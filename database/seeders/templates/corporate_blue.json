@@ -1,0 +1,92 @@
+{
+    "corporate_blue": {
+        "version": "5.3.0",
+        "objects": [
+            {
+                "type": "rect",
+                "left": 0,
+                "top": 0,
+                "width": 1011,
+                "height": 638,
+                "fill": "#f0f4f8",
+                "selectable": false
+            },
+            {
+                "type": "rect",
+                "left": 0,
+                "top": 0,
+                "width": 1011,
+                "height": 150,
+                "fill": "#1e40af",
+                "selectable": true
+            },
+            {
+                "type": "text",
+                "version": "5.3.0",
+                "left": 50,
+                "top": 40,
+                "width": 300,
+                "height": 45,
+                "fill": "#ffffff",
+                "text": "ACME CORP",
+                "fontSize": 40,
+                "fontFamily": "Inter",
+                "fontWeight": "bold"
+            },
+            {
+                "type": "image",
+                "left": 50,
+                "top": 200,
+                "width": 300,
+                "height": 300,
+                "stroke": "#1e40af",
+                "strokeWidth": 2,
+                "src": "https://via.placeholder.com/300"
+            },
+            {
+                "type": "text",
+                "left": 400,
+                "top": 220,
+                "fill": "#111827",
+                "text": "{{ name }}",
+                "fontSize": 50,
+                "fontWeight": "bold",
+                "fontFamily": "Inter"
+            },
+            {
+                "type": "text",
+                "left": 400,
+                "top": 290,
+                "fill": "#6b7280",
+                "text": "{{ designation }}",
+                "fontSize": 30,
+                "fontFamily": "Inter"
+            },
+            {
+                "type": "text",
+                "left": 400,
+                "top": 350,
+                "fill": "#000000",
+                "text": "ID: {{ employee_code }}",
+                "fontSize": 25,
+                "fontFamily": "Inter"
+            },
+            {
+                "type": "rect",
+                "left": 750,
+                "top": 400,
+                "width": 200,
+                "height": 200,
+                "fill": "#ffffff",
+                "stroke": "#000000"
+            },
+            {
+                "type": "text",
+                "left": 780,
+                "top": 480,
+                "text": "QR CODE",
+                "fontSize": 20
+            }
+        ]
+    }
+}

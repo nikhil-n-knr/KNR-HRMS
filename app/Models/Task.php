@@ -1,0 +1,145 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Traits\OptimisticLocking; // Validation Trait
+
+class Task extends Model
+{
+    use HasFactory, SoftDeletes, OptimisticLocking;
+
+    protected $table = 'project_tasks';
+
+    protected $fillable = [
+        'project_id',
+        'module_id',
+        'sprint_id', // New
+        'stage_id',  // New
+        'title',
+        'description',
+        'status',          
+        'priority',        
+        'complexity',      
+        'start_date',
+        'estimated_hours',
+        'actual_hours',
+        'billable',
+        'blocked_by_task_id',
+        'created_by',
+        'git_branch_url', // New
+        'git_pr_url',     // New
+        'qa_notes',       // New
+        'deployed_to',    // New
+        
+        'is_billable',
+        'invoice_id',
+        'billed_at',
+        'version',
+        'due_date',
+        'scrum_points'
+    ];
+
+    public function sprint()
+    {
+        return $this->belongsTo(Sprint::class);
+    }
+
+    public function stage()
+    {
+        return $this->belongsTo(ProjectStage::class);
+    }
+
+    protected $casts = [
+        'billable' => 'boolean',
+        'estimated_hours' => 'decimal:2',
+        'actual_hours' => 'decimal:2',
+        'start_date' => 'date',   // Auto-cast to Carbon
+        'due_date' => 'date',
+    ];
+
+    public function project()
+    {
+        return $this->belongsTo(Project::class);
+    }
+
+    public function module()
+    {
+        return $this->belongsTo(ProjectModule::class, 'module_id');
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function blocker()
+    {
+        return $this->belongsTo(Task::class, 'blocked_by_task_id');
+    }
+
+    public function assignees()
+    {
+        return $this->belongsToMany(\App\Models\Employee::class, 'task_assignees', 'task_id', 'employee_id')
+                    ->withTimestamps();
+    }
+
+    /**
+     * Polymorphic Assignments
+     */
+    public function assignments()
+    {
+        return $this->hasMany(WorkAssignment::class);
+    }
+
+    // Helper for Kanban (Singular Primary Assignee) logic moved to Controller
+
+    public function reporter()
+    {
+        return $this->belongsTo(\App\Models\User::class, 'created_by');
+    }
+
+    // --- Task Hub Relationships ---
+
+    public function comments()
+    {
+        return $this->morphMany(Comment::class, 'commentable')->latest();
+    }
+
+    public function checklists()
+    {
+        return $this->hasMany(TaskChecklist::class)->orderBy('position');
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(TaskActivity::class)->latest();
+    }
+
+    public function dependencies()
+    {
+        return $this->belongsTo(Task::class, 'blocked_by_task_id');
+    }
+
+    public function dependents()
+    {
+        return $this->hasMany(Task::class, 'blocked_by_task_id');
+    }
+
+    public function timesheets()
+    {
+        return $this->hasMany(Timesheet::class);
+    }
+
+    public function bugTicket()
+    {
+        return $this->hasOne(BugTicket::class, 'task_id');
+    }
+
+    public function pullRequests()
+    {
+        return $this->hasMany(TaskPullRequest::class, 'task_id');
+    }
+}

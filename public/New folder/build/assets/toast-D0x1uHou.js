@@ -1,0 +1,1 @@
+import{K as u,r as a}from"./app-CVetpWLH.js";const m=u("toast",()=>{const o=a([]),e=(s,t="success",n=3e3)=>{const c=Date.now();o.value.push({id:c,message:s,type:t}),setTimeout(()=>{r(c)},n)},r=s=>{o.value=o.value.filter(t=>t.id!==s)};return{toasts:o,add:e,remove:r,success:s=>e(s,"success"),error:s=>e(s,"error"),info:s=>e(s,"info")}});export{m as u};

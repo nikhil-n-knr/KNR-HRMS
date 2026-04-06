@@ -1,0 +1,102 @@
+{
+    "version": "5.3.0",
+    "objects": [
+        {
+            "type": "rect",
+            "left": 0,
+            "top": 0,
+            "width": 1011,
+            "height": 638,
+            "fill": "#ffffff"
+        },
+        {
+            "type": "rect",
+            "left": 0,
+            "top": 0,
+            "width": 1011,
+            "height": 180,
+            "fill": "#ea580c"
+        },
+        {
+            "type": "text",
+            "left": 50,
+            "top": 50,
+            "text": "CONTRACTOR",
+            "fontSize": 60,
+            "fontFamily": "Impact",
+            "fill": "#ffffff",
+            "fontWeight": "bold"
+        },
+        {
+            "type": "text",
+            "left": 50,
+            "top": 220,
+            "text": "NAME",
+            "fontSize": 20,
+            "fill": "#9ca3af"
+        },
+        {
+            "type": "text",
+            "left": 50,
+            "top": 250,
+            "text": "{{ name }}",
+            "fontSize": 45,
+            "fontWeight": "bold",
+            "fill": "#111827"
+        },
+        {
+            "type": "text",
+            "left": 50,
+            "top": 330,
+            "text": "AGENCY / COMPANY",
+            "fontSize": 20,
+            "fill": "#9ca3af"
+        },
+        {
+            "type": "text",
+            "left": 50,
+            "top": 360,
+            "text": "{{ company }}",
+            "fontSize": 35,
+            "fontWeight": "bold",
+            "fill": "#ea580c"
+        },
+        {
+            "type": "rect",
+            "left": 650,
+            "top": 220,
+            "width": 300,
+            "height": 300,
+            "fill": "#f3f4f6",
+            "stroke": "#ea580c",
+            "strokeWidth": 5
+        },
+        {
+            "type": "text",
+            "left": 730,
+            "top": 350,
+            "text": "PHOTO",
+            "fontSize": 30,
+            "fill": "#d1d5db"
+        },
+        {
+            "type": "text",
+            "left": 50,
+            "top": 550,
+            "text": "VALID UNTIL:",
+            "fontSize": 25,
+            "fontWeight": "bold",
+            "fill": "#000000"
+        },
+        {
+            "type": "text",
+            "left": 250,
+            "top": 540,
+            "text": "{{ valid_until }}",
+            "fontSize": 40,
+            "fontWeight": "bold",
+            "fill": "#dc2626",
+            "backgroundColor": "#fee2e2"
+        }
+    ]
+}

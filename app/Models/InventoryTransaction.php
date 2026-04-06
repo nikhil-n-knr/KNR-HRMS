@@ -1,0 +1,15 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+
+class InventoryTransaction extends Model
+{
+    use HasFactory;
+    protected $guarded = [];
+
+    public function item() { return $this->belongsTo(InventoryItem::class, 'item_id'); }
+    public function requestedBy() { return $this->belongsTo(User::class, 'requested_by'); }
+}
