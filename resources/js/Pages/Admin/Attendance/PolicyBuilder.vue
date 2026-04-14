@@ -1,6 +1,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { Head, useForm } from '@inertiajs/vue3';
+import { Head, useForm, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import { useToastStore } from '@/stores/toast';
 import PremiumModal from '@/Components/PremiumModal.vue';
@@ -25,10 +25,13 @@ const processing = ref(false);
 const activeSection = ref(props.subTab || 'global');
 
 const policyForm = ref({
+    id: null,
+    name: 'Global Attendance Rules',
     late_mark_threshold: 3,
     sandwich_rule_enabled: false,
     overtime_policy: { rate: 1.5, min_minutes: 60 },
-    deduction_rule: { deduct_leave: 0.5, type: 'CL' }
+    deduction_rule: { deduct_leave: 0.5, type: 'CL' },
+    timesheet_policy: { min_daily_hours: 8, max_daily_hours: 12, fill_frequency: 'daily', auto_lock_after_days: 7 }
 });
 
 // Shift Management State
@@ -39,8 +42,19 @@ watch(() => props.shifts, (newShifts) => {
     localShifts.value = newShifts || [];
 }, { deep: true });
 
+const initializePolicy = (data) => {
+    if (!data) return;
+    policyForm.value = {
+        ...policyForm.value,
+        ...data,
+        overtime_policy: { ...(policyForm.value.overtime_policy || {}), ...(data.overtime_policy || {}) },
+        deduction_rule: { ...(policyForm.value.deduction_rule || {}), ...(data.deduction_rule || {}) },
+        timesheet_policy: { ...(policyForm.value.timesheet_policy || {}), ...(data.timesheet_policy || {}) }
+    };
+};
+
 watch(() => props.policy, (newPolicy) => {
-    if (newPolicy) policyForm.value = newPolicy;
+    initializePolicy(newPolicy);
 }, { deep: true });
 
 const showShiftModal = ref(false);
@@ -72,7 +86,7 @@ const fetchData = async () => {
         });
         
         if (jsonRes.data.policy) {
-            policyForm.value = jsonRes.data.policy;
+            initializePolicy(jsonRes.data.policy);
         }
         localShifts.value = jsonRes.data.shifts;
     } catch (e) {
@@ -83,22 +97,23 @@ const fetchData = async () => {
 };
 
 onMounted(() => {
-    if (props.policy) {
-        policyForm.value = props.policy;
-    }
+    initializePolicy(props.policy);
 });
 
 // Global Policy Actions
-const submitPolicy = async () => {
+const submitPolicy = () => {
     processing.value = true;
-    try {
-        await axios.post('/admin/attendance/policies/update', policyForm.value);
-        toast.success("Global rules updated successfully");
-    } catch (e) {
-        toast.error("Failed to update rules");
-    } finally {
-        processing.value = false;
-    }
+    router.post('/admin/attendance/policies/update', policyForm.value, {
+        preserveScroll: true,
+        onSuccess: () => {
+            processing.value = false;
+            toast.success("Global rules updated successfully");
+        },
+        onError: () => {
+            processing.value = false;
+            toast.error("Failed to update rules");
+        }
+    });
 };
 
 // Shift Actions
@@ -170,6 +185,11 @@ const deleteShift = () => {
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 const openAccordion = ref('punctuality');
+const frequencyOptions = [
+    { v: 'daily', l: 'DAILY_SYNC' },
+    { v: 'weekly', l: 'WEEKLY_BATCH' },
+    { v: 'monthly', l: 'MONTHLY_CLOSE' }
+];
 </script>
 
 <template>
@@ -328,6 +348,46 @@ const openAccordion = ref('punctuality');
                                 <div class="relative flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
                                     <input type="number" step="0.1" v-model="policyForm.overtime_policy.rate" class="w-24 bg-white border-2 border-gray-100 rounded-xl py-3 text-center text-lg font-black text-slate-700 focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all shadow-inner">
                                     <p class="text-sm font-black text-slate-400 uppercase tracking-widest leading-relaxed">HOURLY COEFFICIENT MULTIPLIER FOR OT PAYLOADS</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timesheet Matrix Accordion -->
+                <div class="bg-white rounded-3xl border border-gray-100 shadow-sm overflow-hidden group transition-all" :class="{'ring-4 ring-amber-500/5 border-amber-200': openAccordion === 'timesheet'}">
+                    <button type="button" @click="openAccordion = openAccordion === 'timesheet' ? null : 'timesheet'" class="w-full text-left p-6 md:p-8 flex items-center justify-between group-hover:bg-slate-50/50 transition-all">
+                        <div class="flex items-center gap-5">
+                            <div class="w-12 h-12 rounded-2xl flex items-center justify-center transition-all bg-amber-50 text-amber-600 border border-amber-100 shadow-sm">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-black text-slate-900 uppercase tracking-tight leading-none mb-2">Timesheet Matrix</h4>
+                                <p class="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Temporal Filling & Sync Logic</p>
+                            </div>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-300 transition-transform duration-500" :class="{'rotate-180 text-amber-500': openAccordion === 'timesheet'}" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                    </button>
+                    
+                    <div v-show="openAccordion === 'timesheet'" class="px-8 pb-8 space-y-8 animate-in slide-in-from-top-4 duration-500">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="space-y-4">
+                                <label class="text-sm font-black text-slate-500 uppercase tracking-[0.2em] px-1">Daily Commitment (Hrs)</label>
+                                <div class="relative flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                                    <input type="number" v-model="policyForm.timesheet_policy.min_daily_hours" class="w-24 bg-white border-2 border-gray-100 rounded-xl py-3 text-center text-lg font-black text-slate-700 focus:ring-4 focus:ring-amber-500/10 focus:border-amber-500 transition-all shadow-inner">
+                                    <p class="text-sm font-black text-slate-400 uppercase tracking-widest leading-relaxed">MINIMUM STANDARDS FOR FILLING UP_SEQ TO CONSIDER AS PRESENT</p>
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <label class="text-sm font-black text-slate-500 uppercase tracking-[0.2em] px-1">Sync Frequency</label>
+                                <div class="grid grid-cols-3 gap-3">
+                                    <button v-for="type in frequencyOptions" 
+                                        :key="type.v" type="button" @click="policyForm.timesheet_policy.fill_frequency = type.v"
+                                        :class="policyForm.timesheet_policy.fill_frequency === type.v ? 'bg-slate-900 text-white shadow-xl shadow-slate-200 border-slate-900' : 'bg-white text-slate-400 border-gray-100 hover:border-amber-200 hover:text-amber-600'"
+                                        class="py-4 rounded-2xl text-xs font-black uppercase tracking-widest border-2 transition-all active:scale-95"
+                                    >
+                                        {{ type.l }}
+                                    </button>
                                 </div>
                             </div>
                         </div>

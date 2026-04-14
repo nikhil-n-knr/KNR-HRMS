@@ -1,0 +1,207 @@
+﻿Sales Analytics
+    Dashboards & Visualization
+        Sales Value Trends
+        Sales Volume Trends
+        Margin Trends
+        Sales vs Budget
+        Growth & Variance Analysis
+        Customer Performance Summary
+        Product Performance Summary
+        User-based Dashboard Customization
+        Territory Filters (NSW, VIC)
+
+    Customer Analytics
+        Top Customers by Revenue
+        Growing Customers
+        Declining Customers
+        Low Performing Customers
+        Customer Margin Analysis
+        Ship-To vs Bill-To Analysis
+        Territory-based Filtering
+
+    Product Analytics
+        Product Classification (Still White, Red, Sparkling, Fortified)
+        Series Analysis (On-premise, Off-premise)
+        Top Selling Products
+        Declining Products
+        Product Gap Analysis (Not purchased)
+        Territory Product Performance
+
+    Drill-Down & Analysis
+        Widget Drill-down
+        Analyse Function
+        View Switching (Value, Cost, Quantity, Margin)
+        Pivot / Matrix View
+        Product Share per Customer
+        Gap Identification (0% purchase cases)
+
+    Alerts & Notifications
+        Threshold Alerts
+            Low Purchase Alerts
+            Declining Customers
+            Declining Products
+            Stock Underperformance
+        Save Filters as Favourites
+        Add Insights to Dashboard
+
+    AI & Query System
+        Natural Language Query
+        Instant Result Generation
+        Follow-up Query Handling
+        Calculation Transparency
+
+
+CRM Core System
+    Activity & Task Management
+        Daily Agenda View
+        Task Creation (Single / Bulk)
+        Task Types (Call, Visit, Follow-up)
+        Task Scheduling (Start / End Date)
+        Task Ownership
+        Completion Tracking
+
+    Customer Management
+        Customer Profile
+            Sales Trends
+            Average Margin
+            Return Rates
+            Value per Purchase
+            Product Share Visualization
+        Interaction History
+        Notes Management
+        Cost vs Selling Price Analysis
+
+    Email Integration
+        Gmail / External Email Capture
+        CC-based Email Logging
+        Auto Parsing (Sender, Subject, Body)
+        Customer Mapping
+        Unmapped Email Handling
+
+    Outlook Integration
+        Calendar Sync
+        Meeting Sync
+        Low Latency Sync
+
+    Customization & Reporting
+        Custom Fields
+        Custom Forms
+        Dropdown Configuration
+        Custom Columns
+        Quarterly Business Reports
+        Year-on-Year Comparison
+        Rebate & Incentive Tracking
+
+
+Sales Enablement
+    Opportunity Management
+        Upsell Opportunities
+        Cross-sell Opportunities
+        Product Gap Identification
+
+    Action Management
+        Create Actions from Analytics
+        Assign Tasks to Users
+        Customer Target Lists
+
+
+MYOB Integration
+    Dashboard Integration
+        Customer Scorecard
+        Finance KPIs
+        Product Scorecard
+        Sales KPIs
+        Supplier KPIs
+
+    Sales Reports
+        Stock Cover
+        Lost Customers
+        New Customers
+        Declining Customers
+        Increasing Customers
+        Low Margin Products
+        High Margin Products
+        Dead Stock
+        Product Sales Trends
+
+    Purchase Reports
+        PO Status by Supplier
+        Dead Stock Value
+
+    Integration Setup
+        API Configuration
+        Client ID Setup
+        Data Sync
+
+
+Email Activity Capture
+    Email Logging System
+        Email Capture via CC
+        Real-time Processing
+        Auto Tagging to Customer
+        Activity Timeline Update
+        Manual Review Queue
+
+
+Future Planning & Strategy
+    Product Planning
+        Identify Declining Products
+        Product Discontinuation Decisions
+        Emerging Trend Analysis
+
+    Inventory Planning
+        Stock Holding Analysis
+            3-Year
+            5-Year
+            7-Year
+            10-Year
+        Lean Inventory Management
+
+
+Training & Enablement
+    User Training
+        Dashboard Usage
+        Report Building
+        Alerts Setup
+        Action Creation
+
+    System Setup
+        Pre-built Dashboards
+        Pre-built Reports
+        Custom Scoping Session
+
+
+Non-Functional Requirements
+    Performance
+        Fast Response Time
+        Optimized Queries
+        Real-time Data Processing
+
+    Usability
+        Minimal Clicks to Insight
+        Intuitive UI
+        Easy Navigation
+
+    Scalability
+        Handle Large Data Sets
+        Multi-user Support
+
+    Reliability
+        High Availability
+        Error Handling
+        Data Accuracy
+
+    Security
+        Role-based Access Control
+        Data Protection
+        Secure Integrations
+
+    Maintainability
+        Modular Architecture
+        Easy Configuration
+        Low Dependency on IT
+
+    Flexibility
+        Self-service Analytics
+        Customizable Dashboards
+        Dynamic Filters

@@ -1,0 +1,715 @@
+﻿School Admin
+	Masters
+		Academic Year
+		School Details
+		Class
+		Section
+		Fees Concession
+		Course
+		Create Skill Subject
+		Course Mapping
+		Club
+		VPA
+		Extra Curricular Activities
+		Switch Roles
+		Login Stats
+		Setting 
+		logo
+	Calender Events
+		Category
+		Create Events
+	Building Information
+		Block Types
+		Rooms
+	Gallery
+		Category
+		Gallery Images
+
+User Rights
+	Roles and Permissions
+		Work Groups
+		Roles
+		Access Role Allocation
+
+Student Admission
+	Applications
+		Set Application Date
+		Set Application Fee
+		Collect Application Fee
+		Online Application
+		Offline Application
+		Daily Report
+		Communication
+		Student Workflow Config
+		New Admission Fee Report
+	Entrance Exam
+		Create Exam
+		Exam Subjects
+		Exam Entry/Edit
+		Merit List
+		Schedule Interview
+	Student Master
+		Admission List
+		Mass Update
+		Student & Electives
+		Provision
+		Link Siblings
+		Reset Password (Parent)
+		Profile Edit Settings
+		Manage Profile Pictures
+		Previous Year Student Details
+	Registration Forms
+		Pre Registration
+		Lock Registration
+		Grade 11 Application
+	Reports
+		Students Report
+		Other Report
+		P.E Report
+		Student Details Report
+		Linguistic Report
+		Application Fee Collection
+
+Fee Management
+	School Fee Settings
+		Setting
+		Fee Components
+		Fee Structure
+		Fee Concession
+		Installement(single)
+		Installement(Bulk)
+		Assign Grade 10
+	Fee Collection
+		Collect Student Fee
+		Cancel/Refund Fee Receipt
+		Reprint Fee Receipt
+		Refund Excess Fee Payment
+		Send Notification
+		Book Fees Collection
+	Reports
+		Fee Collection Report
+		Post Due Date Payment
+		Cancelled/Refund Receipts
+		Fee Concession Report
+		Fee due Report
+		Cheque/DD  Report
+
+Student Allocation
+	Segregation
+		Section Allocation
+		Section Interchange
+		Student Promote
+		Detained Students - Promote
+		Allot Roll Numbers
+	Reports
+		Student Information
+		Section Un-Alloted
+		Detained Student
+		Student Classwise
+		Un-Promoted Students
+
+Communication
+	Notification Alerts
+		Birth Day Wishes
+		Student & Staff Notification
+		Commuication Report
+	Circular
+		Student & Staff Circular
+	Reports
+		Student Notifications
+		SMS Report
+		Provision Report
+		Staff Notifications
+		Student Circulars
+		Staff Circulars
+
+Time Table
+	Create Time Table
+		Subject Master
+		Assign TimeTable
+		Create Time Table
+		Print Time Table
+		Create Time Slot
+	Work Load
+		Work Load
+	Create Time Table
+		Class TT
+		Room TT
+		Staff TT
+	Substitution
+		Leave Reasons Master
+		Staff Absentee List
+		Create Substitution
+	Reports
+		Class TT Report
+		Room TT Report
+		Staff TT Report
+
+Attendance
+	Marking Attendance
+		Mark Attendance
+		 Late Entry/Early Departure
+		Monthly Attendance
+		Student Leave Details
+	Reports
+		 Attendance Report
+
+Activity
+	Competition
+		Competition
+	Staff Intitiative
+		Staff Intitiative
+
+Exam&ReportCard
+	Subject Masters
+		Add Sub Type & Components
+		Subject Management
+		Subject Type
+		Subject Type Components
+		Exam Assessments
+		Course & Subjects
+		Subjects & Teachers
+		Lock Entries
+		Keys
+		Config Grade 
+	Exams
+		Manage Exams
+		Exams Entry/Edit
+		Skills/Co-scholastic
+		Exam Assessment Marks
+		Remarks/Attendance
+		Mark Sheet
+		Consolidated 1-5
+		Upload Cover Photos
+		Personality Development
+		Reportcard Answer
+		Upload Marks
+		Manage Student Exam Sessions
+	Tests
+		Manage Tests
+		Tests Entry/Edit
+	Report Card
+		Generate/Re-Generate
+		Publish/Un-Publish
+	Reports
+		Performance Analysis
+		Primary Internal Sheets
+	Archive
+		Upload Report Card
+
+Assessment KG
+	Masters
+		Keys
+		Curriculum
+		Activity
+		Sub Activity
+		Parent Note
+		Examination
+		Term Details
+		Manage Student Exam Sessions
+	Marks Entry
+		Marks Entry
+		Reportcard Answer
+		Lock Entry
+	Generate/Regenerate
+		Generate/Regenerate
+	Publish/Unpublish
+		Publish/Unpublish
+	Attendance Remarks
+		Attendance Remarks
+	Consolidate
+		Report Card Marks Sheet
+		Attendance  & Remarks
+
+Certificates Management
+	Transfer Certificate
+		Transfer Certificate
+	Study Certificate
+		Study Certificate
+	Bonafide Certificate
+		Bonafide Certificate
+
+Montessori
+	Masters
+		Academic Year
+		Curriculam
+		Environment
+		Modules
+		Examinations
+	Montessori
+		Lesson Plan
+		Progress & Plan
+		Track at Work
+	Student Attendance
+		Marks Attendance
+		Late Comer Entry
+		Health Care
+		Early Departure
+		Send Attendance Alerts
+	Attendance Reports
+		Daywise Attendance
+		Monthly Attendance
+	Assessment
+		Keys
+		Curriculam
+		Activity
+		Sub Activity
+		Marks Entry
+	Report Card
+		Generate/Regenerate
+		Publish/UnPublish
+	Online Class
+		Revised Lesson Plan
+		Revised Progress & Plan
+	Reports
+		Progress & Plan
+		Revised Lesson Plan
+		Environment Report
+	Consolidate Report
+		Report Card & Mark Sheet
+		Remark & Attendance
+
+Employee Info
+	Reports
+		Employee Information report
+
+Student Diary
+	Student Diary
+		General Diary
+		Subject-wise Diary
+	Report
+		Diary Status Report
+		Student Diary Report
+
+Task
+	(No Submodule)
+		(No Feature Name)
+
+Observation
+	(No Submodule)
+		(No Feature Name)
+
+Minutes Of Meeting
+	Minutes Of Meeting
+		MOM
+		MOM to Principal
+
+QR code
+	(No Submodule)
+		(No Feature Name)
+
+Master Calendar
+	Master Calendar
+		Pivot Events
+		Holiday dates
+		Exam Dates
+		Week Off Dates
+	Master Calendar
+		Calendar
+	Master Calendar
+		Coordinator List
+	Master Calendar
+		Event List
+	Master Calendar
+		Teachers Timeline
+
+Parent Document
+	(No Submodule)
+		(No Feature Name)
+
+Learning Management
+	Masters
+		Lesson Plan
+		Chapters
+		Topics
+		Sub Topics
+		Examination
+	Question Bank
+		Question Bank
+	Question Paper
+		Question Paper
+	Approve Question Paper
+		Approve Question Paper
+	Assign Student
+		Assign Student
+	Evalute
+		Evalute Test Paper
+		Evalute Education Resource
+	Education Resource
+		Education Resource
+	Performance Analysis
+		Performance Analysis
+
+Visitor Information
+	(No Submodule)
+		(No Feature Name)
+
+Alumni
+	(No Submodule)
+		(No Feature Name)
+	Alumni Master
+		Add Alumni
+		Content Creation
+		Content Manager
+		Create Poll
+		Notifications
+
+CBSE Exam
+	Examination
+		Examination
+	Question Bank
+		Question Bank
+	Question Paper
+		Question Paper
+	Assign Student
+		Assign Student
+	Exam Logins
+		Exam Logins
+	Verification
+		Verification
+	Resume Test
+		Resume Test
+
+Entrance Exam
+	Entrance Exam
+		Entrance Exam
+
+Archival
+	Admission
+		Admission
+
+Programe Of Work
+	Lessons
+		(No Feature Name)
+	Lesson Plan Approval
+		(No Feature Name)
+	Teacher Comment
+		(No Feature Name)
+	Teacher Comment Report
+		(No Feature Name)
+
+Distribution
+	Fee Collection
+		Book Fee Collection
+	Distribution
+		Distributions
+	Reports
+		Book Reports
+
+Data And Analytics
+	Student Personal Details
+		Gender Statistics
+		Mother Tounge Details
+		Blood Group Details
+		Student Religion Details
+	Student Fee Details 
+		Fee Payment Status
+		Mode Of Fee Payment
+	Communication Details
+		Student Communication Details
+	Student Academic Details
+		Student Count Details
+		RTE Student Details
+		Mode of Transport
+		Student Active Status
+		Student OPT Language
+		Student House Group Details
+	Students Performance Analysis
+		Student Year-Wise Exam Analysis
+		Student Year-wise Subject Analysis
+		Student Performance Over Years
+	Attendance Analysis
+		Student Wise Attendance Analysis
+		Grade Wise Analysis
+
+User Manual
+	User Manual
+		School Admin 
+		User Management 
+		Student admission 
+		Fee Management 
+		Student Allocation 
+		Communication 
+		Time Table 
+		Attendance
+		Exam & ReportCard 
+		Assessment KG
+		Employee Info
+		Assignment 
+		Inventory management
+		Data And Analytics 
+		Distribution
+
+Hiring
+	Hiring Process
+		Department
+		Subjects
+		Question Mapping
+		Offline Career Application
+		Career Application
+	Staff Attendance
+		Attendance
+
+Inventory
+	Inventory Detail
+		Inventory Category
+		Inventory Sub Category
+		Incoming Inventory
+		Inventory distribution
+		Inventory Stock
+		Outgoing Inventory
+	Vendor Details
+		Vendor Details
+	Reports
+		Reports
+
+Fee Management +
+	School Fee Settings
+		Setting
+		Fee Components
+		Fee Structure
+		Fee Assign
+		Request Concession
+		Concession Types
+		Edit Student Fees
+		Transportation Details
+		Upload UPI
+		UnAssign / ReAssign
+		Release Fees
+		Choose Receipt Template
+		Assign Installments
+		Installment  Templates
+	Fee Collection
+		Fee Collection
+		Fee Recipt Re-Print
+		Collect Student Fee
+		Bank Reconciliation
+	Fee Reports
+		Fee Collection Report
+		Fee Due Reports 
+		Fee Concession Req Report
+		Fee Due Number Report 
+		Fee collection Due Reports 
+
+Parent Concern
+	Concerns Master
+		Parent Concern Component
+		Parent Concern Category
+		Parent Concern Incharge
+	Resolve Concerns
+		Parent Escalations
+	Concerns Report
+		Parent Concerns Report
+
+Expense
+	Expense Management Master
+		Role List & Assignment
+		Expense List
+		Budget Management
+		Question Map
+		Expense Details
+		Approval Flow
+		Incoming Details 
+		Ledger Details 
+	Expense Submissions
+		Expense Submissions
+		Emp Approval Status Tracker
+	Reports
+		Budget Report
+		Budget Vs Expense Report
+		Expense Report
+		Incoming Amount Report
+
+Enquiry
+	Enquiry Master
+		Enquiry Details
+	Registration Master
+		Registration Details
+	Follow up
+		Follow Up Details
+		Assign Counsellor
+
+Library
+	Library Management
+		Book Category
+		Add Books
+		Assign Books
+		Due Books
+	Reports
+		Due Books
+		Return Books
+		Issued Books
+
+Certificate 
+	Certificate Master
+		Request TC
+		Bonafide
+		Study Certificate
+		It Certificate
+		Generate TC 
+
+Visitor
+	Visitor Management
+		Visitor Department
+		Visitor Management
+		Visitor dep
+		Visitor purpose
+
+Store
+	Store Management
+		Store Category And Subcategory
+		Store Item
+		Purchase Order Details
+		Distribution Details
+		Stock Details
+	Reports
+		Stock Reports
+
+HR
+	Master
+		Department
+		Designation
+	Staff Details
+		Staff Details
+	Mark Attendance
+		Mark Attendance
+		Add Role List 
+		Teacher Leave
+		 Leave Approval Tracker
+		 Manual Teacher Allocation
+		Leave Component
+		Monthly Attendance
+	Salary Configuration
+		Salary Components
+		Salary Configurator
+		Professional Tax Slab
+		Fixed Deduction
+		Salary Generator
+		Download/View Salary Slip
+		Arrear/Bonus
+	Report
+		Monthly Attendance Report
+		Leave Details Report
+
+Student 360Â°
+	Student 360Â°
+		Student 360Â°
+
+Approval Module
+	Student Admission
+		Student Approval
+		Student Approval Report
+	Fee Management +
+		Approve  Concession
+		Fee Concession Reports 
+	Expense
+		Approval Tracker
+		Employee Approval Report
+		Approval Amount Report
+	HR
+		Leave Approval 
+		Leave Approval Report
+	Visitor Management
+		Visitor Approval
+
+Data Analytics
+	Fee Management
+		Collection
+		Concession
+		FeeComponent
+		Assign Details
+	Academics
+		Student Details
+		Admissions
+		Staff
+		Parent Concern
+		Inventory
+		Visitors
+		Transportation
+		Calendar
+	Communication
+		Notifications
+		Circular
+		Assignment
+	Examination
+		Examination
+		Student Test Count
+		ReportCard
+	HR
+		StaffAnalytics
+		Payroll
+	Student
+		Performance
+		AttendanceAnalysis
+	Expense
+		Rolewise spend
+		Transaction Flow
+		Ledger Details
+
+Lesson Planning
+	Lesson Planner
+		Lesson Details
+		Topic Details
+		Lesson Manage Status
+		Lesson Calendar
+		Manage Lesson Planner 
+	Assessment Builder
+		Quiz Builder
+	Reports
+		Lesson Progress Report
+		Lesson / Topic Details Report
+
+Anecdotal Report
+	Access Permissions
+		Groups & Hierarchy
+		Hierarchy Access
+	Report Submissions
+		Observational Categories
+		Report Submission
+		Visibility Matrix
+
+Attendance
+	Marking Attendance
+		Late Entry/Early Departure
+
+Non-Functional Requirements
+    Performance
+        Fast Response Time
+        Real-time Processing
+        Optimized Queries
+
+    Usability
+        Intuitive UI
+        Minimal Clicks
+        Easy Navigation
+        Mobile Friendly
+
+    Scalability
+        Multi-tenant Architecture
+        High Volume Data Handling
+
+    Security
+        Role-Based Access Control
+        Data Encryption
+        Audit Logs
+
+    Reliability
+        High Availability
+        Error Handling
+        Backup & Recovery
+
+    Maintainability
+        Modular Architecture
+        Config-driven Design
+        Easy Updates
+
+    Integration
+        Third-party APIs
+        Email Integration
+        Biometric Devices
+        ERP Integration
+
+    Flexibility
+        Custom Workflows
+        Dynamic Forms
+        Configurable Modules

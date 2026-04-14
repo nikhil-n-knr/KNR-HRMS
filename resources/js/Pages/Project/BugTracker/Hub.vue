@@ -33,10 +33,59 @@
                         <DocumentArrowDownIcon class="w-4 h-4" />
                         Sheet
                     </a>
-                  
+                    <button @click="showImportModal = true" class="px-3 py-1.5 text-xs font-bold text-white bg-indigo-600 rounded-lg hover:bg-indigo-700 flex items-center gap-2 shadow-md">
+                        <ArrowUpTrayIcon class="w-4 h-4" />
+                        Bulk Import
+                    </button>
                 </div>
             </template>
         </BugTrackerHeader>
+        
+        <!-- Bulk Import Modal -->
+        <Modal :show="showImportModal" @close="showImportModal = false" max-width="lg">
+            <template #default>
+                <div class="p-6">
+                    <h3 class="text-lg font-bold text-gray-900 mb-4">Bulk Import Bug Tickets</h3>
+                    <div class="space-y-4">
+                        <div class="p-4 bg-indigo-50 border border-indigo-100 rounded-xl">
+                            <p class="text-sm text-indigo-700 font-medium mb-2 flex items-center gap-2">
+                                <InformationCircleIcon class="w-4 h-4" />
+                                Instructions
+                            </p>
+                            <ul class="text-xs text-indigo-600 space-y-1 list-disc list-inside">
+                                <li>Use the sample template for correct formatting.</li>
+                                <li>Subject and Project mapping are mandatory.</li>
+                                <li>Project name must match exactly.</li>
+                            </ul>
+                            <a :href="route('bugs.import.sample')" class="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-indigo-700 hover:underline">
+                                <DocumentArrowDownIcon class="w-3.5 h-3.5" />
+                                Download Sample CSV
+                            </a>
+                        </div>
+                        
+                        <div class="space-y-2">
+                            <InputLabel value="Select Destination Project" />
+                            <select v-model="importForm.project_id" class="w-full border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 text-sm">
+                                <option value="">Select a project...</option>
+                                <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-2">
+                            <InputLabel value="Upload CSV/Excel File" />
+                            <input type="file" @change="e => importForm.file = e.target.files[0]" class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100" />
+                        </div>
+
+                        <div class="flex justify-end gap-3 mt-6">
+                            <SecondaryButton @click="showImportModal = false">Cancel</SecondaryButton>
+                            <PrimaryButton @click="submitImport" :disabled="importForm.processing || !importForm.project_id || !importForm.file">
+                                Start Import
+                            </PrimaryButton>
+                        </div>
+                    </div>
+                </div>
+            </template>
+        </Modal>
 
         <div class="p-6">
             <!-- Dynamic Component Loading based on Tab -->
@@ -59,11 +108,17 @@ import Analytics from './Analytics.vue';
 import GlobalTicketMatrix from './GlobalTicketMatrix.vue';
 import Create from './Create.vue';
 import ExternalPortalPartial from './Components/ExternalPortalPartial.vue';
-import ClientHub from './ClientHub.vue';
-import WorkflowArchitect from './WorkflowArchitect.vue';
 import ReportBuilder from './ReportBuilder.vue';
+import WorkflowArchitect from './WorkflowArchitect.vue';
+import ClientHub from './ClientHub.vue';
 import BugTrackerHeader from './Partials/BugTrackerHeader.vue';
 import { useBugTrackerStore } from '@/Stores/bugTrackerStore';
+import Modal from '@/Components/Modal.vue';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import { useForm } from '@inertiajs/vue3';
+import { InformationCircleIcon, ArrowUpTrayIcon } from '@heroicons/vue/24/outline';
 
 // Define layout option to avoid nested layouts if components also define it
 defineOptions({ layout: null }); 
@@ -92,6 +147,20 @@ const props = defineProps({
 });
 
 const store = useBugTrackerStore();
+const showImportModal = ref(false);
+const importForm = useForm({
+    project_id: '',
+    file: null
+});
+
+const submitImport = () => {
+    importForm.post(route('bugs.import.bulk'), {
+        onSuccess: () => {
+            showImportModal.value = false;
+            importForm.reset();
+        }
+    });
+};
 
 const tabs = computed(() => {
     if (store.viewMode === 'client') {

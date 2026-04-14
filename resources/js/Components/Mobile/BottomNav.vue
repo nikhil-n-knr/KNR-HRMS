@@ -96,7 +96,7 @@ const navItems = computed(() => [
     key: 'personal', 
     label: 'Me', 
     icon: UserIcon, 
-    href: route('employee.hub') 
+    href: page.props.auth?.profileUrl || route('employee.hub') 
   }
 ]);
 

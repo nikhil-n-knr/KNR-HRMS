@@ -17,23 +17,49 @@ class WorkflowController extends Controller
 {
     public function index(Request $request)
     {
-        $workflows = Workflow::with(['stages', 'stages.role'])->get();
-        $roles = Role::where('tenant_id', auth()->user()->tenant_id)->get();
-        $users = User::where('tenant_id', auth()->user()->tenant_id)->get(['id', 'name']);
+        $tenantId = auth()->user()->tenant_id;
+        $workflows = Workflow::with(['stages', 'stages.role', 'stages.user', 'stages.team', 'stages.department'])->get();
+        $roles = Role::where('tenant_id', $tenantId)->get();
+        $users = User::where('tenant_id', $tenantId)->get(['id', 'name']);
+        $teams = Team::get(['id', 'name']);
+        $departments = Department::where('tenant_id', $tenantId)->get(['id', 'name']);
         
-        return Inertia::render('Admin/Workflows/Index', [
+        return Inertia::render('Admin/Attendance/Hub', [
+            'tab' => 'workflows',
             'workflows' => $workflows,
             'roles' => $roles,
-            'users' => $users
+            'users' => $users,
+            'teams' => $teams,
+            'departments' => $departments
         ]);
     }
 
-    public function init()
+    public function initDefaults()
     {
-        // Create default workflows
-        $this->createTimesheetWorkflow();
-        $this->createAttendanceWorkflow();
-        $this->createLeaveWorkflow();
+        // 1. Timesheet
+        if (!Workflow::where('entity_type', 'timesheet')->exists()) {
+            $this->createTimesheetWorkflow();
+        }
+
+        // 2. Attendance Regularization
+        if (!Workflow::where('entity_type', 'attendance_regularization')->exists()) {
+            $this->createAttendanceWorkflow();
+        }
+
+        // 3. Leave Request
+        if (!Workflow::where('entity_type', 'leave_request')->exists()) {
+            $this->createLeaveWorkflow();
+        }
+
+        // 4. Expenses
+        if (!Workflow::where('entity_type', 'expense')->exists()) {
+            $this->createExpenseWorkflow();
+        }
+
+        // 5. Shift Swap
+        if (!Workflow::where('entity_type', 'shift_swap')->exists()) {
+             $this->createSwapWorkflow();
+        }
         
         return back()->with('success', 'Default workflows initialized successfully');
     }
@@ -49,6 +75,7 @@ class WorkflowController extends Controller
             'rejected_status' => 'nullable|string',
         ]);
 
+        $validated['tenant_id'] = auth()->user()->tenant_id;
         Workflow::create($validated);
         
         return back()->with('success', 'Workflow created');
@@ -151,6 +178,31 @@ class WorkflowController extends Controller
         return back()->with('success', 'Workflow deleted');
     }
 
+    public function clone(Request $request, Workflow $workflow)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'entity_type' => 'required|string'
+        ]);
+
+        DB::transaction(function() use ($workflow, $validated) {
+            $newFlow = $workflow->replicate();
+            $newFlow->name = $validated['name'];
+            $newFlow->entity_type = $validated['entity_type'];
+            $newFlow->is_active = false; // Default to inactive for safety
+            $newFlow->tenant_id = auth()->user()->tenant_id;
+            $newFlow->save();
+
+            foreach ($workflow->stages as $stage) {
+                $newStage = $stage->replicate();
+                $newStage->workflow_id = $newFlow->id;
+                $newStage->save();
+            }
+        });
+
+        return back()->with('success', 'Workflow Protocol Cloned and Migrated');
+    }
+
     // Helper methods for creating default workflows
     private function createTimesheetWorkflow()
     {
@@ -160,7 +212,8 @@ class WorkflowController extends Controller
             'entity_type' => 'timesheet',
             'trigger_event' => 'on_submit',
             'is_active' => true,
-            'priority' => 1
+            'priority' => 1,
+            'tenant_id' => auth()->user()->tenant_id
         ]);
 
         WorkflowStage::create([
@@ -181,35 +234,74 @@ class WorkflowController extends Controller
         ]);
     }
 
-    private function createAttendanceWorkflow()
+    private function createExpenseWorkflow()
     {
         $workflow = Workflow::create([
-            'name' => 'Attendance Regularization',
-            'description' => 'Approval flow for attendance regularization requests',
-            'entity_type' => 'attendance_regularization',
+            'name' => 'Expense Reimbursement',
+            'description' => 'Approval flow for employee expense claims',
+            'entity_type' => 'expense',
             'trigger_event' => 'on_submit',
             'is_active' => true,
-            'priority' => 1
+            'priority' => 1,
+            'tenant_id' => auth()->user()->tenant_id
+        ]);
+
+        WorkflowStage::create([
+            'workflow_id' => $workflow->id,
+            'name' => 'Department Head',
+            'stage_order' => 1,
+            'approver_type' => 'department_head',
+            'can_reject' => true
+        ]);
+
+        WorkflowStage::create([
+            'workflow_id' => $workflow->id,
+            'name' => 'Finance Audit',
+            'stage_order' => 2,
+            'approver_type' => 'role',
+            'role_id' => Role::where('name', 'Finance')->orWhere('name', 'Admin')->first()?->id,
+            'can_reject' => true
+        ]);
+    }
+
+    private function createSwapWorkflow()
+    {
+        $workflow = Workflow::create([
+            'name' => 'Shift Swap Protocol',
+            'description' => 'Peer-to-Peer swap verification',
+            'entity_type' => 'shift_swap',
+            'trigger_event' => 'on_request',
+            'is_active' => true,
+            'priority' => 1,
+            'tenant_id' => auth()->user()->tenant_id
+        ]);
+
+        WorkflowStage::create([
+            'workflow_id' => $workflow->id,
+            'name' => 'Counterpart Consent',
+            'stage_order' => 1,
+            'approver_type' => 'specific_user', // Logic usually handles this dynamically, but we define the stage
+            'can_reject' => true
         ]);
 
         WorkflowStage::create([
             'workflow_id' => $workflow->id,
             'name' => 'Manager Approval',
-            'stage_order' => 1,
+            'stage_order' => 2,
             'approver_type' => 'manager',
             'can_reject' => true
         ]);
     }
 
-    private function createLeaveWorkflow()
+    private function createAttendanceWorkflow()
     {
         $workflow = Workflow::create([
-            'name' => 'Leave Request Approval',
-            'description' => 'Standard leave request approval flow',
-            'entity_type' => 'leave_request',
-            'trigger_event' => 'on_submit',
+            'name' => 'Attendance Correction',
+            'description' => 'Approval for manual attendance adjustments',
+            'entity_type' => 'attendance_regularization',
             'is_active' => true,
-            'priority' => 1
+            'priority' => 1,
+            'tenant_id' => auth()->user()->tenant_id
         ]);
 
         WorkflowStage::create([
@@ -217,16 +309,33 @@ class WorkflowController extends Controller
             'name' => 'Reporting Manager',
             'stage_order' => 1,
             'approver_type' => 'manager',
-            'can_reject' => true
+        ]);
+    }
+
+    private function createLeaveWorkflow()
+    {
+        $workflow = Workflow::create([
+            'name' => 'Standard Leave Policy',
+            'description' => 'Default leave request validation',
+            'entity_type' => 'leave_request',
+            'is_active' => true,
+            'priority' => 1,
+            'tenant_id' => auth()->user()->tenant_id
         ]);
 
         WorkflowStage::create([
             'workflow_id' => $workflow->id,
-            'name' => 'HR Department',
+            'name' => 'Immediate Supervisor',
+            'stage_order' => 1,
+            'approver_type' => 'manager',
+        ]);
+
+        WorkflowStage::create([
+            'workflow_id' => $workflow->id,
+            'name' => 'HR Operations',
             'stage_order' => 2,
             'approver_type' => 'role',
             'role_id' => Role::where('name', 'HR')->first()?->id,
-            'can_reject' => true
         ]);
     }
 }

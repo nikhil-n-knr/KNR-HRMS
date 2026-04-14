@@ -1,5 +1,17 @@
 <template>
     <div class="space-y-6 animate-fade-in-up">
+        <!-- New Password Banner -->
+        <div v-if="$page.props.flash.flash_password" class="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-center justify-between shadow-sm animate-pulse">
+            <div>
+                <div class="text-[10px] font-black text-amber-500 uppercase tracking-widest leading-none mb-1">Security Artifact Generated</div>
+                <div class="text-sm font-black text-slate-800">
+                    Temporal Key: <code class="bg-white px-2 py-1 rounded border border-amber-300 select-all">{{ $page.props.flash.flash_password }}</code>
+                </div>
+            </div>
+            <button @click="$page.props.flash.flash_password = null" class="text-amber-400 hover:text-amber-600 transition-colors">
+                <i class="fas fa-times-circle"></i>
+            </button>
+        </div>
         <!-- Header -->
         <div class="flex items-center justify-between">
             <div class="flex items-center gap-4">
@@ -98,6 +110,11 @@
                                 <div class="text-xs text-gray-500">{{ user.email }}</div>
                             </div>
                             <div class="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                <button @click="openPasswordReset(user)" class="p-1.5 rounded-lg border border-gray-200 text-gray-400 hover:text-emerald-600 hover:bg-emerald-50 hover:border-emerald-200 transition-colors" title="Reset Password">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                    </svg>
+                                </button>
                                 <button @click="killSwitch(user)" :class="['p-1.5 rounded-lg border transition-colors', user.is_active ? 'border-gray-200 text-gray-400 hover:text-red-600 hover:bg-red-50 hover:border-red-200' : 'bg-green-600 text-white border-green-600 shadow-sm']" :title="user.is_active ? 'Revoke Access' : 'Restore Access'">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -113,8 +130,33 @@
             </div>
         </div>
 
+        <!-- Password Reset Modal -->
+        <Modal :show="showPasswordModal" @close="showPasswordModal = false">
+            <div class="p-6">
+                <h2 class="text-lg font-medium text-gray-900 mb-4">Set/Reset Password: {{ selectedUser?.name }}</h2>
+                <form @submit.prevent="submitPasswordReset" class="space-y-4">
+                    <div>
+                        <InputLabel value="New Password" />
+                        <TextInput v-model="passwordForm.password" type="password" class="mt-1 block w-full" placeholder="Enter new password" required />
+                        <InputError :message="passwordForm.errors.password" />
+                    </div>
+                    <div>
+                        <InputLabel value="Confirm New Password" />
+                        <TextInput v-model="passwordForm.password_confirmation" type="password" class="mt-1 block w-full" placeholder="Confirm new password" required />
+                        <InputError :message="passwordForm.errors.password_confirmation" />
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 mt-6">
+                        <SecondaryButton @click="showPasswordModal = false">Cancel</SecondaryButton>
+                        <PrimaryButton :disabled="passwordForm.processing" class="!bg-emerald-600 hover:!bg-emerald-700">Update Password</PrimaryButton>
+                    </div>
+                </form>
+            </div>
+        </Modal>
+
         <!-- Invite Modal -->
         <Modal :show="showInviteModal" @close="showInviteModal = false">
+...
             <div class="p-6">
                 <h2 class="text-lg font-medium text-gray-900 mb-4">Invite Client User</h2>
                 <form @submit.prevent="submitInvite" class="space-y-4">
@@ -149,7 +191,7 @@
 </template>
 
 <script setup>
-import { Link, useForm } from '@inertiajs/vue3';
+import { Link, useForm, router, usePage } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
@@ -158,7 +200,6 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import InputError from '@/Components/InputError.vue';
 import { ref } from 'vue';
-import axios from 'axios';
 
 defineOptions({ layout: MainLayout });
 
@@ -174,6 +215,30 @@ const inviteForm = useForm({
     password_confirmation: ''
 });
 
+// Password Reset Logic
+const showPasswordModal = ref(false);
+const selectedUser = ref(null);
+const passwordForm = useForm({
+    password: '',
+    password_confirmation: ''
+});
+
+const openPasswordReset = (user) => {
+    selectedUser.value = user;
+    passwordForm.reset();
+    showPasswordModal.value = true;
+};
+
+const submitPasswordReset = () => {
+    passwordForm.post(route('clients.users.reset-password', selectedUser.value.id), {
+        onSuccess: () => {
+            showPasswordModal.value = false;
+            passwordForm.reset();
+            alert("Password updated successfully.");
+        }
+    });
+};
+
 const submitInvite = () => {
     inviteForm.post(route('projects.clients.invite', props.client.id), {
         onSuccess: () => {
@@ -183,15 +248,14 @@ const submitInvite = () => {
     });
 };
 
-const killSwitch = async (user) => {
+const killSwitch = (user) => {
     if (user.is_active && !confirm(`Revoke portal access for ${user.name}?`)) return;
     
-    try {
-        await axios.post(route('clients.users.kill', user.id));
-        // Refresh page data to reflect change
-        window.location.reload();
-    } catch (e) {
-        alert("Failed to update access status.");
-    }
+    router.post(route('clients.users.kill', user.id), {}, {
+        preserveScroll: true,
+        onSuccess: () => {
+            // Updated automatically via Inertia
+        }
+    });
 };
 </script>

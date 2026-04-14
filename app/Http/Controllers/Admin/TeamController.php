@@ -10,28 +10,17 @@ use Inertia\Inertia;
 
 class TeamController extends Controller
 {
+    use \App\Traits\HasAttendanceHubData;
     /**
      * Display the Teams Manager (via Unified Hub).
      */
     public function index()
     {
-        // Reuse the Policy Hub logic but activate 'teams' tab
-        $teams = Team::with(['manager:id,name', 'parent:id,name', 'members:id,name,email,team_id']) // Eager load members
-            ->withCount('members')
-            ->get();
+        $data = $this->getHubBaseData('teams');
             
-        // We need to fetch other tabs' data too if we want full switching validation
-        // OR we can lazy load them. For now, let's load what's needed for the hub.
-        // Actually, the Hub logic in PolicyController might be reusable or we just replicate the render.
-        // To avoid code duplication, we should probably have a 'AdminHubService' or similar.
-        // For now, let's just minimal load and assume switching tabs might trigger their own fetches if configured as visits,
-        // BUT the Link components uses Inertia visits, so yes, we need to load data per controller.
-        
-        return Inertia::render('Admin/Attendance/Hub', [
-            'tab' => 'teams', // This triggers the sidebar selection
-            'teams' => $teams,
-            'users' => [], // Manager.vue requires it but search is async.
-        ]);
+        return Inertia::render('Admin/Attendance/Hub', array_merge($data, [
+            'tab' => 'teams',
+        ]));
     }
 
     /**
@@ -42,12 +31,28 @@ class TeamController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'manager_id' => 'nullable|exists:users,id',
-            'parent_team_id' => 'nullable|exists:teams,id'
+            'parent_team_id' => 'nullable|exists:teams,id',
+            'role_id' => 'nullable|exists:roles,id',
+            'member_ids' => 'nullable|array',
+            'member_ids.*' => 'exists:users,id'
         ]);
 
-        Team::create($validated);
+        $team = Team::create($validated);
 
-        return to_route('admin.attendance.teams')->with('success', 'Team created successfully.')
+        if (!empty($validated['member_ids'])) {
+            User::whereIn('id', $validated['member_ids'])->update(['team_id' => $team->id]);
+            
+            if ($team->role_id) {
+                foreach ($validated['member_ids'] as $uid) {
+                    $user = User::find($uid);
+                    $user->roles()->syncWithoutDetaching([
+                        $team->role_id => ['assigned_by' => auth()->id()]
+                    ]);
+                }
+            }
+        }
+
+        return to_route('admin.attendance.teams.index')->with('success', 'Team created successfully.')
             ->setStatusCode(303);
     }
 
@@ -59,12 +64,35 @@ class TeamController extends Controller
         $validated = $request->validate([
             'name' => 'required|string|max:255',
             'manager_id' => 'nullable|exists:users,id',
-            'parent_team_id' => 'nullable|exists:teams,id'
+            'parent_team_id' => 'nullable|exists:teams,id',
+            'role_id' => 'nullable|exists:roles,id',
+            'member_ids' => 'nullable|array',
+            'member_ids.*' => 'exists:users,id'
         ]);
 
         $team->update($validated);
 
-        return to_route('admin.attendance.teams')->with('success', 'Team updated.')
+        // Update members:
+        // 1. Remove team_id from users who were in the team but aren't anymore in the selection
+        User::where('team_id', $team->id)
+            ->whereNotIn('id', $validated['member_ids'] ?? [])
+            ->update(['team_id' => null]);
+
+        // 2. Set team_id for current selected members
+        if (!empty($validated['member_ids'])) {
+            User::whereIn('id', $validated['member_ids'])->update(['team_id' => $team->id]);
+            
+            if ($team->role_id) {
+                 foreach ($validated['member_ids'] as $uid) {
+                    $user = User::find($uid);
+                    $user->roles()->syncWithoutDetaching([
+                        $team->role_id => ['assigned_by' => auth()->id()]
+                    ]);
+                }
+            }
+        }
+
+        return to_route('admin.attendance.teams.index')->with('success', 'Team updated.')
             ->setStatusCode(303);
     }
 
@@ -98,7 +126,7 @@ class TeamController extends Controller
         }
 
         $user->update(['team_id' => null]);
-        return to_route('admin.attendance.teams')->with('success', 'Member removed.')
+        return to_route('admin.attendance.teams.index')->with('success', 'Member removed.')
             ->setStatusCode(303);
     }
 

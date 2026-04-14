@@ -10,7 +10,7 @@ class Comment extends Model
 {
     use HasFactory, SoftDeletes;
 
-    protected $fillable = ['user_id', 'body', 'is_public', 'commentable_id', 'commentable_type', 'attachments'];
+    protected $fillable = ['user_id', 'user_type', 'body', 'is_public', 'commentable_id', 'commentable_type', 'attachments'];
 
     protected $casts = [
         'attachments' => 'array',
@@ -24,6 +24,6 @@ class Comment extends Model
 
     public function author()
     {
-        return $this->belongsTo(User::class, 'user_id');
+        return $this->morphTo('author', 'user_type', 'user_id');
     }
 }

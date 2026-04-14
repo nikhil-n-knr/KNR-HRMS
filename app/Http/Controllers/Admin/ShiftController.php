@@ -72,10 +72,12 @@ class ShiftController extends Controller
 
             DB::commit();
 
-            return response()->json(['message' => 'Shift created successfully.', 'data' => $shift], 201);
+            return redirect()->back()->with('success', 'Shift created successfully.')
+                ->setStatusCode(303);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to create shift: ' . $e->getMessage()], 500);
+            return redirect()->back()->with('error', 'Failed to create shift: ' . $e->getMessage())
+                ->setStatusCode(303);
         }
     }
 
@@ -119,10 +121,12 @@ class ShiftController extends Controller
 
             DB::commit();
 
-            return response()->json(['message' => 'Shift updated successfully.', 'data' => $shift], 200);
+            return redirect()->back()->with('success', 'Shift updated successfully.')
+                ->setStatusCode(303);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['message' => 'Failed to update shift: ' . $e->getMessage()], 500);
+            return redirect()->back()->with('error', 'Failed to update shift: ' . $e->getMessage())
+                ->setStatusCode(303);
         }
     }
 
@@ -143,9 +147,11 @@ class ShiftController extends Controller
             
             $this->logger->log('attendance', 'shift_delete', "Deleted Shift: {$shift->name}", ['user_id' => auth()->id()]);
 
-            return response()->json(['message' => 'Shift deleted successfully.'], 200);
+            return redirect()->back()->with('success', 'Shift deleted successfully.')
+                ->setStatusCode(303);
         } catch (\Exception $e) {
-            return response()->json(['message' => 'Failed to delete shift: ' . $e->getMessage()], 500);
+            return redirect()->back()->with('error', 'Failed to delete shift: ' . $e->getMessage())
+                ->setStatusCode(303);
         }
     }
 

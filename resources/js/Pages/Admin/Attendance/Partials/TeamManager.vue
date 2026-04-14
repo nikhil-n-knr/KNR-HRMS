@@ -49,6 +49,12 @@
 
                     <div class="flex-1">
                         <h3 class="text-sm font-black text-slate-800 uppercase tracking-tight group-hover:text-emerald-700 transition-colors">{{ team.name }}</h3>
+                        
+                        <div v-if="team.role" class="mt-2 inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-900/5 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                            <i class="fas fa-shield-halved text-emerald-500"></i>
+                            {{ team.role.name }}
+                        </div>
+
                         <div class="mt-4 flex items-center gap-2">
                             <div class="w-1 h-1 rounded-full bg-emerald-500"></div>
                             <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Lead: {{ team.manager?.name || 'Unassigned' }}</span>
@@ -89,28 +95,112 @@
             icon="fa-users-gear"
             @confirm="submit"
         >
-            <div class="space-y-6 p-1">
-                <div class="space-y-2">
-                    <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Squad Name</label>
-                    <input v-model="form.name" type="text" class="w-full bg-slate-50 border border-slate-200 rounded-xl h-12 px-4 text-sm font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-widest">
+            <div class="space-y-6">
+                <!-- Squad Identity Section -->
+                <div>
+                     <h4 class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <i class="fas fa-id-card"></i>
+                        Squad Identity
+                     </h4>
+                     <div class="space-y-4">
+                        <div>
+                            <InputLabel value="Squad Name" />
+                            <TextInput 
+                                v-model="form.name" 
+                                type="text" 
+                                class="w-full" 
+                                placeholder="e.g. ALPHA SQUAD"
+                                required
+                            />
+                        </div>
+                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Lead Matrix (Manager)</label>
-                    <select v-model="form.manager_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl h-12 px-4 text-sm font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-widest">
-                        <option :value="null">Unassigned</option>
-                        <option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }}</option>
-                    </select>
+                <!-- Organization Section -->
+                <div>
+                     <h4 class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <i class="fas fa-sitemap"></i>
+                        Organization
+                     </h4>
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <InputLabel value="Squad Role (RBAC Sync)" />
+                            <select v-model="form.role_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl h-11 px-4 text-sm font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-widest">
+                                <option :value="null">No Specific Role</option>
+                                <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <InputLabel value="Lead Matrix (Manager)" />
+                            <select v-model="form.manager_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl h-11 px-4 text-sm font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-widest">
+                                <option :value="null">Unassigned</option>
+                                <option v-for="user in users" :key="user.id" :value="user.id">{{ user.name }}</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <InputLabel value="Parent Command" />
+                            <select v-model="form.parent_team_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl h-11 px-4 text-sm font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-widest">
+                                <option :value="null">Global Root</option>
+                                <option v-for="t in teams" :key="t.id" :value="t.id">{{ t.name }}</option>
+                            </select>
+                        </div>
+                     </div>
                 </div>
 
-                <div class="space-y-2">
-                    <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Parent Command</label>
-                    <select v-model="form.parent_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl h-12 px-4 text-sm font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-widest">
-                        <option :value="null">Global Root</option>
-                        <option v-for="t in teams" :key="t.id" :value="t.id">{{ t.name }}</option>
-                    </select>
+                <!-- Member Selection Section -->
+                <div class="pt-4 border-t border-slate-100 pb-32">
+                    <h4 class="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <i class="fas fa-users-plus"></i>
+                        Personnel Allocation
+                    </h4>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <InputLabel value="Squad Members (Bulk Link)" />
+                            <div class="bg-white rounded-2xl border border-slate-200 mt-1">
+                                <Combobox 
+                                    v-model="form.member_ids" 
+                                    :items="employees" 
+                                    :multiple="true" 
+                                    labelKey="name" 
+                                    valueKey="user_id"
+                                    :displayFormat="(e) => `${e.first_name} ${e.last_name} (${e.employee_code})`"
+                                    placeholder="Link multiple members to this squad..."
+                                    class="min-h-[48px]"
+                                />
+                            </div>
+                            <p v-if="!employees?.length" class="text-[9px] text-rose-500 font-black uppercase tracking-[0.2em] mt-2 bg-rose-50 px-2 py-1 rounded">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                NO OPERATIVES DETECTED IN SECTOR BASE
+                            </p>
+                            <p v-else class="text-[9px] text-slate-400 font-bold uppercase tracking-[0.2em] mt-2 px-1">Selected operators will be synchronized to this unit</p>
+                        </div>
+
+                        <div v-if="form.member_ids?.length > 0" class="flex flex-wrap gap-1.5 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                             <div v-for="uid in form.member_ids" :key="uid" class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-[10px] font-black text-slate-600 uppercase tracking-tight shadow-sm">
+                                {{ employees.find(e => e.user_id === uid)?.first_name || 'ID: '+uid }}
+                             </div>
+                        </div>
+                    </div>
                 </div>
             </div>
+
+            <template #footer>
+                <div class="flex items-center justify-between w-full">
+                    <button @click="showModal = false" type="button" class="text-xs font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition-colors">
+                        Abort Payload
+                    </button>
+                    <button 
+                        @click="submit" 
+                        class="h-11 px-8 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-[0.2em] hover:bg-emerald-600 transition-all flex items-center gap-3 shadow-xl shadow-slate-200 active:scale-95 group"
+                    >
+                        <i :class="['fas', isEditing ? 'fa-check-double' : 'fa-rocket', 'text-emerald-400 group-hover:rotate-12 transition-transform']"></i>
+                        {{ isEditing ? 'Update Squad' : 'Deploy Squad' }}
+                    </button>
+                </div>
+            </template>
         </PremiumModal>
     </div>
 </template>
@@ -119,11 +209,16 @@
 import { ref, computed } from 'vue';
 import { router } from '@inertiajs/vue3';
 import PremiumModal from '@/Components/PremiumModal.vue';
+import Combobox from '@/Components/Combobox.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import TextInput from '@/Components/TextInput.vue';
+import InputError from '@/Components/InputError.vue';
 import { useToastStore } from '@/stores/toast';
 
 const props = defineProps({
     teams: { type: Array, default: () => [] },
     users: { type: Array, default: () => [] },
+    employees: { type: Array, default: () => [] },
     roles: Array,
 });
 
@@ -136,7 +231,9 @@ const form = ref({
     id: null,
     name: '',
     manager_id: null,
-    parent_id: null,
+    parent_team_id: null,
+    role_id: null,
+    member_ids: [],
 });
 
 const filteredTeams = computed(() => {
@@ -147,13 +244,17 @@ const filteredTeams = computed(() => {
 
 const openCreateModal = () => {
     isEditing.value = false;
-    form.value = { id: null, name: '', manager_id: null, parent_id: null };
+    form.value = { id: null, name: '', manager_id: null, parent_team_id: null, role_id: null, member_ids: [] };
     showModal.value = true;
 };
 
 const openEditModal = (team) => {
     isEditing.value = true;
-    form.value = { ...team };
+    form.value = { 
+        ...team,
+        parent_team_id: team.parent_team_id,
+        member_ids: team.members?.map(m => m.id) || []
+    };
     showModal.value = true;
 };
 
@@ -177,3 +278,12 @@ const confirmDelete = (id) => {
     }
 };
 </script>
+
+<style scoped>
+.modal-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+}
+</style>
+

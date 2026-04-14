@@ -39,8 +39,12 @@ class BugAssignedNotification extends Notification
         return [
             'bug_id' => $this->bug->id,
             'subject' => $this->bug->subject,
-            'message' => 'New bug assigned: #' . $this->bug->id,
-            'action_url' => '/projects/bugs?id=' . $this->bug->id
+            'priority' => $this->bug->priority,
+            'severity' => $this->bug->severity,
+            'project_name' => $this->bug->project->name ?? 'N/A',
+            'type' => 'bug_assigned',
+            'message' => "Assigned #{$this->bug->id}: [{$this->bug->priority}] {$this->bug->subject}",
+            'url' => '/projects/bugs?tab=tracker&bug=' . $this->bug->id
         ];
     }
 }

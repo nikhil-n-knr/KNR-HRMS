@@ -19,12 +19,14 @@ class Client extends Model
         'portal_access',
         'contract_start',
         'contract_end',
+        'profile_data'
     ];
 
     protected $casts = [
         'portal_access' => 'boolean',
         'contract_start' => 'date',
         'contract_end' => 'date',
+        'profile_data' => 'array'
     ];
 
     public function projects()

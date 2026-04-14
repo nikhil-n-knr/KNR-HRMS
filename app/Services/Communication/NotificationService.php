@@ -50,6 +50,8 @@ class NotificationService
         
         // 1. Direct URL Override
         if (!empty($data['url'])) return $data['url']; 
+        if (!empty($data['action_url'])) return $data['action_url']; 
+        if (!empty($data['action'])) return $data['action']; 
         
         // 2. Type-based Strategy
         switch ($data['type'] ?? '') {
@@ -60,6 +62,13 @@ class NotificationService
                     return route('projects.board', $data['project_id']);
                 }
                 break;
+
+            case 'bug_assigned':
+            case 'bug_stage_changed':
+                if (!empty($data['bug_id'])) {
+                    return "/projects/bugs?tab=tracker&bug={$data['bug_id']}";
+                }
+                return '/projects/bugs';
                 
             case 'interview_cancelled':
                  // Handled via 'url' in payload, but fallback:

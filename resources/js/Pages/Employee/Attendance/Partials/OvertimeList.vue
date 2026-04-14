@@ -97,6 +97,14 @@ const cancelRequest = (id) => {
              <template #cell-date="{ item }">
                  <span class="text-sm font-medium text-gray-700">{{ formatDate(item.date) }}</span>
              </template>
+             <template #cell-hours="{ item }">
+                 <span class="text-sm font-bold text-emerald-700">
+                     {{ (item.minutes / 60).toFixed(1) }} hrs
+                 </span>
+             </template>
+             <template #cell-project="{ item }">
+                 <span class="text-sm text-gray-600">{{ item.project?.name || '-' }}</span>
+             </template>
              <template #cell-status="{ item }">
                 <span class="px-2 py-0.5 rounded text-xs font-bold" 
                     :class="{
@@ -109,8 +117,8 @@ const cancelRequest = (id) => {
                 </span>
              </template>
              <template #cell-approved_at="{ item }">
-                 <span v-if="item.approved_at" class="text-xs text-gray-500">
-                     {{ formatDate(item.approved_at) }}
+                 <span v-if="item.status !== 'Pending'" class="text-xs text-gray-500">
+                     {{ formatDate(item.updated_at) }}
                  </span>
                  <span v-else>-</span>
              </template>

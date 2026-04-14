@@ -187,11 +187,11 @@
 
             <!-- Right Column -->
             <div class="space-y-6">
-                 <!-- Project Details -->
+                <!-- Project Details -->
                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-6 relative">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-bold text-gray-900">Project Details</h3>
-                        <button @click="openEditModal" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold hover:underline px-2 py-1 bg-indigo-50 rounded transition-colors">Edit</button>
+                        <button v-can="'project-edit'" @click="openEditModal" class="text-xs text-indigo-600 hover:text-indigo-800 font-bold hover:underline px-2 py-1 bg-indigo-50 rounded transition-colors">Edit</button>
                     </div>
                     <div class="space-y-3 text-sm">
                         <div class="flex justify-between">
@@ -206,9 +206,75 @@
                             <span class="text-gray-500">Created</span>
                             <span class="text-gray-900">{{ new Date(project.created_at).toLocaleDateString() }}</span>
                         </div>
-                        <div v-if="project.description" class="pt-3 border-t border-gray-100 mt-3">
-                            <p class="text-gray-500 mb-1 text-xs uppercase font-bold tracking-wider">Description</p>
-                            <p class="text-gray-800 text-sm leading-relaxed">{{ project.description }}</p>
+                    </div>
+                </div>
+
+                <!-- Governance Control (Management Only) -->
+                <div v-can="'project-manage'" class="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-xl border border-indigo-900 shadow-2xl p-6 text-white relative overflow-hidden group">
+                    <div class="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-1000"></div>
+                    
+                    <div class="relative z-10 space-y-6">
+                        <div class="flex justify-between items-center">
+                            <h3 class="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">Governance & Stakeholder Integrity</h3>
+                            <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                        </div>
+
+                        <!-- Pending Sign-offs Indicator -->
+                        <div v-if="project.documents?.filter(d => d.category === 'requirement' && !d.is_signed).length > 0" class="p-4 bg-emerald-950/50 border border-emerald-500/20 rounded-2xl">
+                             <h4 class="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-3 flex items-center gap-2">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Pending Governance Vault ({{ project.documents?.filter(d => d.category === 'requirement' && !d.is_signed).length }})
+                             </h4>
+                             <div class="space-y-2">
+                                <div v-for="doc in project.documents?.filter(d => d.category === 'requirement' && !d.is_signed)" :key="doc.id" class="flex justify-between items-center p-2 bg-white/5 rounded-lg border border-white/5">
+                                    <span class="text-[10px] font-bold text-slate-300 truncate max-w-[150px]">{{ doc.name }}</span>
+                                    <span class="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Awaiting Sign-off</span>
+                                </div>
+                             </div>
+                        </div>
+
+                        <div class="space-y-4">
+                            <div>
+                                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Health Index Override</label>
+                                <input v-model="govForm.project_health_index" type="range" class="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500">
+                                <div class="flex justify-between text-[10px] font-bold mt-2">
+                                    <span :class="getHealthColorClass(govForm.project_health_index)">{{ govForm.project_health_index }}% Satisfaction</span>
+                                    <span class="text-slate-500">Node Logic: {{ project.project_health_index || 100 }}%</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Manual Progress</label>
+                                <div class="flex items-center gap-4">
+                                    <input v-model="govForm.manual_progress_percentage" type="number" min="0" max="100" class="w-20 bg-white/5 border-white/10 rounded-lg text-sm font-black focus:ring-1 focus:ring-emerald-500">
+                                    <span class="text-[10px] text-slate-500 uppercase font-black">Force Percent</span>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Status Overdrive</label>
+                                <select v-model="govForm.manual_status_label" class="w-full bg-white/5 border-white/10 rounded-lg text-xs font-bold focus:ring-1 focus:ring-emerald-500 py-2">
+                                    <option value="Initialising" class="bg-slate-900">Initialising</option>
+                                    <option value="In Development" class="bg-slate-900">In Development</option>
+                                    <option value="UAT Phase" class="bg-slate-900">UAT Phase</option>
+                                    <option value="Nearing Launch" class="bg-slate-900">Nearing Launch</option>
+                                    <option value="Stabilization" class="bg-slate-900">Stabilization</option>
+                                    <option value="Delayed (Internal)" class="bg-slate-900">Delayed (Critical Fix)</option>
+                                </select>
+                            </div>
+
+                            <textarea v-model="govForm.reason" placeholder="Oversight Reason (Internal Log)..." rows="2" class="w-full bg-white/5 border-white/10 rounded-lg text-[10px] font-bold placeholder:text-slate-600 focus:ring-1 focus:ring-emerald-500"></textarea>
+
+                            <button @click="submitGovernance" :disabled="govForm.processing" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50">
+                                Commit Governance Artifact
+                            </button>
+                        </div>
+                        
+                        <div class="pt-4 border-t border-white/5">
+                             <button @click="showHistory = !showHistory" class="text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-white transition-colors flex items-center gap-2">
+                                <i class="fas fa-history"></i>
+                                View Dealing Audit Log
+                             </button>
                         </div>
                     </div>
                 </div>
@@ -343,6 +409,31 @@ const editForm = useForm({
     status: '',
     client_id: ''
 });
+
+const govForm = useForm({
+    manual_progress_percentage: props.project.manual_progress_percentage || 0,
+    manual_status_label: props.project.manual_status_label || 'In Development',
+    project_health_index: props.project.project_health_index || 100,
+    reason: ''
+});
+
+const showHistory = ref(false);
+
+const getHealthColorClass = (val) => {
+    if (val >= 80) return 'text-emerald-400';
+    if (val >= 40) return 'text-amber-400';
+    return 'text-rose-400';
+};
+
+const submitGovernance = () => {
+    govForm.put(route('projects.portal.governance.update', props.project.id), {
+        preserveScroll: true,
+        onSuccess: () => {
+            govForm.reason = '';
+            showHistory.value = false;
+        }
+    });
+};
 
 const openEditModal = () => {
     editForm.id = props.project.id;

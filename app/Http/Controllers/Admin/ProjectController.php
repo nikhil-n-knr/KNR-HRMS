@@ -52,32 +52,48 @@ class ProjectController extends Controller
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'status' => 'required|in:Active,On Hold,Completed,Archived',
             'manager_id' => 'nullable|exists:users,id',
+            'is_locked' => 'nullable|boolean',
+            'plan_lock_recipients' => 'nullable|array',
+            'plan_lock_recipients.*' => 'exists:users,id'
         ]);
 
         $project = Project::create($validated);
 
         $this->logger->log('project', 'create', "Created project: {$project->name}", auth()->id());
 
-        return back()->with('success', 'Project created successfully.');
+        return back()->with('success', 'Project created successfully.')
+            ->setStatusCode(303);
     }
 
     public function update(Request $request, Project $project)
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'sometimes|string|max:255',
             'code' => 'nullable|string|max:50|unique:projects,code,' . $project->id,
             'description' => 'nullable|string',
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
-            'status' => 'required|in:Active,On Hold,Completed,Archived',
+            'status' => 'sometimes|in:Active,On Hold,Completed,Archived',
             'manager_id' => 'nullable|exists:users,id',
+            'is_locked' => 'nullable|boolean',
+            'plan_lock_recipients' => 'nullable|array',
+            'plan_lock_recipients.*' => 'exists:users,id'
         ]);
+        
+        // Handle is_locked explicitly if coming from axios/toggle
+        if ($request->has('is_locked'))  $project->is_locked = $request->is_locked;
+        if ($request->has('plan_lock_recipients')) $project->plan_lock_recipients = $request->plan_lock_recipients;
 
         $project->update($validated);
         
         $this->logger->log('project', 'update', "Updated project: {$project->name}", auth()->id());
 
-        return back()->with('success', 'Project updated successfully.');
+        if ($request->wantsJson()) {
+            return response()->json(['success' => true, 'project' => $project->fresh()]);
+        }
+
+        return back()->with('success', 'Project updated successfully.')
+            ->setStatusCode(303);
     }
 
     public function destroy(Project $project)

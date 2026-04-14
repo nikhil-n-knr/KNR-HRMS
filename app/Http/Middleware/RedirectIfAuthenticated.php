@@ -20,17 +20,18 @@ class RedirectIfAuthenticated
         $guards = empty($guards) ? [null] : $guards;
 
         foreach ($guards as $guard) {
-            if ($guard && !config("auth.guards.$guard")) {
-                continue;
-            }
-
-            if (Auth::guard($guard)->check()) {
-                if ($guard === 'client' || Auth::guard('client')->check()) {
+            $currentGuard = Auth::guard($guard);
+            
+            if ($currentGuard->check()) {
+                // Ensure we redirect to the correct home based on the guard specifically
+                if ($guard === 'client') {
                     return redirect()->route('portal.dashboard');
                 }
-                if ($guard === 'customer' || Auth::guard('customer')->check()) {
+                
+                if ($guard === 'customer') {
                     return redirect('/');
                 }
+
                 return redirect(RouteServiceProvider::HOME);
             }
         }

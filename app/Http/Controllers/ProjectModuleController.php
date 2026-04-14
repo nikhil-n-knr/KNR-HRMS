@@ -115,7 +115,30 @@ class ProjectModuleController extends Controller
     public function destroy(Project $project, ProjectModule $module)
     {
         $module->delete();
-        return back()->with('success', 'Module deleted.');
+        return back()->with('success', 'Module deleted.')->setStatusCode(303);
+    }
+
+    /**
+     * Bulk Delete modules.
+     */
+    public function bulkDestroy(Request $request, Project $project)
+    {
+        $validated = $request->validate([
+            'ids' => 'required|array',
+            'ids.*' => 'exists:project_modules,id'
+        ]);
+
+        $ids = $validated['ids'];
+
+        DB::transaction(function () use ($ids) {
+            ProjectModule::whereIn('id', $ids)->delete();
+        });
+
+        // Log the action
+        $logger = app(\App\Services\Infrastructure\LoggerService::class);
+        $logger->log('project_management', 'bulk_delete', "Bulk deleted " . count($ids) . " modules", ['project_id' => $project->id, 'ids' => $ids]);
+
+        return back()->with('success', count($ids) . ' modules deleted.')->setStatusCode(303);
     }
 
     /**

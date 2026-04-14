@@ -23,7 +23,8 @@ const props = defineProps({
     roles: Array,
     users: Array,
     biometric_devices: Array,
-    attendance_zones: Array
+    attendance_zones: Array,
+    employees: Array
 });
 
 // --- Dynamic Component Imports ---
@@ -92,8 +93,8 @@ const tabRouteMap = {
     'timesheets': 'admin.attendance.timesheets',
     'timesheet_view': 'admin.attendance.timesheets',
     'approvals': 'admin.attendance.regularization', 
-    'overtime': 'admin.attendance.overtime.index',
-    'wfh': 'admin.attendance.wfh.index',
+    'overtime': 'admin.attendance.overtime',
+    'wfh': 'admin.attendance.wfh',
     'my_holidays': 'admin.attendance.holidays',
     'floating_requests': 'admin.attendance.holidays',
     'holidays': 'admin.attendance.holidays',
@@ -105,7 +106,7 @@ const tabRouteMap = {
     'policies': 'admin.attendance.policies', 
     'attendance_policies': 'admin.attendance.policies.index',
     'gamification': 'admin.attendance.gamification',
-    'teams': 'admin.attendance.teams',
+    'teams': 'admin.attendance.teams.index',
     'workflows': 'admin.attendance.workflows',
     'biometric': 'admin.attendance.devices',
     'manual_entry': 'admin.attendance.manual',
@@ -114,8 +115,10 @@ const tabRouteMap = {
 const tabDataMap = {
     'policies': ['tab', 'policy', 'policies'],
     'approvals': ['tab', 'requests', 'locations', 'departments'],
-    'holidays': ['tab', 'holidays'],
-    'teams': ['tab', 'teams', 'users', 'roles'],
+    'holidays': ['tab', 'holidays', 'requests'],
+    'my_holidays': ['tab', 'holidays', 'requests'],
+    'floating_requests': ['tab', 'holidays', 'requests'],
+    'teams': ['tab', 'teams', 'users', 'roles', 'employees'],
     'workflows': ['tab', 'workflows', 'roles'],
     'biometric': ['tab', 'biometric_devices', 'attendance_zones'],
     'gamification': ['tab', 'rules', 'badges'],

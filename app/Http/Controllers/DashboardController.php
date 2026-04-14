@@ -212,14 +212,25 @@ class DashboardController extends Controller
     public function manager(Request $request)
     {
         $user = auth()->user();
-        // Use reporting_to field in employee
+        // 1. Resolve Team & Managed Employees
         $managedEmployeesQuery = Employee::where('reporting_to', $user->id);
-        $teamCount = $managedEmployeesQuery->count();
-        $teamEmployeeIds = $managedEmployeesQuery->pluck('id');
+        $directReportIds = $managedEmployeesQuery->pluck('id')->toArray();
+        
+        // Also include members of teams managed by this user
+        $managedTeamIds = $user->managedTeams->pluck('id');
+        $teamMemberUserIds = User::whereIn('team_id', $managedTeamIds)->pluck('id');
+        $teamEmployeeIds = Employee::whereIn('user_id', $teamMemberUserIds)->pluck('id')->toArray();
+        
+        // Unified list of all employees under this manager's span
+        $allStaffIds = array_unique(array_merge($directReportIds, $teamEmployeeIds));
+        $teamCount = count($allStaffIds);
 
-        // Sprint Completion calculation based on real Tasks
-        $totalTeamTasks = Task::whereIn('assignee_id', $user->managedTeams->pluck('id'))->count();
-        $completedTeamTasks = Task::whereIn('assignee_id', $user->managedTeams->pluck('id'))->where('status', 'completed')->count();
+        // 2. Sprint Completion & Task Calibration
+        // Refactor: Task assignees is a belongsToMany relationship, no assignee_id on project_tasks
+        $teamTasksQuery = Task::whereHas('assignees', fn($q) => $q->whereIn('employee_id', $allStaffIds));
+        
+        $totalTeamTasks = (clone $teamTasksQuery)->count();
+        $completedTeamTasks = (clone $teamTasksQuery)->where('status', 'completed')->count();
         $completionRate = $totalTeamTasks > 0 ? round(($completedTeamTasks / $totalTeamTasks) * 100) : 92;
 
         return Inertia::render('Dashboard/Manager', [
@@ -227,15 +238,15 @@ class DashboardController extends Controller
             'team_performance' => [
                 'velocity' => 84,
                 'sprint_completion' => $completionRate,
-                'active_incidents' => Task::whereIn('assignee_id', $user->managedTeams->pluck('id'))->where('priority', 'critical')->count(),
+                'active_incidents' => (clone $teamTasksQuery)->where('priority', 'critical')->count(),
                 'weekly_engagement' => [70, 75, 82, 60, 95, 88, 72]
             ],
             'teamAttendance' => AttendanceLog::where('date', today())
-                ->whereIn('employee_id', $teamEmployeeIds)
+                ->whereIn('employee_id', $allStaffIds)
                 ->selectRaw('status, count(*) as count')
                 ->groupBy('status')
                 ->get(),
-            'upcomingDeadlines' => Task::whereIn('assignee_id', $user->managedTeams->pluck('id'))
+            'upcomingDeadlines' => (clone $teamTasksQuery)
                 ->where('due_date', '>=', now())
                 ->orderBy('due_date')
                 ->take(3)
@@ -257,10 +268,12 @@ class DashboardController extends Controller
 
         $leaveBalance = 0;
         if ($employee) {
-            $leaveBalance = \App\Models\LeaveBalance::where('employee_id', $employee->id)->sum('balance');
+            $leaveBalance = \App\Models\LeaveBalance::where('employee_id', $employee->id)->sum(DB::raw('total_days - used_days'));
         }
 
-        $pendingTasksCount = $employee ? Task::where('assignee_id', $employee->id)->where('status', '!=', 'completed')->count() : 0;
+        $pendingTasksCount = $employee ? Task::whereHas('assignees', function($q) use ($employee) {
+            $q->where('employee_id', $employee->id);
+        })->where('status', '!=', 'completed')->count() : 0;
 
         return Inertia::render('Dashboard/Employee', [
             'user' => [

@@ -81,7 +81,7 @@ class WorkflowService
             }
 
             if ($shouldMove) {
-                $this->moveToNextStage($instance);
+                $this->moveToNextStage($instance, $stage);
             }
 
             // Fire event for notifications
@@ -119,9 +119,9 @@ class WorkflowService
     /**
      * Move workflow instance to next stage
      */
-    private function moveToNextStage(WorkflowInstance $instance): void
+    private function moveToNextStage(WorkflowInstance $instance, ?WorkflowStage $currentStage = null): void
     {
-        $currentStage = $instance->currentStage;
+        $currentStage = $currentStage ?? $instance->currentStage;
         $nextStage = $instance->workflow->stages()
             ->where('stage_order', '>', $currentStage->stage_order)
             ->orderBy('stage_order')
@@ -203,14 +203,16 @@ class WorkflowService
             $approvers = $approvers->reject(function ($approver) use ($instance) {
                  return $approver->id === $instance->initiator_id;
             });
-            
-            // Fallback: If no approvers remain (and it wasn't empty to start with), 
-            // we have a stalling workflow.
-            // For now, we will proceed, but effectively no approval will be created for this stage,
-            // which might be an issue. 
-            // Ideally, we should maybe flag this or assign to admin.
-            // But strict adherence means: no approval created -> logic might hang if we don't handle "no approvers".
-            // Let's assume there's at least one other approver or the workflow configuration handles it.
+        }
+
+        if ($approvers->isEmpty()) {
+            \Log::warning("No approvers found for stage {$stage->name} in workflow {$instance->workflow->name}. Auto-advancing.", [
+                'instance_id' => $instance->id,
+                'entity_id' => $instance->entity_id,
+                'entity_type' => $instance->entity_type
+            ]);
+            $this->moveToNextStage($instance, $stage);
+            return;
         }
 
         foreach ($approvers as $approver) {

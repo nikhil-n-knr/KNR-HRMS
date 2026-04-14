@@ -103,6 +103,7 @@
                            :class="getCellClass(res.id, day.dateStr)"
                            @click="handleCellClick(res, day)"
                            :title="getCellTooltip(res.id, day.dateStr)"
+                           :style="isExtendedCell(res.id, day.dateStr) ? { boxShadow: 'inset 0 0 12px rgba(239, 68, 68, 0.4)' } : {}"
                          >
                              <!-- Load Indicator -->
                               <span v-if="getLoad(res.id, day.dateStr) > 0 || getActual(res.id, day.dateStr) > 0" class="text-sm font-bold relative z-10 flex flex-col items-center leading-none text-center" :class="getLoadTextClass(res.id, day.dateStr)">
@@ -626,6 +627,25 @@ const getLoadTextClass = (userId, dateStr) => {
     return 'text-emerald-900';
 };
 
+const isExtendedCell = (userId, dateStr) => {
+    let extended = false;
+    props.data.forEach(t => {
+        if (t.type !== 'project' && t.assignments) {
+             const userAssignments = t.assignments.filter(a => a.id === userId);
+             userAssignments.forEach(assignment => {
+                 const start = assignment.start_date || t.start_date;
+                 const end = assignment.end_date || t.due_date;
+                 if (dateStr >= start && dateStr <= end) {
+                     if (t.baseline_due_date && t.due_date && dayjs(t.due_date).isAfter(dayjs(t.baseline_due_date))) {
+                         extended = true;
+                     }
+                 }
+             });
+        }
+    });
+    return extended;
+};
+
 const getCellTooltip = (userId, dateStr) => {
     const load = getLoad(userId, dateStr); // Helper to check if forced
     const holiday = isGlobalHoliday(dateStr);
@@ -854,6 +874,9 @@ const deleteAssignment = async () => {
     }
 };
 
+// JSON headers for axios
+const jsonHeaders = { headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' } };
+
 const submitAssignment = async () => {
     form.clearErrors();
 
@@ -892,7 +915,7 @@ const submitAssignment = async () => {
             assignment_id: form.assignment_id,
             update_task_dates: updateTask,
             force_allocation: form.force_allocation
-        });
+        }, jsonHeaders);
 
         toast.success(`Saved!`);
         showAssignmentModal.value = false;

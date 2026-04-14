@@ -30,8 +30,10 @@ class ProfileController extends Controller
             'latestSalary.structure',
         ])->where('uuid', $uuid)->firstOrFail();
 
-        if (!$viewerEmployee || $viewerEmployee->uuid !== $employee->uuid) {
-            abort(403, 'Unauthorized');
+        $isSuperAdmin = $user->hasRole('Super Admin');
+
+        if (!$isSuperAdmin && (!$viewerEmployee || $viewerEmployee->uuid !== $employee->uuid)) {
+            abort(403, 'Unauthorized access to this operative sanctuary.');
         }
 
         // Fetch Payslip History (Last 12 published)
@@ -79,13 +81,15 @@ class ProfileController extends Controller
     /**
      * Display the personal hub for the authenticated employee.
      */
-    public function hub(Request $request): Response
+    public function hub(Request $request): Response|\Illuminate\Http\RedirectResponse
     {
         $user = $request->user();
         $employee = $user->employee;
 
         if (!$employee) {
-            abort(404, 'Employee record not found');
+            // If it's a mobile request, we stay in mobile land. But this is a web route.
+            // For web, if no employee record, redirect to dashboard.
+            return redirect()->route('dashboard')->with('error', 'Employee record not found. Accessing standard dashboard.');
         }
 
         return Inertia::render('Employee/PersonalHub', [

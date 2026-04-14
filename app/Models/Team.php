@@ -9,7 +9,7 @@ class Team extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['name', 'manager_id', 'parent_team_id'];
+    protected $fillable = ['name', 'manager_id', 'parent_team_id', 'role_id'];
 
     // Hierarchy
     public function parent()
@@ -25,6 +25,11 @@ class Team extends Model
     public function manager()
     {
         return $this->belongsTo(User::class, 'manager_id');
+    }
+
+    public function role()
+    {
+        return $this->belongsTo(Role::class);
     }
 
     public function members()

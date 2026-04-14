@@ -11,6 +11,16 @@
                 </div>
                 <div class="flex flex-col sm:flex-row w-full md:w-auto gap-3">
                     <button 
+                        v-if="selectedIds.length > 0"
+                        @click="confirmBulkDelete"
+                        class="px-5 py-2.5 bg-red-50 text-red-600 hover:bg-red-100 border border-red-100 rounded-xl text-sm font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        Delete ({{ selectedIds.length }})
+                    </button>
+                    <button 
                         @click="showBulkModal = true"
                         class="px-5 py-2.5 bg-white text-indigo-600 hover:bg-indigo-50 border border-indigo-100 rounded-xl text-sm font-black uppercase tracking-widest shadow-sm transition-all active:scale-95 flex items-center justify-center gap-2"
                     >
@@ -69,10 +79,30 @@
                 </div>
 
                 <div v-else class="max-w-4xl mx-auto space-y-4">
+                    <!-- Master Select All -->
+                    <div class="flex items-center px-6 py-2 bg-white/50 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-sm mb-6">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <div class="relative flex items-center">
+                                <input 
+                                    type="checkbox" 
+                                    :checked="isAllSelected"
+                                    :indeterminate="isSomeSelected"
+                                    @change="toggleSelectAll"
+                                    class="w-5 h-5 text-indigo-600 border-gray-300 rounded-lg focus:ring-indigo-500 transition-all cursor-pointer"
+                                />
+                            </div>
+                            <span class="text-sm font-black text-gray-700 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">
+                                {{ isAllSelected ? 'Deselect All' : 'Select All Architecture' }}
+                            </span>
+                        </label>
+                    </div>
+
                     <ModuleTreeItem 
                         v-for="module in modules" 
                         :key="module.id" 
                         :module="module"
+                        :selected-ids="selectedIds"
+                        @toggle-select="handleToggleSelect"
                         @add-submodule="openCreateModal"
                         @edit="openEditModal"
                         @delete="confirmDelete"
@@ -131,15 +161,22 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                     </svg>
                 </div>
-                <h3 class="text-lg font-bold text-gray-900">Delete Module?</h3>
+                <h3 class="text-lg font-bold text-gray-900">
+                    {{ isBulkDelete ? `Delete ${selectedIds.length} Modules?` : 'Delete Module?' }}
+                </h3>
                 <p class="text-gray-500 mt-2 text-sm">
-                    Are you sure you want to delete <strong>{{ moduleToDelete?.name }}</strong>? 
-                    <br>
-                    <span class="text-red-500 font-bold" v-if="moduleToDelete?.children?.length > 0">Warning: All sub-modules will also be deleted.</span>
+                    <span v-if="isBulkDelete">
+                        Are you sure you want to delete the selected modules? This action cannot be undone.
+                    </span>
+                    <span v-else>
+                        Are you sure you want to delete <strong>{{ moduleToDelete?.name }}</strong>? 
+                        <br>
+                        <span class="text-red-500 font-bold" v-if="moduleToDelete?.children?.length > 0">Warning: All sub-modules will also be deleted.</span>
+                    </span>
                 </p>
                 <div class="mt-6 flex justify-center gap-3">
                     <button @click="showDeleteModal = false" class="px-4 py-2 border border-gray-200 rounded-lg text-gray-600 hover:bg-gray-50 font-medium">Cancel</button>
-                    <button @click="deleteModule" class="px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700">Yes, Delete</button>
+                    <button @click="isBulkDelete ? bulkDelete() : deleteModule()" class="px-4 py-2 bg-red-600 text-white rounded-lg font-bold hover:bg-red-700">Yes, Delete</button>
                 </div>
             </div>
          </Modal>
@@ -155,7 +192,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, computed } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import axios from 'axios';
 import ProjectLayout from '@/Layouts/ProjectLayout.vue';
@@ -178,6 +215,32 @@ const showBulkModal = ref(false);
 const isEditing = ref(false);
 const parentModule = ref(null);
 const moduleToDelete = ref(null);
+const selectedIds = ref([]);
+const isBulkDelete = ref(false);
+
+// Selection Helpers
+const getAllIds = (items) => {
+    let ids = [];
+    items.forEach(item => {
+        ids.push(item.id);
+        if (item.children && item.children.length > 0) {
+            ids = [...ids, ...getAllIds(item.children)];
+        }
+    });
+    return ids;
+};
+
+const allModuleIds = computed(() => getAllIds(modules.value));
+const isAllSelected = computed(() => allModuleIds.value.length > 0 && selectedIds.value.length === allModuleIds.value.length);
+const isSomeSelected = computed(() => selectedIds.value.length > 0 && selectedIds.value.length < allModuleIds.value.length);
+
+const toggleSelectAll = () => {
+    if (isAllSelected.value) {
+        selectedIds.value = [];
+    } else {
+        selectedIds.value = [...allModuleIds.value];
+    }
+};
 
 const form = useForm({
     id: null,
@@ -242,7 +305,22 @@ const submitForm = () => {
 };
 
 const confirmDelete = (module) => {
+    isBulkDelete.value = false;
     moduleToDelete.value = module;
+    showDeleteModal.value = true;
+};
+
+const handleToggleSelect = (id) => {
+    const index = selectedIds.value.indexOf(id);
+    if (index > -1) {
+        selectedIds.value.splice(index, 1);
+    } else {
+        selectedIds.value.push(id);
+    }
+};
+
+const confirmBulkDelete = () => {
+    isBulkDelete.value = true;
     showDeleteModal.value = true;
 };
 
@@ -252,6 +330,18 @@ const deleteModule = () => {
     router.delete(route('projects.modules.destroy', { project: props.project.id, module: moduleToDelete.value.id }), {
         onSuccess: () => {
             showDeleteModal.value = false;
+            fetchModules();
+        }
+    });
+};
+
+const bulkDelete = () => {
+    router.post(route('projects.modules.bulk-destroy', { project: props.project.id }), { 
+        ids: selectedIds.value 
+    }, {
+        onSuccess: () => {
+            showDeleteModal.value = false;
+            selectedIds.value = []; // Clear selection
             fetchModules();
         }
     });

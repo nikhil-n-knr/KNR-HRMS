@@ -16,34 +16,18 @@
                     </div>
                     
                     <p class="text-sm text-gray-600 leading-relaxed">
-                        <span v-if="activity.type === 'comment'">
-                            Commented
-                        </span>
+                        <span v-if="activity.type === 'comment'">Commented</span>
                         <span v-else-if="activity.type === 'move' || activity.type === 'moved'">
                             Moved from <span class="font-bold text-gray-800">{{ activity.details?.from_stage_name || activity.details?.from }}</span> to <span class="font-bold text-gray-800">{{ activity.details?.to_stage_name || activity.details?.to }}</span>
                         </span>
-                        <span v-else-if="activity.type === 'create'">
-                            Created this task
-                        </span>
-                         <span v-else-if="activity.type === 'update'">
-                            Updated task details
-                        </span>
-                        <span v-else-if="activity.type === 'pr_linked'">
-                            Linked PR: <span class="font-bold text-indigo-600">{{ activity.details?.title }}</span>
-                        </span>
-                        <span v-else-if="activity.type === 'pr_status_updated'">
-                            {{ activity.details?.new_status.toUpperCase() }} PR: <span class="font-bold text-gray-800">{{ activity.details?.pr_title }}</span>
-                        </span>
-                        <span v-else-if="activity.type === 'checklist_add'">
-                            Added checklist: <span class="italic">"{{ activity.details?.content }}"</span>
-                        </span>
-                        <span v-else>
-                            {{ activity.type.replace('_', ' ').toUpperCase() }}
-                        </span>
+                        <span v-else-if="activity.type === 'create'">Created this task</span>
+                        <span v-else-if="activity.type === 'update'">Updated: <span class="font-medium text-gray-700">{{ formatChanges(activity.details) }}</span></span>
+                        <span v-else-if="activity.type === 'pr_linked'">Linked PR: <span class="font-bold text-indigo-600">{{ activity.details?.title }}</span></span>
+                        <span v-else-if="activity.type === 'pr_status_updated'">{{ activity.details?.new_status.toUpperCase() }} PR: <span class="font-bold text-gray-800">{{ activity.details?.pr_title }}</span></span>
+                        <span v-else-if="activity.type === 'checklist_add'">Added checklist: <span class="italic">"{{ activity.details?.content }}"</span></span>
+                         <span v-else-if="activity.type === 'checklist_toggle'">Toggled checklist item</span>
+                        <span v-else>{{ (activity.type || '').replace('_', ' ').toUpperCase() }}</span>
                     </p>
-                    <div v-if="activity.details && !['move', 'moved', 'pr_linked', 'pr_status_updated', 'checklist_add'].includes(activity.type)" class="mt-2 p-2 bg-gray-50 border border-gray-100 rounded text-[10px] font-mono text-gray-400">
-                         {{ JSON.stringify(activity.details) }}
-                    </div>
                 </div>
             </div>
         </div>
@@ -62,5 +46,17 @@ const props = defineProps({
 
 const formatDate = (date) => {
     return dayjs(date).fromNow();
+};
+
+const formatChanges = (details) => {
+    if (!details) return 'details';
+    if (details.fields) return details.fields.join(', ');
+    if (details.action) return details.action;
+    
+    // Fallback simple parsing for common fields if details is just key-value
+    const keys = Object.keys(details).filter(k => !['project_id', 'task_id', 'user_id', 'id'].includes(k));
+    if (keys.length > 0) return keys.join(', ');
+    
+    return 'details updated';
 };
 </script>

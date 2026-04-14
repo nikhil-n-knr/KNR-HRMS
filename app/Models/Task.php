@@ -13,6 +13,17 @@ class Task extends Model
 
     protected $table = 'project_tasks';
 
+    protected static function booted()
+    {
+        static::updating(function ($task) {
+            // Auto-capture baseline when locked for the first time
+            if ($task->isDirty('is_locked') && $task->is_locked && is_null($task->baseline_start_date)) {
+                $task->baseline_start_date = $task->start_date;
+                $task->baseline_due_date = $task->due_date;
+            }
+        });
+    }
+
     protected $fillable = [
         'project_id',
         'module_id',
@@ -34,12 +45,15 @@ class Task extends Model
         'qa_notes',       // New
         'deployed_to',    // New
         
+        'is_backlog',
         'is_billable',
         'invoice_id',
         'billed_at',
         'version',
         'due_date',
-        'scrum_points'
+        'scrum_points',
+        'is_locked',
+        'total_efforts'
     ];
 
     public function sprint()
@@ -54,10 +68,15 @@ class Task extends Model
 
     protected $casts = [
         'billable' => 'boolean',
+        'is_backlog' => 'boolean',
         'estimated_hours' => 'decimal:2',
         'actual_hours' => 'decimal:2',
-        'start_date' => 'date',   // Auto-cast to Carbon
+        'start_date' => 'date',
         'due_date' => 'date',
+        'baseline_start_date' => 'date',
+        'baseline_due_date' => 'date',
+        'is_locked' => 'boolean',
+        'total_efforts' => 'decimal:2',
     ];
 
     public function project()

@@ -13,14 +13,20 @@ class WorkflowArchitectController extends Controller
 {
     public function index()
     {
-        // Assuming we are editing the default 'Bug Tracking' workflow for now.
-        // Or fetch all workflows.
+        // Prioritize by BugTicket entity Type (Phase 11 Standard)
         $workflow = Workflow::with(['stages' => function($q) {
             $q->orderBy('stage_order');
-        }])->where('name', 'Bug Tracking')->first();
+        }])->where('entity_type', \App\Models\BugTicket::class)->first();
 
         if (!$workflow) {
-            // Fallback or create default if not exists
+            // Fallback by Name
+            $workflow = Workflow::with(['stages' => function($q) {
+                $q->orderBy('stage_order');
+            }])->where('name', 'like', '%Bug Tracking%')->first();
+        }
+
+        if (!$workflow) {
+            // Ultimate Fallback
             $workflow = Workflow::with(['stages' => function($q) {
                 $q->orderBy('stage_order');
             }])->first();

@@ -39,8 +39,12 @@ class BugStageChangedNotification extends Notification
         return [
             'bug_id' => $this->bug->id,
             'subject' => $this->bug->subject,
-            'message' => "Bug #{$this->bug->id} moved to {$this->newStage}",
-            'action_url' => '/projects/bugs?id=' . $this->bug->id
+            'old_stage' => $this->oldStage,
+            'new_stage' => $this->newStage,
+            'priority' => $this->bug->priority,
+            'type' => 'bug_stage_changed',
+            'message' => "Bug #{$this->bug->id}: Moved to {$this->newStage} [{$this->bug->subject}]",
+            'url' => '/projects/bugs?tab=tracker&bug=' . $this->bug->id
         ];
     }
 }

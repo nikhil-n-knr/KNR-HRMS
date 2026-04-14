@@ -22,7 +22,7 @@
                                 <span class="h-8 w-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-xs">
                                      {{ item.text.charAt(0) }}
                                 </span>
-                                <div>
+                                <div @click="emit('task-click', item)" class="cursor-pointer group/task">
                                     <div class="text-sm font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">{{ item.text }}</div>
                                     <div class="text-xs text-gray-500">{{ item.project_name || 'No Project' }}</div>
                                 </div>
@@ -77,6 +77,7 @@ import { computed } from 'vue';
 const props = defineProps({
     data: { type: Array, default: () => [] }
 });
+const emit = defineEmits(['task-click']);
 
 const tasks = computed(() => {
     return props.data.filter(i => i.type !== 'project'); // Filter out project headers

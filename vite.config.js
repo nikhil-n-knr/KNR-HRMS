@@ -10,6 +10,13 @@ export default defineConfig({
         }),
         vue(),
     ],
+    server: {
+        host: '0.0.0.0', // Listen on all interfaces
+        hmr: {
+            host: 'localhost', // Or 10.0.2.2 if you want to be specific, but localhost usually works if proxied correctly
+        },
+        cors: true,
+    },
     resolve: {
         alias: {
             '@': '/resources/js',

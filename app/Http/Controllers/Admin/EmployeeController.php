@@ -430,7 +430,7 @@ class EmployeeController extends Controller
             'ifsc_code' => 'required|string|max:20',
             'account_holder_name' => 'required|string|max:255',
             'bic_code' => 'nullable|string|max:20',
-            'account_type' => 'nullable|string|in:savings,current,other',
+            'account_type' => 'nullable|string|in:savings,current,salary,other',
         ]);
 
         // Assumes updating the PRIMARY bank account for simplicity in this restore phase

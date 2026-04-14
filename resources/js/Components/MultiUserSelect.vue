@@ -31,14 +31,23 @@ const filteredItems = computed(() =>
 const selectedItems = ref([]);
 
 // Sync from parent (IDs -> Objects)
-watch(() => props.modelValue, (newVal) => {
-    if (!newVal) {
+const syncSelected = (val) => {
+    if (!val) {
         selectedItems.value = [];
         return;
     }
-    // Map IDs to Items
-    selectedItems.value = props.items.filter(i => newVal.includes(i[props.valueKey]));
+    // Map IDs to Items (Coerce to String for safe comparison if needed, or Number)
+    selectedItems.value = props.items.filter(i => val.map(v => Number(v)).includes(Number(i[props.valueKey])));
+};
+
+watch(() => props.modelValue, (newVal) => {
+    syncSelected(newVal);
 }, { immediate: true, deep: true });
+
+// ALSO watch items: if items load late, we need to re-sync
+watch(() => props.items, () => {
+    syncSelected(props.modelValue);
+}, { deep: true });
 
 // Sync to parent (Objects -> IDs)
 watch(selectedItems, (newVal) => {

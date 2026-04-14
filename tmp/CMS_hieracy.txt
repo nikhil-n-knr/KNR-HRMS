@@ -1,0 +1,38 @@
+Dashboard
+	Content Management
+		Hero Banners
+		Services
+		Portfolio
+		Pages
+			About Page
+			Legal Pages
+		Gallery
+		Blog
+			Blog Posts
+	Team & Social Proof
+		Team Members
+		Testimonials
+		Clients / Partners
+		Stats & Counters
+	Events
+	Leads & HR
+		Inquiries
+			20
+		Job Listings
+		Career Benefits
+		Applications
+			4
+		Newsletter
+			34
+	Other
+		Chatbot
+		FAQs
+		Technologies
+		Media Library
+	System
+		Settings
+		User Rights
+		Admin Users
+		Activity Logs
+		Website Visits
+	View Website

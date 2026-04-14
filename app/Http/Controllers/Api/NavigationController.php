@@ -29,6 +29,7 @@ class NavigationController extends Controller
             'hr_payroll.disbursement' => ['Super Admin', 'Admin', 'HR', 'Finance'],
             'hr_payroll.tax_config' => ['Super Admin', 'Admin', 'HR'],
             'hr_payroll.tax_declarations' => ['Super Admin', 'Admin', 'HR'],
+            'hr_payroll.employee_360'   => ['Super Admin', 'Admin', 'HR Manager', 'Manager'],
             
             // Project Management
             'project_management.clients.view' => ['Super Admin', 'Admin', 'Manager'],
@@ -45,9 +46,9 @@ class NavigationController extends Controller
             'devops_link' => ['Super Admin', 'Admin', 'Manager'],
             
             // Security
-            'security_identity' => ['Super Admin', 'Admin', 'Security Manager'],
-            'cms' => ['Super Admin', 'Admin', 'Manager'],
-            'advanced_lms' => ['Super Admin', 'Admin', 'Manager'],
+            'security_identity' => ['Super Admin', 'Security Manager'],
+            'cms' => ['Super Admin'],
+            'advanced_lms' => ['Super Admin'],
         ];
 
         // Fetch Modules from DB with Submodules
@@ -90,10 +91,7 @@ class NavigationController extends Controller
                         }
                     }
                     
-                    // Structural module with no submodules fallback
-                    if (!$canViewModule && $mod->subModules->isEmpty() && !empty($mod->route)) {
-                        $canViewModule = true;
-                    }
+                    // Removed loose fallback to prevent unauthorized visibility
                 }
             }
 

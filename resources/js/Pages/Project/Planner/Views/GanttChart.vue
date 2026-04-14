@@ -82,6 +82,7 @@
                              <span class="text-sm text-gray-600 truncate flex-1 cursor-pointer hover:text-indigo-600 hover:underline" @click="emit('task-click', row)">
                                  {{ row.text }}
                                  <span v-if="row.stage_name" class="ml-2 text-[10px] text-gray-400 bg-gray-100 px-1 rounded uppercase tracking-widest font-black">{{ row.stage_name }}</span>
+                                 <svg v-if="row.is_locked" class="w-3 h-3 text-amber-500 inline ml-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
                              </span>
                              
                              <!-- Assignee Avatars -->
@@ -158,15 +159,32 @@
                  <!-- Task Bars -->
                  <div class="relative w-full h-full">
                      <template v-for="row in visibleRows" :key="row.id">
+                          <!-- Baseline Ghost Bar (Original Plan) -->
+                          <div 
+                            v-if="row.type !== 'project' && row.baseline_start_date"
+                            class="absolute h-1 bg-gray-400/30 rounded-full border border-dashed border-gray-400/50 pointer-events-none"
+                            :style="{ 
+                                top: (row.top + rowHeight - 8) + 'px', 
+                                left: getX(row.baseline_start_date) + 'px', 
+                                width: getWidth(dayjs(row.baseline_due_date).diff(dayjs(row.baseline_start_date), 'day') + 1) + 'px' 
+                            }"
+                          ></div>
+
                          <div 
                            v-if="row.type !== 'project' && row.start_date"
-                           class="absolute h-7 rounded shadow-sm border border-black/5 cursor-move flex items-center px-1 text-xs text-white font-medium select-none overflow-hidden hover:shadow-lg transition-shadow group z-10"
-                           :class="getBarColor(row)"
-                           :style="{ top: (row.top + 2) + 'px', left: getX(row.start_date) + 'px', width: getWidth(row.duration) + 'px' }"
+                           class="absolute h-7 rounded shadow-sm border border-black/5 cursor-move flex items-center px-1 text-xs text-white font-medium select-none overflow-hidden hover:shadow-lg transition-all group z-10"
+                           :class="[getBarColor(row), row.is_locked ? 'ring-2 ring-amber-400/50' : '']"
+                           :style="{ 
+                                top: (row.top + 2) + 'px', 
+                                left: getX(row.start_date) + 'px', 
+                                width: getWidth(row.duration) + 'px',
+                                boxShadow: isExtended(row) ? '0 0 15px rgba(239, 68, 68, 0.4)' : ''
+                            }"
                            draggable="true"
                            @dragstart="onBarDragStart($event, row)"
                            @click.stop="emit('task-click', row)"
                          >
+                            <svg v-if="row.is_locked" class="w-3 h-3 mr-1 text-white/80 shrink-0" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd" /></svg>
                             <div class="flex items-center gap-2 w-full transition-all duration-300" :style="{ paddingLeft: getLabelOffset(row) + 'px' }">
                                 <span class="bg-black/20 px-1.5 rounded text-sm font-mono whitespace-nowrap flex items-center gap-1" title="Remaining / Total Effort">
                                     <span class="font-bold text-white">{{ getRemainingDays(row.start_date, row.duration) }}d</span>
@@ -521,22 +539,24 @@ const onGridDrop = async (evt) => {
     
     if (dayIndex < 0) return; 
 
+    const jsonHeaders = { headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' } };
+
     try {
         if (source === 'backlog') {
-             await axios.post(route('planner.move', taskId), {
+             await axios.post(route('planner.move', { id: taskId }), {
                 start_date: newDate.format('YYYY-MM-DD'),
                 duration: 5 
-            });
+            }, jsonHeaders);
             emit('task-update', { id: parseInt(taskId), start_date: newDate.format('YYYY-MM-DD'), duration: 5 });
             toast.success('Task scheduled');
         } else {
              const task = props.data.find(t => t.id == taskId);
              const duration = task ? task.duration : 1;
              
-             await axios.post(route('planner.move', taskId), {
+             await axios.post(route('planner.move', { id: taskId }), {
                 start_date: newDate.format('YYYY-MM-DD'),
                 duration: duration
-            });
+            }, jsonHeaders);
             emit('task-update', { id: parseInt(taskId), start_date: newDate.format('YYYY-MM-DD') });
             toast.success('Task moved');
         }
@@ -557,9 +577,15 @@ const getWidth = (days) => (days || 1) * colWidth;
 
 const getBarColor = (row) => {
     if (row.progress === 1) return 'bg-emerald-500 from-emerald-500 to-emerald-600 bg-gradient-to-br';
-    if (row.status === 'Done') return 'bg-emerald-500'; // Override for Done tasks
+    if (row.status === 'Done') return 'bg-emerald-500'; 
+    if (isExtended(row)) return 'bg-red-500 from-red-600 to-rose-700 bg-gradient-to-br ring-1 ring-red-400';
     if (dayjs(row.start_date).add(row.duration, 'day').isBefore(dayjs())) return 'bg-red-500 from-red-500 to-red-600 bg-gradient-to-br'; 
     return 'bg-indigo-500 from-indigo-500 to-violet-600 bg-gradient-to-br';
+};
+
+const isExtended = (row) => {
+    if (!row.baseline_due_date || !row.due_date) return false;
+    return dayjs(row.due_date).isAfter(dayjs(row.baseline_due_date));
 };
 
 const getRealityColor = (row) => {

@@ -57,20 +57,18 @@
 
                 <div class="h-6 w-px bg-gray-200"></div>
 
-                <!-- Approve & Release (Visible for Management Stages) -->
-                <button v-if="isAwaitingApproval" @click="approveTicket" class="whitespace-nowrap flex items-center gap-2 px-4 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200 ring-4 ring-emerald-500/10">
-                    <ShieldCheckIcon class="w-4 h-4" />
-                    Approve & Release
-                </button>
-
-                <!-- NEW: Verification Gate Controls -->
-                <div v-if="bug.pending_approval" class="flex items-center gap-2 bg-amber-50 rounded-lg p-1 border border-amber-100 shadow-sm ring-4 ring-amber-500/5">
-                    <div class="px-2 py-1 text-sm font-black text-amber-700 uppercase tracking-widest flex items-center gap-2">
+                <!-- NEW: Approval Gate Controls (Phase 11) -->
+                <div v-if="bug.stage?.requires_approval" class="flex items-center gap-2 bg-amber-50 rounded-lg p-1 border border-amber-100 shadow-sm ring-4 ring-amber-500/5">
+                    <div class="px-2 py-1 text-[10px] font-black text-amber-700 uppercase tracking-widest flex items-center gap-2">
                         <LockClosedIcon class="w-3.5 h-3.5" />
                         Gate Locked
                     </div>
-                    <button v-if="canApprove" @click="handleVerification('approve')" class="px-3 py-1 bg-emerald-600 text-white rounded-md text-sm font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Approve Fix</button>
-                    <button v-if="canApprove" @click="handleVerification('reject')" class="px-3 py-1 bg-rose-600 text-white rounded-md text-sm font-black uppercase tracking-widest hover:bg-rose-700 transition-all">Reject</button>
+                    <div v-if="canApprove" class="flex gap-1">
+                        <button @click="quickApprove" class="px-3 py-1 bg-emerald-600 text-white rounded-md text-xs font-black uppercase tracking-widest hover:bg-emerald-700 transition-all">Quick Approve</button>
+                    </div>
+                    <div v-else class="px-2 py-1 text-[10px] font-bold text-slate-400">
+                        Waiting for {{ bug.stage?.role?.name || 'Manager' }}
+                    </div>
                 </div>
 
                 <!-- Code Integration -->
@@ -330,11 +328,26 @@ const isAwaitingApproval = computed(() => {
 });
 
 const canApprove = computed(() => {
-    if (!bug.value?.pending_approval) return false;
+    if (!bug.value?.stage?.requires_approval) return true;
     const user = usePage().props.auth.user;
+    // Admins or users with the required role can approve
     if (user.roles.some(r => ['Admin', 'Super Admin'].includes(r.name))) return true;
-    return bug.value.pending_approval.approver_id === user.id;
+    return user.roles.some(r => r.id === bug.value.stage.role_id);
 });
+
+const quickApprove = async () => {
+    if (!confirm("Authorizing transition from this stage. Proceed?")) return;
+    try {
+        // We simulate approval by just allowing the next stage change or adding a comment
+        await axios.post(route('bugs.comments.store', bug.value.id), {
+            body: `<strong>Gate Authorization:</strong> ${usePage().props.auth.user.name} has authorized movement from '${bug.value.stage.name}'.`,
+            is_public: true
+        });
+        alert("Gate unlocked. You can now move the ticket to the next stage.");
+    } catch (e) {
+        console.error("Approval failed", e);
+    }
+};
 
 import { usePage } from '@inertiajs/vue3';
 

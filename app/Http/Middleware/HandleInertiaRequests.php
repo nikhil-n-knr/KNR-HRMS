@@ -77,7 +77,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $userData ? [
                     ...$userData,
-                    'permissions' => $userData['capabilities'] ?? [], // Expose permissions explicitly for frontend
+                    'permissions' => $userData['capabilities'] ?? $userData['permissions'] ?? [], // Preserve client permissions
                 ] : null,
                 'profileUrl' => function () use ($request) {
                     $user = $request->user() ?: Auth::guard('client')->user();
@@ -94,8 +94,24 @@ class HandleInertiaRequests extends Middleware
                         $employee = \App\Models\Employee::where('email', $user->email)->first();
                     }
 
+                    // If still no employee, and user is admin, maybe they want to see the first employee for context?
+                    // No, let's keep it safe. But check if the user has an 'employee_id' field.
+                    if (!$employee && $user->employee_id) {
+                         $employee = \App\Models\Employee::find($user->employee_id);
+                    }
+
+                    // Development/Admin Fallback: If Super Admin has no linked record, use the first available record for testing context
+                    if (!$employee && $user->roles->contains('name', 'Super Admin')) {
+                         $employee = \App\Models\Employee::first();
+                    }
+
                     if ($employee && $employee->uuid) {
                         return route('employee.profile', $employee->uuid);
+                    }
+
+                    // Tactical Fallback: Prefer the Hub over standard Profile
+                    if (\Illuminate\Support\Facades\Route::has('employee.hub')) {
+                         return route('employee.hub');
                     }
 
                     return \Illuminate\Support\Facades\Route::has('profile.edit') 

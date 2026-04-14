@@ -5,14 +5,24 @@
       <select
         v-bind="$attrs"
         :value="modelValue"
-        @input="$emit('update:modelValue', $event.target.value)"
+        @change="$emit('update:modelValue', $event.target.value)"
         class="block w-full rounded-xl shadow-sm text-sm py-2.5 pl-4 pr-10 appearance-none transition-colors bg-white/50 backdrop-blur-sm hover:bg-white"
         :class="[
           colorClasses,
           inputClass
         ]"
       >
-         <slot></slot>
+        <option v-if="placeholder" value="">{{ placeholder }}</option>
+        <slot v-if="hasDefaultSlot"></slot>
+        <template v-else>
+          <option
+            v-for="option in normalizedOptions"
+            :key="option.value"
+            :value="option.value"
+          >
+            {{ option.label }}
+          </option>
+        </template>
       </select>
       
       <!-- Custom Chevron (Optional, relying on browser default or appearance-none + bg-icon usually best) -->
@@ -33,7 +43,7 @@
 </template>
 
 <script setup>
-import { computed } from 'vue';
+import { computed, useSlots } from 'vue';
 
 const props = defineProps({
   modelValue: {
@@ -52,6 +62,22 @@ const props = defineProps({
     type: String,
     default: ''
   },
+  options: {
+    type: Array,
+    default: () => []
+  },
+  placeholder: {
+    type: String,
+    default: ''
+  },
+  valueField: {
+    type: String,
+    default: 'value'
+  },
+  labelField: {
+    type: String,
+    default: 'label'
+  },
   color: {
     type: String,
     default: 'emerald',
@@ -60,6 +86,27 @@ const props = defineProps({
 });
 
 defineEmits(['update:modelValue']);
+
+const slots = useSlots();
+
+const hasDefaultSlot = computed(() => Boolean(slots.default));
+
+const normalizedOptions = computed(() => {
+  return (props.options || []).map((option) => {
+    if (option === null || option === undefined) {
+      return { value: '', label: '' };
+    }
+
+    if (typeof option !== 'object') {
+      return { value: option, label: String(option) };
+    }
+
+    const value = option[props.valueField] ?? option.value ?? option.id ?? option.key ?? '';
+    const label = option[props.labelField] ?? option.label ?? option.name ?? option.title ?? String(value);
+
+    return { value, label };
+  });
+});
 
 const colorClasses = computed(() => {
     if (props.error) return 'border-red-300 text-red-900 focus:ring-red-500 focus:border-red-500';

@@ -376,11 +376,17 @@ const authStore = useAuthStore();
 const toastStore = useToastStore();
 const analyticsStore = useAnalyticsStore(); // Init logic
 const profileUrl = computed(() => {
-    // Priority: Employee Profile (UUID-based)
+    // 1. Priority: Server-Side Shared Link (Most Accurate)
+    if (page.props.auth?.profileUrl) {
+        return page.props.auth.profileUrl;
+    }
+
+    // 2. Client-Side Resolution fallback
     if (authStore.user?.employee?.uuid) {
         return route('employee.profile', { uuid: authStore.user.employee.uuid });
     }
-    // Fallback: Employee Hub
+
+    // 3. Absolute Fallback to Hub
     return route('employee.hub');
 });
 

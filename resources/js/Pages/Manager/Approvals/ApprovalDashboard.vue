@@ -13,6 +13,8 @@ import { useToastStore } from '@/Stores/toast';
 import pickBy from 'lodash/pickBy';
 import debounce from 'lodash/debounce';
 
+defineOptions({ layout: MainLayout });
+
 const toast = useToastStore();
 
 const props = defineProps({

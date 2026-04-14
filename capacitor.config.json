@@ -1,0 +1,9 @@
+{
+  "appId": "com.knr.hrms.mobile",
+  "appName": "LEAP HRMS",
+  "webDir": "public",
+  "server": {
+    "url": "http://10.0.2.2:8000",
+    "cleartext": true
+  }
+}

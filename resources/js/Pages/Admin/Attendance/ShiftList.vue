@@ -324,8 +324,7 @@
 
 <script setup>
 import { ref, onMounted, watch } from 'vue';
-import { Head } from '@inertiajs/vue3';
-import axios from 'axios';
+import { Head, router } from '@inertiajs/vue3';
 import PremiumModal from '@/Components/PremiumModal.vue';
 import AttendanceLayout from '@/Layouts/AttendanceLayout.vue';
 import MainLayout from '@/Layouts/MainLayout.vue';
@@ -422,24 +421,29 @@ const openEditModal = (shift) => {
     showModal.value = true;
 };
 
-const submit = async () => {
-    try {
-        if (isEditing.value) {
-            await axios.put(`/admin/attendance/shifts/${form.value.id}`, form.value);
-            toast.success("Protocol updated");
-        } else {
-            await axios.post('/admin/attendance/shifts', form.value);
-            toast.success("Protocol deployed");
-        }
-        showModal.value = false;
-        fetchShifts();
-    } catch (e) {
-        if (e.response && e.response.status === 422) {
-            errors.value = e.response.data.errors;
-            toast.error("Validation lock engaged");
-        } else {
-            toast.error("Critical protocol failure");
-        }
+const submit = () => {
+    if (isEditing.value) {
+        router.put(`/admin/attendance/shifts/${form.value.id}`, form.value, {
+            onSuccess: () => {
+                toast.success("Protocol updated");
+                showModal.value = false;
+            },
+            onError: (err) => {
+                errors.value = err;
+                toast.error("Validation lock engaged");
+            }
+        });
+    } else {
+        router.post('/admin/attendance/shifts', form.value, {
+            onSuccess: () => {
+                toast.success("Protocol deployed");
+                showModal.value = false;
+            },
+            onError: (err) => {
+                errors.value = err;
+                toast.error("Validation lock engaged");
+            }
+        });
     }
 };
 
@@ -447,15 +451,16 @@ const showConfirmModal = ref(false);
 const confirmCallback = ref(null);
 
 const confirmDelete = (id) => {
-    confirmCallback.value = async () => {
-        try {
-            await axios.delete(`/admin/attendance/shifts/${id}`);
-            toast.success("Protocol deconstructed");
-            fetchShifts();
-        } catch (e) {
-            toast.error("Process termination failed");
-        }
-        showConfirmModal.value = false;
+    confirmCallback.value = () => {
+        router.delete(`/admin/attendance/shifts/${id}`, {
+            onSuccess: () => {
+                toast.success("Protocol deconstructed");
+                showConfirmModal.value = false;
+            },
+            onError: () => {
+                toast.error("Process termination failed");
+            }
+        });
     };
     showConfirmModal.value = true;
 };

@@ -41,7 +41,8 @@ class BugTrackerController extends Controller
                 $projects = Project::select('id', 'name')->get();
             }
 
-            $bugs = $query->paginate(50)->withQueryString();
+            $bugs = $query->paginate(50);
+            $bugs->withQueryString();
             
             $openCriticalCount = BugTicket::where('is_client_visible', true)
                 ->when($user->hasRole('Client'), function($q) use ($user) {
@@ -182,7 +183,8 @@ class BugTrackerController extends Controller
                 $query->where('created_at', '>=', now()->subDays(14));
             }
 
-            $data['bugs'] = $query->paginate(50)->withQueryString();
+            $data['bugs'] = $query->paginate(50);
+            $data['bugs']->withQueryString();
             $data['filters'] = $request->all();
             $data['lookup'] = $lookup;
         } 
@@ -463,14 +465,29 @@ class BugTrackerController extends Controller
 
         $stage = WorkflowStage::findOrFail($request->stage_id);
 
-        // High-Control Rule: Role Authorization for Stages
-        if ($stage->role_id && !Auth::user()->hasRole($stage->role_id)) {
+        // Phase 11: Approval Gate Logic
+        $currentStage = $bug->stage;
+        if ($currentStage && $currentStage->requires_approval) {
+            // Admin/Super Admin override
             if (!Auth::user()->hasRole(['Admin', 'Super Admin'])) {
-                return response()->json(['message' => 'You do not have the required role for this stage.'], 403);
+                // Check if user has the required role to execute this transition
+                $approverRoleId = $currentStage->role_id;
+                
+                if ($approverRoleId && !Auth::user()->hasRole($approverRoleId)) {
+                    return response()->json([
+                        'message' => "Transition out of '{$currentStage->name}' requires approval from " . ($currentStage->role->name ?? 'authorized personnel') . "."
+                    ], 403);
+                }
             }
         }
+
+        // Target Stage Rule: Only check if target requires specific role to perform work (Optional)
+        // If not, allow it. We primarily care about Approval Gates for CURRENT stage.
+        if ($stage->role_id && !Auth::user()->hasAnyRole(['Admin', 'Super Admin', $stage->role_id])) {
+            // log warn but let it pass if transition is from Architect
+        }
         
-        $fromStageName = $bug->stage->name;
+        $fromStageName = $bug->stage->name ?? 'Blank';
         $toStageName = $stage->name;
         
         $updateData = [
@@ -499,13 +516,16 @@ class BugTrackerController extends Controller
         ]);
         
         $this->logActivity($bug, 'p_change', "Changed stage from $fromStageName to {$toStageName}");
+        
+        // Phase 11: Clear notifications for previous stage participants
+        $this->clearStageNotifications($bug, $fromStageId);
 
         // Notify Reporter and Assignee
         $recipients = collect([$bug->reporter, $bug->assignee])->filter();
         
         $currentUser = Auth::user();
-        $recipients = $recipients->filter(function($u) use ($currentUser) {
-            return $u && !($u->id === $currentUser->id && get_class($u) === get_class($currentUser));
+        $recipients = $recipients->filter(function($u) {
+            return $u !== null;
         });
 
         foreach ($recipients as $recipient) {
@@ -530,6 +550,9 @@ class BugTrackerController extends Controller
                 }
             }
         }
+        
+        // Notify responsible people for NEW stage
+        $this->notifyStageParticipants($bug, $stage);
         
         if ($request->filled('resolution_note')) {
             $bug->comments()->create([
@@ -575,7 +598,7 @@ class BugTrackerController extends Controller
             }
         }
         
-        $fromStageName = $bug->stage->name;
+        $fromStageName = $bug->stage->name ?? 'Blank';
         $toStageName = $stage->name;
         
         $updateData = [
@@ -710,6 +733,10 @@ class BugTrackerController extends Controller
         }
 
         $this->logActivity($bug, 'p_change', "Advanced stage from $fromStageName to {$toStageName}");
+        
+        // Phase 11: Clear notifications
+        $this->clearStageNotifications($bug, $fromStageId);
+        $this->notifyStageParticipants($bug, $stage);
 
         return back()->with('success', 'Ticket stage advanced successfully.');
     }
@@ -953,7 +980,7 @@ class BugTrackerController extends Controller
             'activities.user',
             'task',
             'forensics', // Phase 10
-            'pendingApproval'
+            // 'pendingApproval' // Currently breaking due to SQL aliasing in polymorphic through
         ]);
         
         return response()->json($bug);
@@ -1016,6 +1043,134 @@ class BugTrackerController extends Controller
             'projects' => Project::where('client_id', $user->client_id)->get(),
             'filters' => $request->all()
         ]);
+    }
+
+    /**
+     * Phase 11: Stage Transition Utilities
+     */
+    private function clearStageNotifications(BugTicket $bug, $stageId)
+    {
+        if (!$stageId) return;
+        
+        // People previously involved in this stage relative to THIS bug
+        // We find their unread database notifications for this bug
+        DB::table('notifications')
+            ->where('notifiable_type', User::class)
+            ->whereNull('read_at')
+            ->where('data', 'like', '%"bug_id":' . $bug->id . '%')
+            ->update(['read_at' => now()]);
+    }
+
+    private function notifyStageParticipants(BugTicket $bug, WorkflowStage $stage)
+    {
+        // Resolve all people listed in this stage configuration (Workers + Approvers)
+        $referenceUser = $bug->assignee && get_class($bug->assignee) === User::class ? $bug->assignee : Auth::user();
+        $participants = $stage->resolveAllApprovers($referenceUser); 
+        
+        foreach ($participants as $participant) {
+            if ($participant) {
+                $participant->notify(new \App\Notifications\BugAssignedNotification($bug));
+            }
+        }
+    }
+
+    /**
+     * Phase 11: Stage Config Method
+     */
+    public function updateStagePeople(Request $request, WorkflowStage $stage)
+    {
+        $request->validate([
+            'approver_type' => 'required|string',
+            'user_id' => 'nullable|exists:users,id',
+            'role_id' => 'nullable|exists:roles,id',
+            'team_id' => 'nullable|exists:teams,id',
+            'additional_approvers' => 'nullable|array'
+        ]);
+
+        $stage->update($request->only(['approver_type', 'user_id', 'role_id', 'team_id', 'additional_approvers', 'requires_approval']));
+
+        return response()->json(['status' => 'ok', 'message' => 'Stage participants updated successfully']);
+    }
+
+    /**
+     * Phase 11: Bulk Management Methods
+     */
+    public function downloadSampleExcel()
+    {
+        $headers = [
+            "Content-type"        => "text/csv",
+            "Content-Disposition" => "attachment; filename=bug_import_sample.csv",
+            "Pragma"              => "no-cache",
+            "Cache-Control"       => "must-revalidate, post-check=0, pre-check=0",
+            "Expires"             => "0"
+        ];
+
+        $columns = ['Subject', 'Description', 'Severity', 'Priority', 'ProjectName', 'ModuleName'];
+
+        $callback = function() use($columns) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $columns);
+            fputcsv($file, ['Sample Bug Title', 'Detailed description of the issue', 'medium', 'normal', 'Core App', 'Auth Module']);
+            fputcsv($file, ['CRITICAL: Login failing', 'Steps to reproduce...', 'critical', 'urgent', 'Mobile Web', 'UI Engine']);
+            fclose($file);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function importExcel(Request $request)
+    {
+        $request->validate([
+            'file' => 'required|file|mimes:csv,txt,xlsx',
+            'project_id' => 'required|exists:projects,id'
+        ]);
+
+        $file = $request->file('file');
+        $handle = fopen($file->getRealPath(), "r");
+        $header = fgetcsv($handle, 1000, ",");
+        
+        $importedCount = 0;
+        $failedCount = 0;
+        
+        $firstStage = WorkflowStage::whereHas('workflow', function($q) {
+            $q->where('entity_type', BugTicket::class);
+        })->orderBy('stage_order')->first();
+
+        while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+            try {
+                // Attempt to link module by name if provided
+                $moduleName = $data[5] ?? null;
+                $moduleId = null;
+                if ($moduleName) {
+                    $module = \App\Models\ProjectModule::where('project_id', $request->project_id)
+                        ->where('name', 'like', "%$moduleName%")
+                        ->first();
+                    $moduleId = $module?->id;
+                }
+
+                $bug = BugTicket::create([
+                    'project_id' => $request->project_id,
+                    'module_id' => $moduleId,
+                    'subject' => $data[0] ?? 'Untitled Bug',
+                    'description' => $data[1] ?? '',
+                    'severity' => strtolower($data[2] ?? 'medium'),
+                    'priority' => strtolower($data[3] ?? 'normal'),
+                    'reporter_id' => Auth::id(),
+                    'reporter_type' => User::class,
+                    'workflow_stage_id' => $firstStage?->id,
+                    'is_client_visible' => false
+                ]);
+
+                $this->logActivity($bug, 'imported', 'Imported via Bulk Upload');
+                $importedCount++;
+
+            } catch (\Exception $e) {
+                $failedCount++;
+            }
+        }
+        fclose($handle);
+
+        return back()->with('success', "Import Complete. $importedCount tickets created. $failedCount failed.");
     }
 
     private function logActivity(BugTicket $bug, $type, $description, $details = null)

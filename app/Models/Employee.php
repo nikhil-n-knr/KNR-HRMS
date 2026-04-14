@@ -11,6 +11,8 @@ use App\Traits\LogsActivity;
 class Employee extends Model
 {
     use HasFactory, SoftDeletes, FilterableByAccess, LogsActivity;
+    
+    protected $appends = ['name'];
 
     protected $fillable = [
         'uuid',
@@ -207,5 +209,10 @@ class Employee extends Model
         }
 
         return null;
+    }
+
+    public function getNameAttribute()
+    {
+        return trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? ''));
     }
 }

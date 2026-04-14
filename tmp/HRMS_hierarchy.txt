@@ -1,0 +1,252 @@
+﻿Employee Management
+    Employee Master
+        Employee Profiles
+        Documents
+        Family Details
+        Employment History
+
+Recruitment
+    Talent Management
+        Job Posting
+        ATS (Applicant Tracking System)
+    Candidates
+        Candidate Profiles
+        Resume Tracking
+    Interviews
+        Interview Scheduling
+        Feedback Management
+    Offers
+        Offer Letter Creation
+    Onboarding
+        Offer Letters
+        Orientation
+        E-Signature
+
+HR & Payroll
+    Payroll Processing
+        Salary Processing
+        Bulk Salary Management
+        Payslips Generation
+    Salary Management
+        Salary Structures
+        Disbursement
+        TDS
+    Expenses & Claims
+        Expense Claims
+        Expense Categories
+    Loans & Advances
+        Loan Requests
+        Repayment Tracking
+    Tax Management
+        Tax Configuration
+        Employee Declarations
+        Proof Verification
+    Compliance
+        Statutory Compliance
+        Workflow Builder
+
+Attendance
+    Attendance Dashboard
+        My Attendance
+        Live Monitoring
+        Analytics
+    Time Tracking
+        Timesheets
+        Check-In / Check-Out
+        Biometric Integration
+    Requests
+        Regularization
+        Overtime Requests
+        Work From Home (WFH)
+        Holiday Requests
+        Swap Requests
+    Approvals
+        Team Approvals
+    Configuration
+        Shift Management
+        Policy Builder
+        Workflow Builder
+        Gamification Rules
+        AI Logs
+
+Leave Management
+    Leave Policy
+        Policy Configuration
+    Leave Requests
+        Leave Application
+        Leave Balance Tracking
+
+Assets Management
+    Asset Dashboard
+    Asset Lifecycle
+        Asset Allocation
+        Asset Requests
+        Maintenance
+        Blind Audit
+    Inventory / Store
+        Inventory Dashboard
+        Master List
+        Scanner Mode
+        Restock Queue
+    Physical Documents
+        Document Registry
+        Storage Mapping
+        Templates
+        Chain of Custody
+
+Project Management
+    Projects
+        Project Tracking
+        Client Hub
+    Tasks
+        Task Management
+        My Tasks
+    Agile Management
+        Sprints
+    Issue Tracking
+        Bug Tracker
+        Bug Intelligence
+        Pending Approvals
+    DevOps
+        Code & Repositories
+        Deployment Pulse
+        Workflow Architect
+
+Dynamic User Management
+    User Management
+        User CRUD
+        Role CRUD
+        Permission Management
+        Scope Management
+        Access Review
+
+Organization Management
+    Departments
+    Locations
+    Tenants
+
+Performance Management
+    Goals
+    Reviews
+    Feedback
+
+Learning & Development
+    Learning Hub
+        My Courses
+        Course Catalog
+        Question Bank
+    Advanced LMS
+        Course Builder
+        Certifications
+        Learning Analytics
+        ERP Integration
+
+Finance & Documents
+    Finance
+        Ledger
+        Procurement
+    Document Management
+        Repository
+        Version Control
+        Audit Logs
+
+Compliance & Legal
+    Social Security
+        EPF
+        ESI
+        Gratuity
+        Welfare Fund
+    Grievance Management
+        Complaint Portal
+        Committee
+        Resolution
+    Safety & Welfare
+        Incident Reporting
+        Welfare Facilities
+    Statutory Compliance
+        Multi-State Support
+        State Rules
+        Licences
+        Wage Variations
+        Returns
+        Compliance Calendar
+
+Employee Self Service (ESS)
+    Self Service Portal
+    My Payslips
+    My Claims
+    My Loans
+    Tax Declarations
+    Referrals
+
+Separation Management
+    Clearance Process
+        Clearance Dashboard
+        My Clearance
+
+Security & Identity
+    ID Card Management
+
+CRM (Internal)
+    CRM Hub
+        Leads
+        Contacts
+        Deals & Pipeline
+        Marketing
+        Support
+        Communications
+        Meetings
+
+System & Platform
+    System Admin
+        Module Manager
+    DevOps Center
+        Overview Dashboard
+        Provider Configuration
+
+Visitor Management
+    Visitor Tracking
+    Entry Logs
+
+
+Non-Functional Requirements
+    Performance
+        Fast Response Time
+        Real-time Processing
+        Optimized Queries
+
+    Usability
+        Intuitive UI
+        Minimal Clicks
+        Easy Navigation
+        Mobile Friendly
+
+    Scalability
+        Multi-tenant Architecture
+        High Volume Data Handling
+
+    Security
+        Role-Based Access Control
+        Data Encryption
+        Audit Logs
+
+    Reliability
+        High Availability
+        Error Handling
+        Backup & Recovery
+
+    Maintainability
+        Modular Architecture
+        Config-driven Design
+        Easy Updates
+
+    Integration
+        Third-party APIs
+        Email Integration
+        Biometric Devices
+        ERP Integration
+
+    Flexibility
+        Custom Workflows
+        Dynamic Forms
+        Configurable Modules

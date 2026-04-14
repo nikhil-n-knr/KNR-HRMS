@@ -4,6 +4,9 @@ namespace App\Http\Controllers\ClientPortal;
 
 use App\Http\Controllers\Controller;
 use App\Models\BugTicket;
+use App\Models\KnowledgeArticle;
+use App\Models\Project;
+use App\Models\ProjectDocument;
 use App\Models\ProjectModule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -26,43 +29,93 @@ class ClientPortalController extends Controller
     public function dashboard()
     {
         $user = Auth::guard('client')->user();
-        $projectIds = $user->projects->pluck('id');
 
-        // Stats: Bugs by Module
-        $bugsByModule = BugTicket::whereIn('project_id', $projectIds)
+        // Action Center: Awaiting Verification
+        $awaitingVerification = BugTicket::whereIn('project_id', $user->projects->pluck('id'))
+            ->whereHas('stage', function($q) {
+                $q->where('requires_verification', true)
+                  ->where('is_final', false);
+            })
+            ->with([
+                'stage',
+                'module',
+                'assignee',
+                'media',
+                'comments.author',
+                'project',
+                'transitions.fromStage',
+                'transitions.toStage'
+            ])
+            ->latest('updated_at')
+            ->get();
+
+        // Dynamic Pulse Projects
+        $projects = Project::where('client_id', $user->client_id)
+            ->with(['client', 'documents' => function($q) {
+                $q->where('visibility', 'client_shared')->latest();
+            }])->get();
+
+        // Real-Time Intelligence Calculations
+        $activeProjectIds = $projects->pluck('id');
+        
+        $avgHealth = $projects->avg('project_health_index') ?? 100;
+        
+        $totalRequiredDocs = ProjectDocument::whereIn('project_id', $activeProjectIds)
+            ->where('category', 'requirement')
+            ->count();
+        $signedDocs = ProjectDocument::whereIn('project_id', $activeProjectIds)
+            ->where('category', 'requirement')
+            ->where('is_signed', true)
+            ->count();
+            
+        $complianceRate = $totalRequiredDocs > 0 ? ($signedDocs / $totalRequiredDocs) * 100 : 100;
+
+        // Recent Signal Feed
+        $recentBugs = BugTicket::whereIn('project_id', $activeProjectIds)
+            ->with([
+                'stage',
+                'module',
+                'project',
+                'comments.author',
+                'assignee',
+                'transitions.fromStage',
+                'transitions.toStage'
+            ])
+            ->latest()
+            ->limit(10)
+            ->get();
+
+        // Stats: Signal Mass by Module
+        $bugsByModule = BugTicket::whereIn('project_id', $activeProjectIds)
             ->select('module_id', DB::raw('count(*) as total'))
             ->groupBy('module_id')
             ->with('module:id,name')
             ->get();
 
-        // Action Center: Awaiting Verification
-        $awaitingVerification = BugTicket::whereIn('project_id', $projectIds)
-            ->whereHas('stage', function($q) {
-                $q->where('requires_verification', true)
-                  ->where('is_final', false);
-            })
-            ->with(['stage', 'module', 'assignee', 'media', 'comments.author', 'project'])
-            ->latest('updated_at')
-            ->get();
-
-        // Recent Activity (All active bugs)
-        $recentBugs = BugTicket::whereIn('project_id', $projectIds)
-            ->with(['stage', 'module', 'media', 'comments.author', 'project'])
-            ->latest()
-            ->limit(10)
-            ->get();
-
-        $all_stages = \App\Models\WorkflowStage::whereHas('workflow', function($q) {
+        $all_stages = WorkflowStage::whereHas('workflow', function($q) {
             $q->where('name', 'Bug Tracking');
         })->orderBy('stage_order')->get();
 
+        $kbArticles = KnowledgeArticle::where('visibility', 'client_shared')
+            ->where('is_published', true)
+            ->latest()
+            ->get();
+
         return Inertia::render('ClientPortal/Dashboard', [
+            'client' => $user->client,
+            'projects' => $projects,
+            'documents' => ProjectDocument::whereIn('project_id', $activeProjectIds)->where('visibility', 'client_shared')->get(),
             'stats' => [
                 'by_module' => $bugsByModule,
+                'avg_health' => round($avgHealth),
+                'compliance_rate' => round($complianceRate),
+                'active_signals' => $recentBugs->count()
             ],
             'awaiting_verification' => $awaitingVerification,
             'recent_bugs' => $recentBugs,
-            'all_stages' => $all_stages
+            'kb_articles' => $kbArticles,
+            'all_stages' => $all_stages,
+            'notifications' => $user->unreadNotifications
         ]);
     }
 
@@ -427,6 +480,90 @@ class ClientPortalController extends Controller
         $preset->delete();
 
         return response()->json(['message' => 'Preset deleted successfully']);
+    }
+
+    public function uploadDocument(Request $request, Project $project)
+    {
+        $request->validate([
+            'name' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'category' => 'required|in:requirement,sign_off,general,financial',
+            'file' => 'required|file|max:20480', // 20MB
+            'visibility' => 'required|in:public,internal,management_only,client_shared'
+        ]);
+
+        $user = Auth::guard('client')->user();
+        if (!$user->projects->contains($project->id)) {
+            abort(403, 'Unauthorized project access.');
+        }
+
+        $path = $request->file('file')->store('project-documents/' . $project->id, 'public');
+
+        $doc = ProjectDocument::create([
+            'project_id' => $project->id,
+            'uploader_id' => $user->id,
+            'uploader_type' => get_class($user),
+            'name' => $request->name,
+            'description' => $request->description,
+            'category' => $request->category,
+            'file_path' => $path,
+            'mime_type' => $request->file('file')->getClientMimeType(),
+            'file_size' => $request->file('file')->getSize(),
+            'visibility' => $request->visibility,
+            'version_number' => 1,
+            'is_current' => true
+        ]);
+
+        $this->logActivity(BugTicket::where('project_id', $project->id)->first() ?? new BugTicket(), 'upload', 'Stakeholder uploaded a new governance artifact.');
+
+        return back()->with('success', 'Document uploaded successfully.')->setStatusCode(303);
+    }
+
+    public function signOffDocument(Request $request, ProjectDocument $document)
+    {
+        $user = Auth::guard('client')->user();
+        if (!$user->projects->contains($document->project_id)) {
+            abort(403);
+        }
+
+        if ($document->category !== 'requirement') {
+            return back()->with('error', 'Only requirement documents can be signed off.');
+        }
+
+        $document->update([
+            'is_signed' => true,
+            'signed_at' => now(),
+            'signed_by' => $user->id // Note: This stores ClientUser ID. We might need polymorphic signedBy too, but user didn't ask yet.
+        ]);
+
+        return back()->with('success', 'Document signed off successfully.')->setStatusCode(303);
+    }
+
+    public function storeComment(Request $request, BugTicket $bug)
+    {
+        $request->validate([
+            'body' => 'required|string',
+            'is_public' => 'boolean'
+        ]);
+
+        $user = Auth::guard('client')->user();
+
+        // Check if the signal belongs to the client's project mass
+        if (!$user->projects->contains($bug->project_id)) {
+            abort(403, 'Unauthorized signal access.');
+        }
+
+        $comment = $bug->comments()->create([
+            'user_id' => $user->id,
+            'user_type' => get_class($user),
+            'body' => $request->body,
+            'is_public' => true,
+            'attachments' => $request->attachments ?? []
+        ]);
+
+        $this->logActivity($bug, 'commented', 'Stakeholder broadcasted a new signal.');
+
+        return response()->json($comment->load('author'));
     }
 
     private function logActivity(BugTicket $bug, $type, $description, $details = null)

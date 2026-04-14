@@ -50,7 +50,10 @@ class ClientManagementController extends Controller
 
         // Ideally send email with $password here
         
-        return response()->json(['message' => 'User created', 'user' => $user, 'initial_password' => $password]);
+        session()->flash('flash_password', $password);
+        
+        return back()->with('success', 'User created successfully.')
+            ->setStatusCode(303);
     }
 
     public function updateUser(Request $request, ClientUser $user)
@@ -72,22 +75,33 @@ class ClientManagementController extends Controller
             $user->projects()->sync($request->project_ids);
         }
 
-        return response()->json(['message' => 'User updated', 'user' => $user->load('projects')]);
+        return back()->with('success', 'User updated successfully.')
+            ->setStatusCode(303);
     }
 
-    public function resetPassword(ClientUser $user)
+    public function resetPassword(Request $request, ClientUser $user)
     {
-        $password = Str::random(12);
+        $request->validate([
+            'password' => 'nullable|string|min:8|confirmed'
+        ]);
+
+        $password = $request->password ?? Str::random(12);
+        
         $user->update(['password' => Hash::make($password)]);
         
-        // Send email logic would go here
+        if (!$request->password) {
+            session()->flash('flash_password', $password);
+        }
         
-        return response()->json(['message' => 'Password reset', 'new_password' => $password]);
+        return back()->with('success', 'Password updated successfully.')
+            ->setStatusCode(303);
     }
 
     public function killSwitch(ClientUser $user)
     {
         $user->update(['is_active' => !$user->is_active]);
-        return response()->json(['message' => 'User access status updated']);
+        $status = $user->is_active ? 'Activated' : 'Suspended';
+        return back()->with('success', "User access {$status} successfully.")
+            ->setStatusCode(303);
     }
 }

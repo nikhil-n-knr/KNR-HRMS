@@ -58,147 +58,21 @@
             </div>
         </div>
 
-        <!-- Task Modal (Create/Edit) -->
-        <ModalLarge :show="showTaskModal" @close="closeTaskModal" :title="isEditing ? 'Edit Task' : 'New Task'">
-             <form @submit.prevent="submitTaskForm" id="taskForm">
-                 <div class="space-y-6">
-                        <!-- Template Loader -->
-                        <div v-if="!isEditing && taskTemplates.length > 0" class="flex items-center gap-3 p-3 bg-indigo-50 border border-indigo-100 rounded-lg">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2" /></svg>
-                            <div class="flex-1">
-                                <label class="text-xs font-bold text-indigo-700 uppercase tracking-wide">Load Template</label>
-                                <select @change="applyTemplate($event.target.value)" class="mt-1 block w-full text-sm border-gray-300 rounded focus:ring-indigo-500 focus:border-indigo-500 bg-white">
-                                    <option value="">Select a template...</option>
-                                    <option v-for="t in taskTemplates" :key="t.id" :value="t.id">{{ t.name }}</option>
-                                </select>
-                            </div>
-                        </div>
+        <!-- Unified Task Modal (Create/Edit/Full) -->
+        <TaskFullModal 
+            :show="showTaskModal"
+            :task-id="focusedTaskId"
+            :project-id="project.id"
+            :projects="[project]"
+            :employees="employees"
+            :task-templates="taskTemplates"
+            :modules="modules"
+            :initial-data="taskForm"
+            @close="closeTaskModal"
+            @success="handleTaskSuccess"
+            @deleted="handleTaskDeleted"
+        />
 
-                        <BaseInput
-                            v-model="taskForm.title" 
-                            label="Title"
-                            :error="taskForm.errors.title"
-                            placeholder="Type task title..."
-                            color="indigo"
-                            required 
-                            autofocus 
-                        />
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <BaseSelect
-                                v-model="taskForm.stage_id"
-                                label="Stage"
-                                color="indigo"
-                            >
-                                <option v-for="s in project.stages" :key="s.id" :value="s.id">{{ s.name }}</option>
-                            </BaseSelect>
-
-                            <BaseInput 
-                                label="Sprint" 
-                                :value="currentSprint?.name || 'Backlog'" 
-                                readonly 
-                                class="bg-gray-100/50 text-gray-500 cursor-not-allowed" 
-                            />
-                        </div>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <BaseInput 
-                                v-model="taskForm.scrum_points" 
-                                label="Scrum Points" 
-                                placeholder="e.g. 5" 
-                                v-restrict.number 
-                                :error="taskForm.errors.scrum_points" 
-                            />
-
-                             <BaseSelect
-                                v-model="taskForm.priority"
-                                label="Priority"
-                                color="indigo"
-                            >
-                                <option v-for="p in priorities" :key="p.id" :value="p.name">{{ p.name }}</option>
-                            </BaseSelect>
-                        </div>
-
-                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                             <div class="flex flex-col">
-                                <label class="block font-medium text-sm text-gray-700 mb-1">Module</label>
-                                <Combobox 
-                                    v-model="taskForm.module_id" 
-                                    :items="flatModules" 
-                                    labelKey="breadcrumb_name"
-                                    valueKey="id"
-                                    placeholder="Search Module..."
-                                    class="w-full"
-                                />
-                            </div>
-                            
-                            <div class="flex flex-col">
-                                <label class="block font-medium text-sm text-gray-700 mb-1">Assignees</label>
-                                <MultiUserSelect
-                                    v-model="taskForm.assignees"
-                                    :items="employees"
-                                    placeholder="Search Name/ID..."
-                                />
-                            </div>
-                        </div>
-                        
-                        <!-- Git Integration -->
-                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                             <BaseInput
-                                v-model="taskForm.git_branch_url"
-                                label="Git Branch URL"
-                                placeholder="https://github.com/..."
-                                color="indigo"
-                            />
-                              <BaseInput
-                                v-model="taskForm.git_pr_url"
-                                label="Pull Request URL"
-                                placeholder="https://github.com/.../pull/1"
-                                color="indigo"
-                            />
-                        </div>
-
-                        <div>
-                            <InputLabel for="description" value="Description" />
-                            <textarea 
-                                id="description"
-                                v-model="taskForm.description"
-                                rows="4"
-                                class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                                placeholder="Details about this task..."
-                            ></textarea>
-                        </div>
-
-                        <!-- Sprint Assignment -->
-                         <div class="bg-gray-50 p-4 rounded-lg flex items-center justify-between border border-gray-200">
-                             <div>
-                                 <h4 class="text-sm font-bold text-gray-700">Sprint Assignment</h4>
-                                 <p class="text-xs text-gray-500">Move this task to a specific sprint.</p>
-                             </div>
-                             <select v-model="taskForm.sprint_id" class="text-sm border-gray-300 rounded-md focus:ring-indigo-500 focus:border-indigo-500">
-                                 <option :value="null">Backlog</option>
-                                 <option v-for="s in project.sprints" :key="s.id" :value="s.id">{{ s.name }} ({{ s.status }})</option>
-                             </select>
-                         </div>
-                 </div>
-             </form>
-             <template #footer>
-                 <div class="flex justify-between w-full">
-                    <button type="button" v-if="isEditing" @click="deleteTask" class="text-red-500 hover:text-red-700 text-sm font-medium">
-                        Delete Task
-                    </button>
-                    <div v-else></div> <!-- Spacer -->
-                    
-                    <div class="flex gap-3">
-                        <SecondaryButton @click="closeTaskModal">Cancel</SecondaryButton>
-                        <!-- Notice we use form attribute to bind this button outside the form tag -->
-                        <PrimaryButton type="submit" form="taskForm" :disabled="taskForm.processing">
-                            {{ isEditing ? 'Save Changes' : 'Create Task' }}
-                        </PrimaryButton>
-                    </div>
-                 </div>
-             </template>
-        </ModalLarge>
 
         <!-- Sprint Manager Modal -->
         <SprintManagerModal
@@ -282,14 +156,7 @@
             @close="showSprintCompletion = false"
         />
 
-        <TaskDetailModal 
-            :show="showDetailModal"
-            :task-id="focusedTaskId"
-            :project="project"
-            :tasks="localTasks"
-            @close="showDetailModal = false"
-            @edit="openFormModal"
-        />
+
 
         <!-- Batch Action Bar -->
         <BatchActionBar 
@@ -380,26 +247,66 @@
                                      <span class="text-[10px] text-gray-400 font-mono">{{ new Date(act.created_at).toLocaleString() }}</span>
                                  </div>
                                  
-                                 <!-- Move Logic -->
-                                 <div v-if="act.type === 'moved'" class="mt-1">
-                                     <p class="text-sm text-gray-600">
-                                         Moved task <span class="font-bold text-indigo-700">#{{ act.task?.id }} {{ act.task?.title }}</span>
-                                     </p>
-                                     <div class="mt-2 flex items-center gap-2 flex-wrap">
-                                         <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-500 text-[10px] font-bold uppercase">{{ act.details?.from_stage_name }}</span>
-                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
-                                         <span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase">{{ act.details?.to_stage_name }}</span>
-                                     </div>
-                                 </div>
-                                 
-                                 <!-- Create Logic -->
-                                 <p v-else-if="act.type === 'created'" class="mt-1 text-sm text-gray-600">
-                                     Created task <span class="font-bold text-gray-900">{{ act.task?.title }}</span>
-                                 </p>
-                                 
-                                 <p v-else class="mt-1 text-sm text-gray-600">
-                                     Performed action <span class="px-1.5 py-0.5 rounded bg-gray-100 font-mono text-[10px]">{{ act.type }}</span> on task #{{ act.task_id }}
-                                 </p>
+                                  <!-- Activity Description - Human Readable -->
+                                  <div class="mt-1 text-sm text-gray-600">
+                                      <!-- Stage Move -->
+                                      <template v-if="act.type === 'moved'">
+                                          Moved task <span class="font-bold text-indigo-700">#{{ act.task?.id }} {{ act.task?.title }}</span>
+                                          <div class="mt-1.5 flex items-center gap-2 flex-wrap">
+                                              <span class="px-2 py-0.5 rounded bg-gray-100 text-gray-600 text-[10px] font-bold uppercase">{{ act.details?.from_stage_name || '?' }}</span>
+                                              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-gray-300 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                              <span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-700 text-[10px] font-bold uppercase">{{ act.details?.to_stage_name || '?' }}</span>
+                                          </div>
+                                      </template>
+                                      <!-- Created -->
+                                      <template v-else-if="act.type === 'created'">
+                                          Created task <span class="font-bold text-gray-900">{{ act.task?.title }}</span>
+                                      </template>
+                                      <!-- Comment Added -->
+                                      <template v-else-if="act.type === 'comment'">
+                                          Added a <span class="font-bold text-indigo-600">comment</span> on task <span class="font-bold text-gray-900">#{{ act.task?.id }} {{ act.task?.title }}</span>
+                                      </template>
+                                      <!-- Task Update -->
+                                      <template v-else-if="act.type === 'update'">
+                                          Updated <span class="font-bold text-indigo-700">details</span> for task <span class="font-bold">#{{ act.task_id }}</span>
+                                          <div v-if="act.details?.fields?.length" class="mt-1 flex gap-1 flex-wrap">
+                                              <span v-for="field in act.details.fields" :key="field" class="px-1.5 py-0.5 rounded bg-gray-100 text-[9px] text-gray-500 uppercase font-bold">{{ field.replace(/_/g, ' ') }}</span>
+                                          </div>
+                                      </template>
+                                      <!-- PR Linked -->
+                                      <template v-else-if="act.type === 'pr_linked'">
+                                          Linked PR <span class="font-bold text-indigo-600">{{ act.details?.title }}</span> to task <span class="font-bold">#{{ act.task_id }}</span>
+                                      </template>
+                                      <!-- PR Status Updated -->
+                                      <template v-else-if="act.type === 'pr_status_updated'">
+                                          PR status changed for <span class="font-bold text-gray-900">{{ act.details?.pr_title }}</span>:
+                                          <span class="inline-flex items-center gap-1.5 ml-1">
+                                              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase bg-yellow-100 text-yellow-700">{{ act.details?.old_status }}</span>
+                                              <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                                              <span class="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase" :class="act.details?.new_status === 'approved' || act.details?.new_status === 'merged' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'">{{ act.details?.new_status }}</span>
+                                          </span>
+                                      </template>
+                                      <!-- Checklist -->
+                                      <template v-else-if="act.type === 'checklist_add'">
+                                          Added checklist item <span class="italic text-gray-500">"{{ act.details?.content }}"</span> to task <span class="font-bold">#{{ act.task_id }}</span>
+                                      </template>
+                                      <!-- Cloned Checklist -->
+                                      <template v-else-if="act.type === 'checklist_cloned'">
+                                          Cloned <span class="font-bold text-indigo-700">{{ act.details?.count }}</span> checklist items from task <span class="font-bold">#{{ act.details?.source_task_id }}</span>
+                                      </template>
+                                      <!-- Moved to Backlog -->
+                                      <template v-else-if="act.type === 'moved_to_backlog'">
+                                          Moved task <span class="font-bold text-gray-900">#{{ act.task_id }}</span> to <span class="px-1.5 py-0.5 rounded bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-wider">Backlog</span>
+                                      </template>
+                                      <!-- Restored from Backlog -->
+                                      <template v-else-if="act.type === 'restored_from_backlog' || act.type === 'restored_from_backlog'">
+                                          Restored task <span class="font-bold text-gray-900">#{{ act.task_id }}</span> back to the <span class="px-1.5 py-0.5 rounded bg-green-100 text-green-700 text-[10px] font-black uppercase tracking-wider">Sprint Board</span>
+                                      </template>
+                                      <!-- Generic Fallback -->
+                                      <template v-else>
+                                          Performed <span class="px-1.5 py-0.5 rounded bg-gray-100 font-mono text-[10px] text-gray-500">{{ act.type.replace(/_/g, ' ') }}</span> on task <span class="font-bold">#{{ act.task_id }}</span>
+                                      </template>
+                                  </div>
                              </div>
                          </div>
                     </div>
@@ -443,7 +350,7 @@ import SprintManagerModal from '@/Components/Project/SprintManagerModal.vue'; //
 import ProjectReports from '@/Pages/Project/Planner/Views/ProjectReports.vue'; // Imported
 
 import MultiUserSelect from '@/Components/MultiUserSelect.vue';
-import TaskDetailModal from '@/Components/Project/TaskDetailModal.vue';
+import TaskFullModal from '@/Components/Project/TaskFullModal.vue';
 import BatchActionBar from '@/Components/Project/BatchActionBar.vue';
 
 const props = defineProps({
@@ -480,7 +387,8 @@ const sprintToEdit = ref(null); // Sprint Edit State
 const isEditing = ref(false); // Task Edit
 
 // Hub Modal State
-const showDetailModal = ref(false);
+// Unified Modal State
+// showTaskModal already declared at line 370
 const focusedTaskId = ref(null);
 
 // Batch Actions State
@@ -622,9 +530,9 @@ watch(() => props.currentSprint, (newVal) => {
 
 // Actions
 const openCreateModal = () => {
-    isEditing.value = false;
-    taskForm.reset();
+    focusedTaskId.value = null; // Use null for "Create" mode
     
+    // Default form presets
     taskForm.stage_id = props.project.stages[0]?.id;
     taskForm.sprint_id = (props.currentSprint && props.currentSprint !== 'backlog') ? props.currentSprint.id : null;
     
@@ -643,74 +551,31 @@ const applyTemplate = (templateId) => {
 };
 
 const openEditModal = (task) => {
-    // Open Hub Instead
     focusedTaskId.value = task.id;
-    showDetailModal.value = true;
-};
-
-// Open the traditional Edit Form from Hub
-const openFormModal = (taskDetails) => {
-    isEditing.value = true;
-    showDetailModal.value = false; // Close Hub
-    
-    // Populate Form
-    taskForm.id = taskDetails.id;
-    taskForm.title = taskDetails.title;
-    taskForm.description = taskDetails.description;
-    taskForm.stage_id = taskDetails.stage_id;
-    taskForm.module_id = taskDetails.module_id || '';
-    taskForm.sprint_id = taskDetails.sprint_id;
-    taskForm.priority = taskDetails.priority;
-    taskForm.assignees = taskDetails.assignees?.map(u => u.id) || [];
-    taskForm.scrum_points = taskDetails.scrum_points;
-    taskForm.git_branch_url = taskDetails.git_branch_url;
-    taskForm.git_pr_url = taskDetails.git_pr_url;
-    
     showTaskModal.value = true;
 };
 
 const closeTaskModal = () => {
     showTaskModal.value = false;
+    focusedTaskId.value = null;
     taskForm.reset();
+    isEditing.value = false;
+};
+
+const handleTaskSuccess = () => {
+    // Optionally refresh or sync local state if needed
+    // The router will handle general page refresh via onSuccess in the modal
+};
+
+const handleTaskDeleted = () => {
+    // Redirect or refresh
+    router.reload({ only: ['tasks'] });
 };
 
 // Toast Store
 import { useToastStore } from '@/stores/toast';
 
-const submitTaskForm = () => {
-    // Frontend Validation
-    if (!taskForm.title) {
-        useToastStore().error('Title is required');
-        return;
-    }
-    if (!taskForm.stage_id) {
-         useToastStore().error('Stage is required');
-         return;
-    }
-    
-    if (isEditing.value) {
-        taskForm.put(route('projects.tasks.update', { project: props.project.id, task: taskForm.id }), {
-            onSuccess: () => {
-                showTaskModal.value = false;
-                taskForm.reset();
-            }
-        });
-    } else {
-        taskForm.post(route('projects.tasks.store', props.project.id), {
-            onSuccess: () => {
-                showTaskModal.value = false;
-                taskForm.reset();
-            }
-        });
-    }
-};
-const deleteTask = () => {
-    if (confirm('Are you sure you want to delete this task?')) {
-        taskForm.delete(route('projects.tasks.destroy', { project: props.project.id, task: taskForm.id }), {
-            onSuccess: () => closeTaskModal()
-        });
-    }
-};
+
 
 const openActivityLog = async () => {
     showActivityLog.value = true;

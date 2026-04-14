@@ -182,124 +182,18 @@
        </div>
     </div>
 
-    <!-- Task Details Modal -->
-    <Modal :show="showTaskModal" @close="showTaskModal = false" maxWidth="lg">
-        <div class="p-6">
-            <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <span v-if="taskForm.id">Edit Task</span>
-                <span v-else>New Task</span>
-            </h2>
-            
-            <form @submit.prevent="submitTask" class="space-y-4">
-                <!-- Title -->
-                <div>
-                     <BaseInput
-                        v-model="taskForm.title"
-                        label="Task Title"
-                        :error="errors.title"
-                        color="indigo"
-                        required
-                        autofocus
-                        placeholder="Enter task title..."
-                     />
-                </div>
-
-                <!-- Project & Stage -->
-                <div class="grid grid-cols-2 gap-6">
-                    <div>
-                        <BaseSelect
-                            v-model="taskForm.project_id"
-                            label="Project"
-                            :error="errors.project_id"
-                            color="indigo"
-                            required
-                        >
-                            <option v-for="p in projects" :key="p.id" :value="p.id">{{ p.text }}</option>
-                        </BaseSelect>
-                    </div>
-                    <div>
-                        <BaseSelect
-                            v-model="taskForm.stage_id"
-                            label="Stage"
-                            color="indigo"
-                        >
-                            <option value="">Auto-assign</option>
-                            <option v-for="s in availableStages" :key="s.id" :value="s.id">{{ s.name }}</option>
-                        </BaseSelect>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-6">
-                    <!-- Start Date -->
-                    <div>
-                         <BaseInput
-                            v-model="taskForm.start_date"
-                            label="Start Date"
-                            type="date"
-                            color="indigo"
-                         />
-                    </div>
-
-                    <!-- End Date -->
-                    <div>
-                        <BaseInput
-                            v-model="taskForm.end_date"
-                            label="End Date"
-                            type="date"
-                            :error="errors.end_date"
-                            color="indigo"
-                         />
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-2 gap-6">
-                    <!-- Assignee -->
-                    <!-- Assignees -->
-                    <div>
-                        <InputLabel for="assignees" value="Assignees" class="mb-1" />
-                        <MultiUserSelect
-                            v-model="taskForm.assignees"
-                            :items="resources"
-                            label="name"
-                            track-by="id"
-                            placeholder="Select assignees"
-                        />
-                    </div>
-
-                    <!-- Priority -->
-                    <div>
-                        <BaseSelect
-                            v-model="taskForm.priority"
-                            label="Priority"
-                            color="indigo"
-                        >
-                            <option value="Low">Low</option>
-                            <option value="Medium">Medium</option>
-                            <option value="High">High</option>
-                            <option value="Critical">Critical</option>
-                        </BaseSelect>
-                    </div>
-                </div>
-
-                <div class="pt-6 flex justify-between items-center border-t border-gray-100 mt-6">
-                    <button v-if="taskForm.id" type="button" @click="confirmDelete" class="text-red-600 hover:text-red-800 text-sm font-semibold flex items-center gap-1 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" /></svg>
-                        Delete
-                    </button>
-                    <div v-else></div>
-
-                    <div class="flex gap-3">
-                        <SecondaryButton @click="showTaskModal = false">
-                            Cancel
-                        </SecondaryButton>
-                        <PrimaryButton @click="submitTask">
-                            {{ taskForm.id ? 'Save Changes' : 'Create Task' }}
-                        </PrimaryButton>
-                    </div>
-                </div>
-            </form>
-        </div>
-    </Modal>
+    <!-- Unified Task Modal -->
+    <TaskFullModal 
+        :show="showTaskModal"
+        :task-id="focusedTaskId"
+        :projects="projects"
+        :employees="resources"
+        :task-templates="[]"
+        :initial-data="{}"
+        @close="showTaskModal = false"
+        @success="loadPlannerData"
+        @deleted="loadPlannerData"
+    />
 
      <!-- Help Modal -->
     <Modal :show="showHelpModal" @close="showHelpModal = false" maxWidth="2xl">
@@ -347,21 +241,35 @@ import { ref, onMounted, computed, defineAsyncComponent, reactive } from 'vue';
 import axios from 'axios';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ProjectHeader from '@/Components/Project/ProjectHeader.vue';
-import { useToastStore } from '@/stores/toast';
-import Modal from '@/Components/Modal.vue';
-import { useForm } from '@inertiajs/vue3';
 import dayjs from 'dayjs';
+import PrimaryButton from '@/Components/PrimaryButton.vue';
+import SecondaryButton from '@/Components/SecondaryButton.vue';
+import BaseInput from '@/Components/BaseInput.vue';
+import BaseSelect from '@/Components/BaseSelect.vue';
+import MultiUserSelect from '@/Components/MultiUserSelect.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import InputError from '@/Components/InputError.vue';
+import Modal from '@/Components/Modal.vue';
+import TaskFullModal from '@/Components/Project/TaskFullModal.vue';
+import { useToastStore } from '@/stores/toast';
 
 defineOptions({ layout: MainLayout });
+const props = defineProps({
+    initialProjectId: { type: [String, Number], default: null }
+});
 
 const toast = useToastStore();
-const currentView = ref('Reports');
+const currentView = ref('Gantt'); // Default to Gantt
 const showSidebar = ref(true);
 const loading = ref(true);
 const showHelpModal = ref(false); 
 const showTaskModal = ref(false);
+const focusedTaskId = ref(null);
 const searchQuery = ref('');
-const projectFilter = ref('');
+const projectFilter = ref(props.initialProjectId ? parseInt(props.initialProjectId) : '');
+
+// JSON headers for axios
+const jsonHeaders = { headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' } };
 
 const rawData = ref([]); 
 const resources = ref([]); 
@@ -370,11 +278,7 @@ const holidays = ref([]);
 const workDays = ref({});
 
 // Validations
-import InputError from '@/Components/InputError.vue';
-import BaseSelect from '@/Components/BaseSelect.vue';
-import BaseInput from '@/Components/BaseInput.vue';
-import MultiUserSelect from '@/Components/MultiUserSelect.vue';
-import InputLabel from '@/Components/InputLabel.vue';
+// (Already imported above)
 
 const errors = ref({}); // To store validation errors 
 
@@ -445,14 +349,14 @@ const filteredData = computed(() => {
 const loadPlannerData = async () => {
     loading.value = true;
     try {
-        // Read URL param
-        const urlParams = new URLSearchParams(window.location.search);
-        const pid = urlParams.get('project');
-        if (pid) {
-             projectFilter.value = parseInt(pid);
+        // Use prop or URL param
+        let pid = projectFilter.value || new URLSearchParams(window.location.search).get('project');
+        
+        if (pid && !projectFilter.value) {
+            projectFilter.value = parseInt(pid);
         }
 
-        const res = await axios.get(route('planner.data', { project: pid }));
+        const res = await axios.get(route('planner.data', { project: pid }), jsonHeaders);
         rawData.value = res.data.data; // Tasks + Projects
         resources.value = res.data.resources;
         availability.value = res.data.availability || {}; // Store Availability
@@ -496,80 +400,8 @@ const getPriorityColor = (p) => {
 // --- CRUD Actions ---
 
 const openTaskModal = (task = null) => {
-    if (task) {
-        taskForm.id = task.id;
-        taskForm.title = task.text;
-        taskForm.project_id = task.parent; // Parent is project_id
-        taskForm.stage_id = task.stage_id || '';
-        taskForm.start_date = task.start_date;
-        // Calc end date if available or from duration
-        if (task.start_date && task.duration) {
-            taskForm.end_date = dayjs(task.start_date).add(task.duration - 1, 'day').format('YYYY-MM-DD');
-        } else {
-            taskForm.end_date = '';
-        }
-        // Map assignments to IDs
-        taskForm.assignees = task.assignments ? task.assignments.map(a => a.id) : [];
-        taskForm.priority = task.priority || 'Medium';
-    } else {
-        // Reset
-        taskForm.id = null;
-        taskForm.title = '';
-        const pid = projectFilter.value || (projects.value[0]?.id || '');
-        taskForm.project_id = pid;
-        
-        // Default to first stage
-        const proj = projects.value.find(p => p.id === pid);
-        taskForm.stage_id = proj?.stages?.[0]?.id || '';
-        
-        taskForm.start_date = '';
-        taskForm.end_date = '';
-        taskForm.assignees = [];
-        taskForm.priority = 'Medium';
-    }
+    focusedTaskId.value = task ? task.id : null;
     showTaskModal.value = true;
-};
-
-const submitTask = async () => {
-    errors.value = {};
-    
-    // Client-side Validation
-    if (!taskForm.title) errors.value.title = "Title is required";
-    if (!taskForm.project_id) errors.value.project_id = "Project is required";
-    
-    if (taskForm.start_date && taskForm.end_date) {
-        if (dayjs(taskForm.end_date).isBefore(dayjs(taskForm.start_date))) {
-            errors.value.end_date = "End date must be after start date";
-        }
-    }
-
-    if (Object.keys(errors.value).length > 0) return;
-
-    try {
-        if (taskForm.id) {
-            await axios.put(route('planner.update', taskForm.id), taskForm);
-            toast.success('Task updated');
-        } else {
-            await axios.post(route('planner.store'), taskForm);
-            toast.success('Task created');
-        }
-        showTaskModal.value = false;
-        loadPlannerData();
-    } catch (e) {
-        toast.error('Operation failed');
-    }
-};
-
-const confirmDelete = async () => {
-    if (!confirm('Are you sure you want to delete this task?')) return;
-    try {
-        await axios.delete(route('planner.destroy', taskForm.id));
-        toast.success('Task deleted');
-        showTaskModal.value = false;
-        loadPlannerData();
-    } catch (e) {
-        toast.error('Delete failed');
-    }
 };
 
 onMounted(() => {

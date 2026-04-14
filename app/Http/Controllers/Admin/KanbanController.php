@@ -18,6 +18,7 @@ use Illuminate\Support\Facades\Notification;
 
 class KanbanController extends Controller
 {
+    use \App\Traits\ProjectGovernanceTrait;
     protected $logger;
     protected $dependencyService;
 
@@ -81,12 +82,14 @@ class KanbanController extends Controller
             ->orderBy('id');
 
         if ($currentSprint === 'backlog') {
-            $query->whereNull('sprint_id');
+            // Explicitly showing backlog view - show only backlog tasks
+            $query->where('is_backlog', true);
         } elseif ($currentSprint) {
-            $query->where('sprint_id', $currentSprint->id);
+            // Specific sprint selected - show sprint tasks that are NOT in backlog
+            $query->where('sprint_id', $currentSprint->id)->where('is_backlog', false);
         } else {
-            // Default: Show Backlog if no active sprint
-            $query->whereNull('sprint_id');
+            // Default board: show ALL tasks that are NOT marked as backlog
+            $query->where('is_backlog', false);
         }
 
         $tasks = $query->get()->map(function ($task) {
@@ -97,40 +100,68 @@ class KanbanController extends Controller
         });
 
         // Load project relationships needed for the board
-        $project->load(['stages.assignees', 'sprints']); // Loaded stage assignees
+        $project->load([
+            'stages.assignees', 
+            'sprints',
+            'modules' => fn($q) => $q->whereNull('parent_id')->with('childrenRecursive')
+        ]);
 
         return Inertia::render('Project/Board', [
             'project' => $project,
             'tasks' => $tasks,
             'currentSprint' => $currentSprint,
-            'activeSprints' => $activeSprints, // Pass Collection
+            'activeSprints' => $activeSprints,
             'employees' => \App\Models\User::select('id', 'name')->with('employee:id,user_id,avatar')->whereHas('employee')->get()->map(function($u) {
                 return ['id' => $u->id, 'name' => $u->name, 'avatar' => $u->employee ? $u->employee->avatar : null];
             }),
-             // Duplicate employees key removed
             'priorities' => $project->priorities()->orderBy('order')->get(),
-            'modules' => $project->modules()->whereNull('parent_id')->with('childrenRecursive')->get(),
-            'taskTemplates' => $project->taskTemplates()->get(), // Pass Templates
+            'modules' => $project->modules, // Pass already loaded relationship
+            'taskTemplates' => $project->taskTemplates()->get(),
         ]);
     }
 
     public function store(Request $request, Project $project)
     {
+        // Fix string 'null' issues from frontend selects
+        $sprintId = $request->sprint_id;
+        if (empty($sprintId) || $sprintId === 'null' || $sprintId === 'undefined' || strtolower((string)$sprintId) === 'backlog') {
+            $sprintId = null;
+        }
+        
+        $moduleId = $request->module_id;
+        if (empty($moduleId) || $moduleId === 'null' || $moduleId === 'undefined') {
+            $moduleId = null;
+        }
+
+        $request->merge([
+            'sprint_id' => $sprintId,
+            'module_id' => $moduleId,
+        ]);
+
+        if (empty($request->stage_id) || $request->stage_id === 'null') {
+            $firstStage = $project->stages()->orderBy('order')->first();
+            if ($firstStage) {
+                $request->merge(['stage_id' => $firstStage->id]);
+            }
+        }
+
         $validated = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
             'stage_id' => 'required|exists:project_stages,id',
             'sprint_id' => 'nullable|exists:sprints,id',
-            'priority' => 'required|in:Low,Medium,High,Critical',
+            'priority' => 'nullable|string|max:100',
+            'is_backlog' => 'nullable|boolean',
             'assignees' => 'nullable|array',
             'assignees.*' => 'exists:users,id',
-            'due_date' => 'nullable|date',
             'scrum_points' => 'nullable|integer|min:0',
             'blocked_by_task_id' => 'nullable|exists:project_tasks,id',
             'git_branch_url' => 'nullable|url',
             'git_pr_url' => 'nullable|url',
             'qa_notes' => 'nullable|string',
-            'module_id' => 'nullable|exists:project_modules,id'
+            'module_id' => 'nullable|exists:project_modules,id',
+            'start_date' => 'nullable|date',
+            'due_date' => 'nullable|date|after_or_equal:start_date',
         ]);
         
         $validated['created_by'] = auth()->id();
@@ -142,6 +173,12 @@ class KanbanController extends Controller
         // Check stage default assignee
         $stage = \App\Models\ProjectStage::find($validated['stage_id']);
         $validated['status'] = $this->mapStageToStatus($stage->type);
+
+        // Calculate Estimated Hours if dates provided
+        if (!empty($validated['start_date']) && !empty($validated['due_date'])) {
+            $days = \Carbon\Carbon::parse($validated['start_date'])->diffInDays(\Carbon\Carbon::parse($validated['due_date'])) + 1;
+            $validated['estimated_hours'] = $days * 8;
+        }
 
         $task = $project->tasks()->create($validated);
         
@@ -188,20 +225,47 @@ class KanbanController extends Controller
             'details' => ['message' => 'Task created']
         ]);
 
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Task created successfully', 'task' => $task->load('stage', 'sprint')]);
+        }
         return redirect()->back()->with('success', 'Task created successfully.')->setStatusCode(303);
     }
 
     public function update(Request $request, Project $project, Task $task)
     {
+        // Fix string 'null' issues from frontend selects
+        $sprintId = $request->sprint_id;
+        if (empty($sprintId) || $sprintId === 'null' || $sprintId === 'undefined' || strtolower((string)$sprintId) === 'backlog') {
+            $sprintId = null;
+        }
+        
+        $moduleId = $request->module_id;
+        if (empty($moduleId) || $moduleId === 'null' || $moduleId === 'undefined') {
+            $moduleId = null;
+        }
+
+        $request->merge([
+            'sprint_id' => $sprintId,
+            'module_id' => $moduleId,
+        ]);
+
+        if (empty($request->stage_id) || $request->stage_id === 'null') {
+            $request->merge(['stage_id' => $task->stage_id]); // Fallback to current stage if auto-assign chosen
+        }
+
         $validated = $request->validate([
             'title' => 'sometimes|required|string|max:255',
             'description' => 'nullable|string',
             'stage_id' => 'sometimes|required|exists:project_stages,id',
             'sprint_id' => 'nullable|exists:sprints,id',
-            'priority' => 'sometimes|required|in:Low,Medium,High,Critical',
+            'priority' => 'nullable|string|max:100',
+            'is_backlog' => 'nullable|boolean',
+            'is_locked' => 'nullable|boolean',
+            'total_efforts' => 'nullable|numeric|min:0',
             'assignees' => 'nullable|array',
-            'assignees.*' => 'exists:users,id', // Validating against users table
-            'due_date' => 'nullable|date',
+            'assignees.*' => 'exists:users,id', 
+            'start_date' => 'nullable|date',
+            'due_date' => 'nullable|date|after_or_equal:start_date',
             'scrum_points' => 'nullable|integer|min:0',
             'order' => 'nullable|integer',
             'blocked_by_task_id' => 'nullable|exists:project_tasks,id',
@@ -222,7 +286,26 @@ class KanbanController extends Controller
             $this->dependencyService->validateDependency($task->id, $validated['blocked_by_task_id']);
         }
 
-        $task->update($validated);
+        $task->fill($validated);
+
+        // Track changes for notifications
+        $changes = [];
+        $monitoredFields = ['start_date', 'due_date', 'total_efforts'];
+        foreach ($monitoredFields as $field) {
+            if ($task->isDirty($field)) {
+                $orig = $task->getOriginal($field);
+                $curr = $task->$field;
+                $changes[$field] = [
+                    'old' => $orig instanceof \Carbon\Carbon ? $orig->format('Y-m-d') : $orig,
+                    'new' => $curr instanceof \Carbon\Carbon ? $curr->format('Y-m-d') : $curr,
+                ];
+            }
+        }
+
+        // Check Lock & Notify (Trait Method)
+        $this->checkLockAndNotify($project, $task, $changes);
+
+        $task->save();
         
         if (isset($validated['assignees'])) {
             $assigneeIds = $validated['assignees'];
@@ -263,10 +346,15 @@ class KanbanController extends Controller
             ]);
         }
 
+        if ($request->wantsJson()) {
+            $task->load(['stage', 'sprint', 'assignees']);
+            $task->assignees->each(fn($a) => $a->name = trim(($a->first_name ?? '') . ' ' . ($a->last_name ?? '')));
+            return response()->json(['message' => 'Task updated successfully', 'task' => $task]);
+        }
         return redirect()->back()->with('success', 'Task updated successfully.')->setStatusCode(303);
     }
 
-    public function destroy(Project $project, Task $task)
+    public function destroy(Request $request, Project $project, Task $task)
     {
         $id = $task->id;
         $title = $task->title;
@@ -277,6 +365,9 @@ class KanbanController extends Controller
             'task_id' => $id
         ]);
 
+        if ($request->wantsJson()) {
+            return response()->json(['message' => 'Task deleted successfully']);
+        }
         return redirect()->back()->with('success', 'Task deleted successfully.')->setStatusCode(303);
     }
     
@@ -483,6 +574,48 @@ class KanbanController extends Controller
         });
         
         return response()->json($task);
+    }
+
+    /**
+     * Mark task as backlog (hide from board).
+     */
+    public function moveToBacklog(Request $request, Project $project, Task $task)
+    {
+        $task->update(['is_backlog' => true]);
+
+        $task->activities()->create([
+            'user_id' => auth()->id(),
+            'type'    => 'moved_to_backlog',
+            'details' => ['action' => 'Moved to Backlog']
+        ]);
+
+        $this->logger->log('Kanban', 'Backlog', "Task '{$task->title}' moved to backlog", [
+            'project_id' => $project->id,
+            'task_id'    => $task->id,
+        ]);
+
+        return response()->json(['message' => 'Task moved to backlog', 'is_backlog' => true]);
+    }
+
+    /**
+     * Restore task from backlog back to board.
+     */
+    public function restoreFromBacklog(Request $request, Project $project, Task $task)
+    {
+        $task->update(['is_backlog' => false]);
+
+        $task->activities()->create([
+            'user_id' => auth()->id(),
+            'type'    => 'restored_from_backlog',
+            'details' => ['action' => 'Restored to Board']
+        ]);
+
+        $this->logger->log('Kanban', 'Backlog', "Task '{$task->title}' restored from backlog", [
+            'project_id' => $project->id,
+            'task_id'    => $task->id,
+        ]);
+
+        return response()->json(['message' => 'Task restored to board', 'is_backlog' => false]);
     }
 
     private function mapStageToStatus($type) {

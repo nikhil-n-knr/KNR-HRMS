@@ -14,21 +14,49 @@ class ProjectDocument extends Model
         'project_id',
         'module_id',
         'uploader_id',
+        'uploader_type',
         'name',
+        'description',
         'category',
         'file_path',
         'mime_type',
         'file_size',
         'visibility',
         'shared_with',
-        'shared_with_teams'
+        'shared_with_teams',
+        'is_signed',
+        'signed_at',
+        'signed_by',
+        'version_number',
+        'parent_id',
+        'is_current'
     ];
 
     protected $casts = [
         'shared_with' => 'array',
         'shared_with_teams' => 'array',
-        'file_size' => 'integer'
+        'file_size' => 'integer',
+        'is_signed' => 'boolean',
+        'signed_at' => 'datetime',
+        'is_current' => 'boolean',
+        'version_number' => 'integer',
+        'uploader_type' => 'string'
     ];
+
+    public function parent()
+    {
+        return $this->belongsTo(ProjectDocument::class, 'parent_id');
+    }
+
+    public function history()
+    {
+        return $this->hasMany(ProjectDocument::class, 'parent_id')->orderBy('version_number', 'desc');
+    }
+
+    public function signedBy()
+    {
+        return $this->belongsTo(User::class, 'signed_by');
+    }
 
     // Relationships
     public function project()
@@ -43,7 +71,7 @@ class ProjectDocument extends Model
 
     public function uploader()
     {
-        return $this->belongsTo(User::class, 'uploader_id');
+        return $this->morphTo('uploader', 'uploader_type', 'uploader_id');
     }
     
     /**

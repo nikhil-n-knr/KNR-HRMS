@@ -132,7 +132,7 @@ const formatDate = (dateString) => {
              </template>
              <template #cell-days_count="{ item }">
                  <span class="inline-flex items-center justify-center w-8 h-8 rounded-full bg-gray-100 text-xs font-bold text-gray-700">
-                     {{ item.days_taken || '-' }}
+                     {{ item.total_days || '-' }}
                  </span>
              </template>
              <template #cell-status="{ item }">

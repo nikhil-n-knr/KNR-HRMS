@@ -31,6 +31,9 @@ class EventServiceProvider extends ServiceProvider
         \App\Events\VisitorCheckedIn::class => [
             \App\Listeners\HandleVisitorCheckIn::class,
         ],
+        \App\Events\DocumentActionEvent::class => [
+            \App\Listeners\ProjectGovernanceListener::class,
+        ],
     ];
 
     /**

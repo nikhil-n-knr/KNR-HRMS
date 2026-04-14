@@ -1,0 +1,16 @@
+Mobile App
+	Profile
+	Fees
+	Notification
+	Attendance
+	Time Table
+	Report Card
+	Diary
+	Calendar
+	Circular
+	Concerns
+	Leave
+	Interaction
+	Thursday Folder
+	NPS YPR WEB
+	Bus Tracker

@@ -11,6 +11,16 @@
         >
             <div class="flex items-center justify-between">
                 <div class="flex items-center gap-3">
+                    <!-- Selection Checkbox -->
+                    <div class="flex items-center">
+                        <input 
+                            type="checkbox" 
+                            :checked="selectedIds.includes(module.id)"
+                            @change="$emit('toggle-select', module.id)"
+                            class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 transition-all cursor-pointer"
+                        />
+                    </div>
+
                     <!-- Toggle Button -->
                     <button 
                         v-if="module.children && module.children.length > 0"
@@ -79,6 +89,8 @@
                 :key="child.id" 
                 :module="child"
                 :depth="depth + 1"
+                :selected-ids="selectedIds"
+                @toggle-select="$emit('toggle-select', $event)"
                 @add-submodule="$emit('add-submodule', $event)"
                 @edit="$emit('edit', $event)"
                 @delete="$emit('delete', $event)"
@@ -98,8 +110,14 @@ const props = defineProps({
     depth: {
         type: Number,
         default: 0
+    },
+    selectedIds: {
+        type: Array,
+        default: () => []
     }
 });
+
+defineEmits(['add-submodule', 'edit', 'delete', 'toggle-select']);
 
 const isOpen = ref(true); // Default open
 </script>

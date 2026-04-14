@@ -5,14 +5,19 @@ namespace App\Http\Controllers\ProjectManagement;
 use App\Http\Controllers\Controller;
 use App\Models\Project;
 use App\Models\Task;
-use App\Models\User;
 use App\Models\WorkAssignment;
+use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\Project\PlanOverwrittenNotification;
 use App\Models\Timesheet;
+use App\Traits\ProjectGovernanceTrait;
 
 class PlannerApiController extends Controller
 {
+    use ProjectGovernanceTrait;
+
     protected $logger;
 
     public function __construct(\App\Services\Infrastructure\LoggerService $logger)
@@ -31,7 +36,7 @@ class PlannerApiController extends Controller
 
             // 1. Projects (visible to user)
             $query = Project::visibleTo($request->user())
-                ->with(['client', 'stages'])
+                ->with(['client', 'stages', 'modules' => fn($q) => $q->whereNull('parent_id')->with('childrenRecursive')])
                 ->whereIn('status', ['active', 'planning']);
 
             if ($projectId) {
@@ -53,7 +58,10 @@ class PlannerApiController extends Controller
                         'open' => true,
                         'stages' => $p->stages->map(function($s) {
                              return ['id' => $s->id, 'name' => $s->name];
-                        })
+                        }),
+                        'modules' => $p->modules,
+                        'is_locked' => (bool) $p->is_locked,
+                        'plan_lock_recipients' => $p->plan_lock_recipients
                     ];
                 });
 
@@ -98,12 +106,14 @@ class PlannerApiController extends Controller
                     return [
                         'id' => $t->id,
                         'text' => $t->title,
-                        'start_date' => $t->start_date ? (is_string($t->start_date) ? Carbon::parse($t->start_date)->format('Y-m-d') : $t->start_date->format('Y-m-d')) : null,
-                        'due_date' => $t->due_date ? (is_string($t->due_date) ? Carbon::parse($t->due_date)->format('Y-m-d') : $t->due_date->format('Y-m-d')) : null,
-                        'duration' => $t->estimated_hours / 8, // Rough day conversion
+                        'title' => $t->title, // Duplicate for modal
+                        'start_date' => $t->start_date ? (is_string($t->start_date) ? \Carbon\Carbon::parse($t->start_date)->format('Y-m-d') : $t->start_date->format('Y-m-d')) : null,
+                        'due_date' => $t->due_date ? (is_string($t->due_date) ? \Carbon\Carbon::parse($t->due_date)->format('Y-m-d') : $t->due_date->format('Y-m-d')) : null,
+                        'duration' => $t->estimated_hours / 8, 
                         'estimated_hours' => (float) $t->estimated_hours,
-                        'actual_hours' => (float) ($t->actual_hours ?? 0), // From withSum
-                        'parent' => $t->project_id, // Link to project folder
+                        'actual_hours' => (float) ($t->actual_hours ?? 0), 
+                        'parent' => $t->project_id, 
+                        'project_id' => $t->project_id, // Explicit for modal
                         'assignments' => $assignees,
                         'priority' => $t->priority,
                         'status' => $t->status,
@@ -113,6 +123,10 @@ class PlannerApiController extends Controller
                         'progress' => $t->status === 'Done' ? 1 : 0,
                         'is_bug' => $t->bugTicket ? true : false,
                         'bug_severity' => $t->bugTicket ? $t->bugTicket->severity : null,
+                        'is_locked' => (bool) $t->is_locked,
+                        'total_efforts' => (float) $t->total_efforts,
+                        'baseline_start_date' => $t->baseline_start_date ? $t->baseline_start_date->format('Y-m-d') : null,
+                        'baseline_due_date' => $t->baseline_due_date ? $t->baseline_due_date->format('Y-m-d') : null,
                     ];
                 });
 
@@ -369,7 +383,18 @@ class PlannerApiController extends Controller
                 $task->start_date = Carbon::parse($validated['start_date']);
             }
             if (isset($validated['end_date'])) {
+                $oldDue = $task->due_date ? $task->due_date->format('Y-m-d') : null;
                 $task->due_date = Carbon::parse($validated['end_date']);
+                
+                // Track changes for notification
+                $changes = [];
+                if ($oldDue !== $task->due_date->format('Y-m-d')) {
+                    $changes['due_date'] = ['old' => $oldDue, 'new' => $task->due_date->format('Y-m-d')];
+                }
+
+                // Check lock
+                $this->checkLockAndNotify($task->project, $task, $changes);
+
                  // Update Estimated Hours
                  if ($task->start_date && $task->due_date) {
                     $days = $task->start_date->diffInDays($task->due_date) + 1;
@@ -438,16 +463,22 @@ class PlannerApiController extends Controller
                 'duration' => 'required|numeric'
             ]);
 
+            $oldStart = $task->start_date ? $task->start_date->format('Y-m-d') : null;
             $task->start_date = Carbon::parse($request->start_date);
             
             // Calculate end date based on duration
             if ($request->duration > 0) {
-                 // Assuming duration is in days (Gantt chart standard)
-                 // Subtract 1 day because start date counts as day 1
                  $daysToAdd = max(0, ceil($request->duration) - 1);
                  $task->due_date = $task->start_date->copy()->addDays($daysToAdd);
-                 // Update estimated hours
                  $task->estimated_hours = $request->duration * 8;
+            }
+
+            // Check lock
+            if ($oldStart !== $request->start_date) {
+                $this->checkLockAndNotify($task->project, $task, [
+                    'start_date' => ['old' => $oldStart, 'new' => $request->start_date],
+                    'duration' => ['old' => '-', 'new' => $request->duration]
+                ]);
             }
 
             $task->save();
@@ -482,6 +513,9 @@ class PlannerApiController extends Controller
 
             $task = Task::findOrFail($request->task_id);
             
+            // Check lock
+            $this->checkLockAndNotify($task->project, $task, ['action' => 'Assignment Update']);
+
             // Normalize input to array
             $userIds = $request->input('user_ids', []);
             if ($request->has('user_id')) {
@@ -736,6 +770,67 @@ class PlannerApiController extends Controller
         $assignments = $query->get();
         $holidays = \App\Models\Holiday::whereBetween('date', [$start, $end])->get()->keyBy('date');
         
+        $format = $request->input('format', 'csv');
+
+        if ($format === 'excel') {
+            // Aggregate high-level stats for the Overview Sheet
+            $totalScopeHours = 0;
+            $totalScopePoints = 0;
+            if ($pid) {
+                $projectStats = \App\Models\Task::where('project_id', $pid)->selectRaw('SUM(estimated_hours) as hours, SUM(scrum_points) as points')->first();
+                $totalScopeHours = $projectStats->hours ?? 0;
+                $totalScopePoints = $projectStats->points ?? 0;
+            } else {
+                $uniqueTaskIds = $assignments->pluck('task_id')->unique();
+                $scopeStats = \App\Models\Task::whereIn('id', $uniqueTaskIds)->selectRaw('SUM(estimated_hours) as hours, SUM(scrum_points) as points')->first();
+                $totalScopeHours = $scopeStats->hours ?? 0;
+                $totalScopePoints = $scopeStats->points ?? 0;
+            }
+
+            // Quick scan for Holiday/Weekend hours and resource count
+            $uniqueResources = [];
+            $totalHours = 0;
+            $holidayHours = 0;
+            foreach ($assignments as $a) {
+                $s = $a->start_date < $start ? $start->copy() : $a->start_date->copy();
+                $e = $a->end_date > $end ? $end->copy() : $a->end_date->copy();
+                $curr = $s->copy();
+                while ($curr <= $e) {
+                    $isWeekend = $curr->isWeekend(); 
+                    $dateStr = $curr->format('Y-m-d');
+                    $isHoliday = isset($holidays[$dateStr]);
+                    if ($isWeekend || $isHoliday) {
+                        if ($a->force_allocation) $holidayHours += $a->allocated_hours;
+                    } else {
+                        $totalHours += $a->allocated_hours;
+                    }
+                    $curr->addDay();
+                }
+                $userId = null;
+                if ($a->assignee_type === \App\Models\Employee::class && $a->assignee) $userId = $a->assignee->user_id;
+                elseif ($a->assignee_type === \App\Models\User::class) $userId = $a->assignee_id;
+                if ($userId) $uniqueResources[$userId] = true;
+            }
+            $totalHours += $holidayHours;
+            $days = $start->diffInDays($end) + 1;
+
+            $stats = [
+                'total_hours' => $totalHours,
+                'holiday_hours' => $holidayHours,
+                'resource_count' => count($uniqueResources),
+                'avg_daily' => $days > 0 ? round($totalHours / $days, 1) : 0,
+                'total_scope' => (float)$totalScopeHours,
+                'total_points' => (int)$totalScopePoints,
+                'remaining_hours' => max(0, $totalScopeHours - $totalHours)
+            ];
+
+            return \Maatwebsite\Excel\Facades\Excel::download(
+                new \App\Exports\ProjectComprehensiveExport($assignments, $holidays, $start, $end, $stats, $pid),
+                'Project_Comprehensive_Analytics_' . date('Y-m-d') . '.xlsx'
+            );
+        }
+
+        // --- LEGACY CSV STREAM ---
         $headers = [
             "Content-type"        => "text/csv",
             "Content-Disposition" => "attachment; filename=Project_Analytics_Report.csv",
@@ -747,20 +842,16 @@ class PlannerApiController extends Controller
         $callback = function() use ($assignments, $holidays, $start, $end) {
             $file = fopen('php://output', 'w');
             fputcsv($file, ['Project', 'Task', 'Status', 'Employee', 'Start Date', 'End Date', 'Allocated Hours', 'Estimated Hours', 'Scrum Points', 'Holiday/Forced Hours', 'Type']); 
-
             foreach ($assignments as $a) {
                 $s = $a->start_date < $start ? $start->copy() : $a->start_date->copy();
                 $e = $a->end_date > $end ? $end->copy() : $a->end_date->copy();
-                
                 $regularHours = 0;
                 $holidayHours = 0;
-                
                 $curr = $s->copy();
                 while ($curr <= $e) {
                     $isWeekend = $curr->isWeekend(); 
                     $dateStr = $curr->format('Y-m-d');
                     $isHoliday = isset($holidays[$dateStr]);
-                    
                     if ($isWeekend || $isHoliday) {
                         if ($a->force_allocation) $holidayHours += $a->allocated_hours;
                     } else {
@@ -774,7 +865,7 @@ class PlannerApiController extends Controller
 
                 fputcsv($file, [
                     $a->project ? $a->project->name : 'Unknown',
-                    $a->task ? $a->task->text : 'N/A',
+                    $a->task ? $a->task->title : 'N/A', // Swapped text to title for clarity
                     $a->task ? $a->task->status : 'N/A',
                     $a->assignee ? $a->assignee->name : 'Unknown',
                     $s->format('Y-m-d'),
@@ -1034,33 +1125,31 @@ class PlannerApiController extends Controller
             $start = $request->input('start_date') ? Carbon::parse($request->input('start_date')) : now()->startOfMonth();
             $end = $request->input('end_date') ? Carbon::parse($request->input('end_date')) : now()->endOfMonth();
 
-            // 1. Base Query for Timesheets (Actuals)
-            $timesheetQuery = \App\Models\Timesheet::whereIn('status', ['Approved', 'approved']) 
-                ->whereBetween('date', [$start, $end]);
+            // 1. All Projects for the user to filter
+            $projectsList = Project::visibleTo($request->user())->get();
+            $projectIds = $projectId ? [$projectId] : $projectsList->pluck('id')->toArray();
 
-            if ($projectId) {
-                $timesheetQuery->where('project_id', $projectId);
-            }
+            // 2. Base Query for Timesheets (Actuals)
+            $timesheetQuery = \App\Models\Timesheet::whereIn('status', ['Approved', 'approved']) 
+                ->whereIn('project_id', $projectIds)
+                ->whereBetween('date', [$start, $end]);
 
             $timesheets = $timesheetQuery->with(['employee.user', 'project', 'task'])->get();
 
             // 2. Base Query for Tasks (Scope/Plan)
-            $taskQuery = \App\Models\Task::with(['assignees'])
+            $taskQuery = \App\Models\Task::whereIn('project_id', $projectIds)
                 ->whereNull('deleted_at'); 
-
-            if ($projectId) {
-                $taskQuery->where('project_id', $projectId);
-            }
             
-            $tasks = $taskQuery->get();
+            $tasks = $taskQuery->with(['assignees', 'project'])->get();
 
             // 3. Stats Calculation
-            $totalHours = $tasks->sum('estimated_hours'); // Total Scope Allocated
+            // Prioritize total_efforts (decoupled logic)
+            $totalPlanned = (float) $tasks->sum(fn($t) => $t->total_efforts > 0 ? $t->total_efforts : $t->estimated_hours);
             $totalPoints = $tasks->sum('scrum_points') ?? 0;
             
             // Actuals
-            $investedHours = $timesheets->sum('hours_spent');
-            $remainingHours = max(0, $totalHours - $investedHours);
+            $totalActual = $timesheets->sum('hours_spent');
+            $remainingHours = max(0, $totalPlanned - $totalActual);
 
             // Resource Count
             $activeResourceIds = $timesheets->pluck('employee_id')->unique();
@@ -1068,25 +1157,32 @@ class PlannerApiController extends Controller
 
             // Avg Burn Rate (Daily)
             $daysDiff = $start->diffInDays($end) + 1;
-            $avgDaily = $daysDiff > 0 ? round($investedHours / $daysDiff, 1) : 0;
+            $avgDaily = $daysDiff > 0 ? round($totalActual / $daysDiff, 1) : 0;
 
             $stats = [
-                'total_hours' => (float) $totalHours, // Allocated Scope
-                'total_scope' => (float) $totalHours, 
-                'total_points' => (int) $totalPoints,
+                'total_hours' => (float) $totalPlanned, 
+                'total_scope' => (float) $totalPlanned, 
+                'total_actual' => (float) $totalActual,
+                'total_points' => (int) $totalPoints, 
                 'remaining_hours' => (float) $remainingHours,
                 'holiday_hours' => 0, 
                 'resource_count' => $resourceCount,
-                'avg_daily' => $avgDaily
+                'avg_daily' => $avgDaily,
+                'health_score' => $this->calculateHealthScore($totalActual, $totalPlanned),
+                'forecast_finish' => $this->calculateForecastFinish($avgDaily, $remainingHours)
             ];
 
-            // 4. Table Data (Flattened Timesheets for Detail)
-            $tableData = $timesheets->map(function($t) {
+            // 4. Detailed Table (Actually loaded timesheets)
+            // Identify Critical Path
+            $criticalPathIds = $this->getCriticalPathIds($tasks);
+
+            $tableData = $timesheets->map(function($t) use ($criticalPathIds) {
                 return [
                     'id' => $t->id,
                     'project' => $t->project ? $t->project->name : 'Unknown',
-                    'task' => $t->task ? $t->task->title : 'General/Unassigned',
+                    'task' => $t->task ? $t->task->title : 'General/Timesheet',
                     'task_status' => $t->task ? strtolower($t->task->status) : 'n/a',
+                    'is_critical' => $t->task ? in_array($t->task->id, $criticalPathIds) : false,
                     'employee_name' => $t->employee ? ($t->employee->first_name . ' ' . $t->employee->last_name) : 'Unknown',
                     'employee_initials' => $t->employee ? substr($t->employee->first_name, 0, 1) . substr($t->employee->last_name, 0, 1) : 'NA',
                     'avatar' => $t->employee ? $t->employee->avatar : null,
@@ -1097,32 +1193,57 @@ class PlannerApiController extends Controller
                 ];
             });
 
-            // 5. Charts Data
-            // A. Hours by Project
-            $projectsChart = $timesheets->groupBy(function($t) {
-                 return $t->project ? $t->project->name : 'Other';
-            })->map->sum('hours_spent');
-            
-            // B. Hours by Employee
-            $employeesChart = $timesheets->groupBy(function($t) {
-                return $t->employee ? ($t->employee->first_name . ' ' . $t->employee->last_name) : 'Unknown';
-            })->map->sum('hours_spent');
+            // 5. Build Chart Datasets (Planned vs Actual)
+            $projectsChart = [];
+            foreach ($projectIds as $pid) {
+                $pObj = \App\Models\Project::find($pid);
+                if (!$pObj) continue;
+                $projectsChart[$pObj->name] = [
+                    'planned' => (float) $tasks->where('project_id', $pid)->sum('estimated_hours'),
+                    'actual' => (float) $timesheets->where('project_id', $pid)->sum('hours_spent')
+                ];
+            }
 
-            // C. Points Leaderboard (Assiged Done Tasks)
+            $employeesChart = [];
+            // Map Actuals
+            $empActuals = $timesheets->groupBy('employee_id');
+            foreach ($empActuals as $eid => $records) {
+                $e = $records->first()->employee;
+                if (!$e) continue;
+                $name = $e->first_name . ' ' . $e->last_name;
+                if (!isset($employeesChart[$name])) $employeesChart[$name] = ['planned' => 0, 'actual' => 0];
+                $employeesChart[$name]['actual'] = (float) $records->sum('hours_spent');
+            }
+            // Map Planned (Tasks assigned to them in current scope)
+            foreach ($tasks as $task) {
+                $count = $task->assignees->count();
+                if ($count > 0) {
+                    $split = $task->estimated_hours / $count;
+                    foreach ($task->assignees as $assignee) {
+                        $name = $assignee->name; 
+                        if (!isset($employeesChart[$name])) $employeesChart[$name] = ['planned' => 0, 'actual' => 0];
+                        $employeesChart[$name]['planned'] += $split;
+                    }
+                }
+            }
+
+            // 6. Points Leaderboard (Completed)
             $pointsChart = [];
-            $doneTasks = $tasks->where('status', 'Done');
-            
+            $doneTasks = $tasks->where('status', 'done'); // Status case safety
+            if ($doneTasks->isEmpty()) $doneTasks = $tasks->where('status', 'Done');
+
             foreach ($doneTasks as $task) {
-                $points = $task->scrum_points ?? 0;
-                if ($points > 0 && $task->assignees->count() > 0) {
-                    $split = $points / $task->assignees->count(); 
-                    foreach ($task->assignees as $u) {
-                        $name = $u->name;
+                $count = $task->assignees->count();
+                if ($count > 0) {
+                    $split = ($task->scrum_points ?? 0) / $count;
+                    foreach ($task->assignees as $assignee) {
+                        $name = $assignee->name;
                         if (!isset($pointsChart[$name])) $pointsChart[$name] = 0;
                         $pointsChart[$name] += $split;
                     }
                 }
             }
+            arsort($pointsChart);
 
             return response()->json([
                 'success' => true,
@@ -1134,10 +1255,83 @@ class PlannerApiController extends Controller
                     'points' => $pointsChart
                 ]
             ]);
-
         } catch (\Exception $e) {
             $this->logger->log('project_management', 'reports_error', $e->getMessage());
             return response()->json(['error' => $e->getMessage()], 500);
         }
+    }
+
+    /**
+     * Extend Task (Handles overrun)
+     */
+    public function extendTask(Request $request, $id)
+    {
+        try {
+            $task = Task::findOrFail($id);
+            $project = $task->project;
+            
+            $request->validate([
+                'new_due_date' => 'required|date|after:due_date'
+            ]);
+
+            $oldDue = $task->due_date->format('Y-m-d');
+            $task->due_date = Carbon::parse($request->new_due_date);
+            $task->save();
+
+            // Check lock & notify if needed
+            $this->checkLockAndNotify($project, $task, [
+                'due_date' => ['old' => $oldDue, 'new' => $task->due_date->format('Y-m-d')],
+                'action' => 'Task Extension'
+            ]);
+
+            return response()->json(['status' => 'ok', 'task' => $task]);
+        } catch (\Exception $e) {
+            return response()->json(['error' => $e->getMessage()], 500);
+        }
+    }
+
+    // Helpers (checkLockAndNotify & notifyStakeholders) removed, now using ProjectGovernanceTrait.
+
+    /**
+     * AI Health Logic & Critical Path
+     */
+    private function calculateHealthScore($actual, $planned)
+    {
+        if ($planned <= 0) return 'N/A';
+        $ratio = $actual / $planned;
+        if ($ratio > 1.1) return 'Critical (Overrun)';
+        if ($ratio > 0.9) return 'Healthy';
+        return 'Underutilized';
+    }
+
+    private function calculateForecastFinish($avgDaily, $remaining)
+    {
+        if ($avgDaily <= 0) return 'Unknown';
+        $days = ceil($remaining / $avgDaily);
+        return Carbon::now()->addDays($days)->format('Y-m-d');
+    }
+
+    private function getCriticalPathIds($tasks)
+    {
+        // Simple heuristic: Tasks with no successors (nothing blocks them) 
+        // that have the latest due dates, and their dependencies.
+        $ids = [];
+        $latestTasks = $tasks->sortByDesc('due_date')->take(3);
+        
+        foreach ($latestTasks as $lt) {
+            $ids[] = $lt->id;
+            // Trace back blockers
+            $curr = $lt;
+            while ($curr && $curr->blocked_by_task_id) {
+                $blocker = Task::find($curr->blocked_by_task_id);
+                if ($blocker) {
+                    $ids[] = $blocker->id;
+                    $curr = $blocker;
+                } else {
+                    $curr = null;
+                }
+            }
+        }
+        return array_unique($ids);
     }
 }

@@ -25,14 +25,31 @@ class Project extends Model
         'gamification_settings', // JSON
         'billing_type',
         'hourly_rate',
-        'currency'
+        'currency',
+        'manual_progress_percentage',
+        'manual_status_label',
+        'project_health_index',
+        'is_locked',
+        'plan_lock_recipients'
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'deadline' => 'date',
         'gamification_settings' => 'array',
+        'manual_progress_percentage' => 'integer',
+        'project_health_index' => 'integer'
     ];
+
+    protected $appends = ['brd_signed'];
+
+    public function getBrdSignedAttribute()
+    {
+        return $this->documents()
+            ->where('category', 'requirement')
+            ->where('is_signed', true)
+            ->exists();
+    }
 
     public function client()
     {
@@ -62,6 +79,11 @@ class Project extends Model
     public function tasks()
     {
         return $this->hasMany(Task::class);
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(ProjectDocument::class);
     }
 
     public function taskTemplates()

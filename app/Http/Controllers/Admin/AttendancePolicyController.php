@@ -25,14 +25,28 @@ class AttendancePolicyController extends Controller
             'approvals' => \App\Models\AttendanceRegularization::class,
             'overtime' => \App\Models\OvertimeRequest::class,
             'wfh' => \App\Models\WfhRequest::class,
+            'floating_requests' => \App\Models\FloatingHolidayRequest::class,
+            'my_holidays' => \App\Models\FloatingHolidayRequest::class, // Or whatever the correct model is
         ];
         
         $activeModel = $requestModels[$tab] ?? \App\Models\AttendanceRegularization::class;
         $isRequestTab = isset($requestModels[$tab]);
 
-        $data['requests'] = $isRequestTab
-            ? $activeModel::with(['employee.department'])->whereHas('employee', fn($q) => $q->where('tenant_id', $tenantId))->latest()->paginate(15)->withQueryString()
-            : \Inertia\Inertia::lazy(fn() => $activeModel::with(['employee.department'])->whereHas('employee', fn($q) => $q->where('tenant_id', $tenantId))->latest()->paginate(15)->withQueryString());
+        // Determine relation strings based on the model since FloatingHolidayRequest uses 'user' instead of 'employee'
+        $relations = ($activeModel === \App\Models\FloatingHolidayRequest::class) 
+            ? ['user.employee'] 
+            : ['employee.department'];
+
+        // Safest approach to eager loading for different models
+        if ($activeModel === \App\Models\FloatingHolidayRequest::class) {
+            $data['requests'] = $isRequestTab
+                ? $activeModel::with(['user.employee', 'holiday'])->latest()->paginate(15)->withQueryString()
+                : \Inertia\Inertia::lazy(fn() => $activeModel::with(['user.employee', 'holiday'])->latest()->paginate(15)->withQueryString());
+        } else {
+            $data['requests'] = $isRequestTab
+                ? $activeModel::with(['employee.department'])->whereHas('employee', fn($q) => $q->where('tenant_id', $tenantId))->latest()->paginate(15)->withQueryString()
+                : \Inertia\Inertia::lazy(fn() => $activeModel::with(['employee.department'])->whereHas('employee', fn($q) => $q->where('tenant_id', $tenantId))->latest()->paginate(15)->withQueryString());
+        }
 
         // 1.1 Team Approvals (Managerial Context)
         if ($tab === 'team_approvals') {
@@ -76,8 +90,10 @@ class AttendancePolicyController extends Controller
             'name' => 'required|string|max:255',
             'priority' => 'required|integer|min:0',
             'rules' => 'nullable|array',
+            'late_mark_threshold' => 'nullable|integer|min:0',
+            'deduction_rule' => 'nullable|array',
             'wfh_policy' => 'nullable|array',
-            'overtime_policy' => 'nullable|array', // Standardized name
+            'overtime_policy' => 'nullable|array',
             'timesheet_policy' => 'nullable|array',
             'sandwich_rule_enabled' => 'boolean'
         ]);
@@ -86,8 +102,8 @@ class AttendancePolicyController extends Controller
 
         // Logical Validation
         if (!empty($validated['timesheet_policy'])) {
-             $min = $validated['timesheet_policy']['daily_min_hours'] ?? 0;
-             $max = $validated['timesheet_policy']['daily_max_hours'] ?? 24;
+             $min = $validated['timesheet_policy']['min_daily_hours'] ?? 0;
+             $max = $validated['timesheet_policy']['max_daily_hours'] ?? 24;
              if ($min > $max) {
                  return back()->withErrors(['timesheet_policy' => 'Minimum hours cannot be greater than maximum hours.']);
              }
@@ -104,16 +120,18 @@ class AttendancePolicyController extends Controller
             'name' => 'required|string|max:255',
             'priority' => 'required|integer|min:0',
             'rules' => 'nullable|array',
+            'late_mark_threshold' => 'nullable|integer|min:0',
+            'deduction_rule' => 'nullable|array',
             'wfh_policy' => 'nullable|array',
-            'overtime_policy' => 'nullable|array', // Standardized name
+            'overtime_policy' => 'nullable|array',
             'timesheet_policy' => 'nullable|array',
             'sandwich_rule_enabled' => 'boolean'
         ]);
 
         // Logical Validation
         if (!empty($validated['timesheet_policy'])) {
-             $min = $validated['timesheet_policy']['daily_min_hours'] ?? 0;
-             $max = $validated['timesheet_policy']['daily_max_hours'] ?? 24;
+             $min = $validated['timesheet_policy']['min_daily_hours'] ?? 0;
+             $max = $validated['timesheet_policy']['max_daily_hours'] ?? 24;
              if ($min > $max) {
                  return back()->withErrors(['timesheet_policy' => 'Minimum hours cannot be greater than maximum hours.']);
              }

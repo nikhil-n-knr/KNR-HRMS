@@ -82,7 +82,7 @@ class AttendanceRegistryService
      * The Clock In Action.
      * Handles logic for Late Mark, Shift assignment, and starting a session.
      */
-    public function clockIn(Employee $employee, string $ip, string $source = 'Web')
+    public function clockIn(Employee $employee, string $ip, string $source = 'Web', $lat = null, $long = null)
     {
         $today = Carbon::today();
         $now = Carbon::now();
@@ -170,6 +170,8 @@ class AttendanceRegistryService
         $session = $log->sessions()->create([
             'in_time' => $now,
             'in_ip' => $ip,
+            'in_lat' => $lat,
+            'in_long' => $long,
             'source' => $source,
             'session_type' => 'Work'
         ]);
@@ -183,7 +185,7 @@ class AttendanceRegistryService
      * The Clock Out Action.
      * Closes the current session and recalculates totals.
      */
-    public function clockOut(Employee $employee, string $ip)
+    public function clockOut(Employee $employee, string $ip, $lat = null, $long = null)
     {
         $today = Carbon::today();
         $now = Carbon::now();
@@ -198,7 +200,9 @@ class AttendanceRegistryService
         if ($session) {
             $session->update([
                 'out_time' => $now,
-                'out_ip' => $ip
+                'out_ip' => $ip,
+                'out_lat' => $lat,
+                'out_long' => $long
             ]);
 
             // Recalculate Totals & Overtime

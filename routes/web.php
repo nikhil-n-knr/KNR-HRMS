@@ -58,9 +58,7 @@ Route::get('/force-clear-all', function() {
     return "System Wiped and Browser Cookies Cleared. Return to <a href='/'>Home</a>";
 });
 
-// MEETING HUB PUBLIC ROUTES
-Route::get('/m/{uuid}', [App\Http\Controllers\CRM\PublicMeetingController::class, 'show'])->name('crm.meetings.public.show');
-Route::post('/m/{uuid}/rsvp', [App\Http\Controllers\CRM\PublicMeetingController::class, 'rsvp'])->name('crm.meetings.public.rsvp');
+
 
 // --- CMS Storefront Root & Dynamic Catch-all (Priority) ---
 // This ensures http://localhost:8000/ and dynamic slugs like /men work immediately.
@@ -93,8 +91,18 @@ Route::post('/become-seller', [\App\Http\Controllers\CMS\SellerOnboardingControl
 
 
 
+Route::middleware(['auth'])->group(function () {
+    Route::prefix('hr/employee-360')->name('hr.employee-360.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\HR\Employee360Controller::class, 'index'])->name('index');
+        Route::get('/{employee}/metrics', [\App\Http\Controllers\HR\Employee360Controller::class, 'getMetrics'])->name('metrics');
+        Route::get('/{employee}/export', [\App\Http\Controllers\HR\Employee360Controller::class, 'export'])->name('export');
+    });
+});
+
 Route::middleware(['auth', 'verified'])->group(function () {
     // ... existing routes ...
+
+
 
     // Project Modules API
     Route::prefix('projects/{project}/modules')->name('projects.modules.')->group(function () {
@@ -102,12 +110,22 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::post('/', [ProjectModuleController::class, 'store'])->name('store');
         Route::post('/bulk', [ProjectModuleController::class, 'bulkStore'])->name('bulk');
         Route::post('/clone', [ProjectModuleController::class, 'cloneStructure'])->name('clone');
+        Route::post('/bulk-destroy', [ProjectModuleController::class, 'bulkDestroy'])->name('bulk-destroy');
         Route::put('/{module}', [ProjectModuleController::class, 'update'])->name('update');
         Route::delete('/{module}', [ProjectModuleController::class, 'destroy'])->name('destroy');
     });
 
 
     // Client Management API (Renamed to avoid conflict with UI Resource)
+    Route::prefix('project-portal')->name('projects.portal.')->group(function () {
+        Route::get('/', [App\Http\Controllers\ProjectManagement\ProjectPortalController::class, 'index'])->name('index');
+        Route::post('/{project}/document', [App\Http\Controllers\ProjectManagement\ProjectPortalController::class, 'uploadDocument'])->name('document.upload');
+        Route::post('/document/{document}/sign-off', [App\Http\Controllers\ProjectManagement\ProjectPortalController::class, 'signOffDocument'])->name('document.sign-off');
+        Route::put('/{project}/governance', [App\Http\Controllers\ProjectManagement\ProjectPortalController::class, 'updateGovernance'])->name('governance.update');
+        Route::get('/{project}/governance/history', [App\Http\Controllers\ProjectManagement\ProjectPortalController::class, 'getLogHistory'])->name('governance.history');
+        Route::get('/{project}/summary-pdf', [App\Http\Controllers\ProjectManagement\ProjectSummaryController::class, 'exportPDF'])->name('summary-pdf');
+        Route::get('/management/dealing-hub', [App\Http\Controllers\ProjectManagement\ManagementDealingController::class, 'hub'])->name('management.dealing-hub');
+    });
     Route::prefix('projects/clients-api')->name('clients.')->group(function () {
         Route::get('/', [App\Http\Controllers\ProjectManagement\ClientManagementController::class, 'index'])->name('index');
         Route::post('/users', [App\Http\Controllers\ProjectManagement\ClientManagementController::class, 'storeUser'])->name('users.store');
@@ -161,6 +179,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::put('/deployments/{round}/status', [App\Http\Controllers\ProjectManagement\DeploymentController::class, 'updateStatus'])->name('deployments.update-status');
 
         Route::get('/reports/generate', [App\Http\Controllers\ProjectManagement\ReportController::class, 'generate'])->name('reports.generate');
+        
+        // Phase 11: Bulk Management
+        Route::get('/import/sample', [App\Http\Controllers\ProjectManagement\BugTrackerController::class, 'downloadSampleExcel'])->name('import.sample');
+        Route::post('/import/bulk', [App\Http\Controllers\ProjectManagement\BugTrackerController::class, 'importExcel'])->name('import.bulk');
+        
+        // Phase 11: Stage Configuration
+        Route::post('/stages/{stage}/people', [App\Http\Controllers\ProjectManagement\BugTrackerController::class, 'updateStagePeople'])->name('stages.people.update');
     });
 });
 
@@ -185,7 +210,10 @@ Route::prefix('portal')->name('portal.')->group(function () {
         Route::get('/pulse', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'getLivePulse'])->name('pulse');
         Route::get('/ticket/new', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'createTicket'])->name('tickets.create');
         Route::post('/ticket', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'storeTicket'])->name('tickets.store');
-        Route::get('/ticket/{bug}/timeline', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'getTicketTimeline'])->name('tickets.timeline');
+        Route::post('/ticket/{bug}/timeline', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'getTicketTimeline'])->name('tickets.timeline');
+        Route::post('/ticket/{bug}/comments', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'storeComment'])->name('tickets.comments.store');
+        Route::post('/project/{project}/document', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'uploadDocument'])->name('projects.document.upload');
+        Route::post('/document/{document}/sign-off', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'signOffDocument'])->name('projects.document.sign-off');
         Route::post('/ticket/{ticket}/verify', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'verifyTicket'])->name('tickets.verify');
         Route::post('/ticket/{ticket}/rate', [App\Http\Controllers\ClientPortal\ClientPortalController::class, 'storeRating'])->name('tickets.rate');
 
@@ -257,10 +285,26 @@ Route::middleware(['auth'])->prefix('talent')->name('talent.')->group(function (
     Route::post('/offers/{offer}/reject', [App\Http\Controllers\Talent\OfferApprovalController::class, 'reject'])->name('offers.reject');
 });
 
+Route::get('/m/login', function() { return Inertia::render('MobileApp/Auth/Login'); })->name('mobile.login');
+Route::post('/m/login', [App\Http\Controllers\Auth\AuthController::class, 'login'])->name('mobile.login.post');
+Route::get('/m/forgot-password', function() { return Inertia::render('MobileApp/Auth/ForgotPassword'); })->name('mobile.password.request');
+
 // Authenticated Routes
 Route::middleware(['auth'])->group(function () {
     // Dashboard / Home (Inertia App Entry)
     Route::get('/dashboard', [App\Http\Controllers\DashboardController::class, 'index'])->name('dashboard');
+
+    Route::prefix('m')->name('mobile.')->middleware(['auth'])->group(function () {
+        Route::get('/dashboard', [App\Http\Controllers\MobileController::class, 'dashboard'])->name('dashboard');
+        Route::get('/tasks', [App\Http\Controllers\MobileController::class, 'tasks'])->name('tasks');
+        Route::get('/timesheet', [App\Http\Controllers\MobileController::class, 'timesheet'])->name('timesheet');
+        Route::get('/chat', [App\Http\Controllers\MobileController::class, 'chat'])->name('chat');
+        Route::get('/requests', [App\Http\Controllers\MobileController::class, 'requests'])->name('requests');
+        Route::get('/approvals', [App\Http\Controllers\MobileController::class, 'approvals'])->name('approvals');
+        Route::get('/profile', [App\Http\Controllers\MobileController::class, 'profile'])->name('profile');
+        Route::get('/notifications', [App\Http\Controllers\MobileController::class, 'notifications'])->name('notifications');
+    });
+
 
     // Coming Soon Fallback
     Route::get('/coming-soon', function () {
@@ -872,13 +916,18 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
     Route::post('projects/clients/{client}/invite', [App\Http\Controllers\ProjectManagement\ClientController::class, 'inviteUser'])->name('projects.clients.invite');
          
     // Planner UI & API (Universal)
-    Route::get('/projects/planner', function () { return Inertia::render('Project/Planner/Index'); })->name('planner.index');
+    Route::get('/projects/planner', function (\Illuminate\Http\Request $request) { 
+        return Inertia::render('Project/Planner/Index', [
+            'initialProjectId' => $request->query('project')
+        ]); 
+    })->name('planner.index');
     Route::get('/planner/data', [App\Http\Controllers\ProjectManagement\PlannerApiController::class, 'loadData'])->name('planner.data');
     Route::post('/planner/tasks', [App\Http\Controllers\ProjectManagement\PlannerApiController::class, 'store'])->name('planner.store');
     Route::put('/planner/tasks/{id}', [App\Http\Controllers\ProjectManagement\PlannerApiController::class, 'update'])->name('planner.update');
     Route::delete('/planner/tasks/{id}', [App\Http\Controllers\ProjectManagement\PlannerApiController::class, 'destroy'])->name('planner.destroy');
     Route::post('/planner/move-task/{id}', [App\Http\Controllers\ProjectManagement\PlannerApiController::class, 'moveTask'])->name('planner.move');
     Route::post('/planner/assign', [App\Http\Controllers\ProjectManagement\PlannerApiController::class, 'assign'])->name('planner.assign');
+    Route::post('/planner/extend-task/{id}', [App\Http\Controllers\ProjectManagement\PlannerApiController::class, 'extendTask'])->name('planner.extend-task');
     
     // Reports
     Route::get('/planner/reports', [App\Http\Controllers\ProjectManagement\PlannerApiController::class, 'getReports'])->name('planner.reports');
@@ -916,6 +965,15 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
     Route::get('projects/{project}/board', [App\Http\Controllers\Admin\KanbanController::class, 'index'])->name('projects.board');
     Route::get('projects/{project}/board/activities', [App\Http\Controllers\Admin\KanbanController::class, 'activityLog'])->name('projects.board.activities');
     Route::get('projects/{project}/board/activities/export', [App\Http\Controllers\Admin\KanbanController::class, 'exportActivityLog'])->name('projects.board.activities.export');
+
+    // Task CRUD (used by Board modal + Task List page)
+    Route::post('projects/{project}/tasks', [App\Http\Controllers\Admin\KanbanController::class, 'store'])->name('projects.tasks.store');
+    Route::put('projects/{project}/tasks/{task}', [App\Http\Controllers\Admin\KanbanController::class, 'update'])->name('projects.tasks.update');
+    Route::delete('projects/{project}/tasks/{task}', [App\Http\Controllers\Admin\KanbanController::class, 'destroy'])->name('projects.tasks.destroy');
+    Route::get('projects/{project}/tasks/{task}', [App\Http\Controllers\Admin\KanbanController::class, 'show'])->name('projects.tasks.show');
+    Route::post('projects/{project}/tasks/{task}/move', [App\Http\Controllers\Admin\KanbanController::class, 'move'])->name('projects.tasks.move');
+    Route::post('projects/{project}/tasks/bulk-update', [App\Http\Controllers\Admin\KanbanController::class, 'bulkUpdate'])->name('projects.tasks.bulk_update');
+    Route::post('projects/{project}/tasks/reorder', [App\Http\Controllers\Admin\KanbanController::class, 'reorder'])->name('projects.tasks.reorder');
     
     // Task Hub API (Comments, Checklists)
     Route::controller(App\Http\Controllers\ProjectManagement\TaskCommentController::class)->group(function () {
@@ -940,6 +998,8 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
 
     // Project Tabs (New)
     Route::get('projects/{project}/list', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'taskList'])->name('projects.tasks.index');
+    Route::post('projects/{project}/tasks/{task}/backlog', [App\Http\Controllers\Admin\KanbanController::class, 'moveToBacklog'])->name('projects.tasks.backlog');
+    Route::post('projects/{project}/tasks/{task}/restore', [App\Http\Controllers\Admin\KanbanController::class, 'restoreFromBacklog'])->name('projects.tasks.restore');
     Route::get('projects/{project}/modules', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'modules'])->name('projects.modules.index');
     Route::get('projects/{project}/files', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'files'])->name('projects.files');
     Route::get('projects/{project}/reports', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'reports'])->name('projects.reports');
@@ -1180,7 +1240,8 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
             Route::get('/attendance-policies', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'attendance_policies')->name('policies.index');
             Route::get('/workflows', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'workflows')->name('workflows');
             Route::get('/gamification', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'gamification')->name('gamification');
-            Route::get('/teams', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'teams')->name('teams');
+            Route::get('/teams', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'teams')->name('teams.index');
+            Route::resource('teams', \App\Http\Controllers\Admin\TeamController::class)->except(['index'])->names('teams');
             
             // AI Logs & Analytics
             Route::get('/analytics', [App\Http\Controllers\Admin\AttendanceAnalyticsController::class, 'index'])->name('analytics');
@@ -1250,6 +1311,7 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
                 Route::put('/stages/{stage}', [App\Http\Controllers\Admin\WorkflowController::class, 'updateStage'])->name('stages.update');
                 Route::delete('/stages/{stage}', [App\Http\Controllers\Admin\WorkflowController::class, 'removeStage'])->name('stages.destroy');
                 Route::put('/{workflow}/reorder', [App\Http\Controllers\Admin\WorkflowController::class, 'reorderStages'])->name('reorder');
+                Route::post('/{workflow}/clone', [App\Http\Controllers\Admin\WorkflowController::class, 'clone'])->name('clone');
             });
         });
 
@@ -1257,7 +1319,6 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
         Route::get('/analytics/visual', [\App\Http\Controllers\Admin\VisualAnalyticsController::class, 'index'])->name('analytics.visual');
         // Attendance Hub (Moved to top)
         
-
 
 
         // --- Assets Management (Smart Group) ---
@@ -1517,7 +1578,7 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
 });
 
 Route::post('/login', [App\Http\Controllers\Auth\AuthController::class, 'login']);
-Route::post('/logout', [App\Http\Controllers\Auth\AuthController::class, 'logout']);
+Route::post('/logout', [App\Http\Controllers\Auth\AuthController::class, 'logout'])->middleware('nocache');
 Route::post('/impersonate', [App\Http\Controllers\Auth\AuthController::class, 'impersonate']);
 Route::post('/forgot-password', [App\Http\Controllers\Auth\AuthController::class, 'forgotPassword'])->middleware('throttle:3,1');
 Route::post('/verify-otp', [App\Http\Controllers\Auth\AuthController::class, 'verifyOtp'])->middleware('throttle:5,1');
@@ -1543,7 +1604,7 @@ Route::prefix('client-portal')->group(function () {
 
 Route::get('/login', function () {
     return Inertia::render('Auth/Login');
-})->name('login');
+})->name('login')->middleware('nocache');
     // Public Verification (No Auth)
     Route::get('/verify-card/{uuid}', [App\Http\Controllers\Admin\IdentityCardController::class, 'verify'])->name('identity.verify');
 
@@ -1879,8 +1940,17 @@ Route::get('/manifest.json',   [\App\Http\Controllers\CMS\PublicSiteController::
 Route::get('/sitemap.xml',     [\App\Http\Controllers\CMS\PublicSiteController::class, 'sitemap'])->name('psp.sitemap');
 Route::get('/robots.txt',      [\App\Http\Controllers\CMS\PublicSiteController::class, 'robots'])->name('psp.robots');
 
+// MEETING HUB PUBLIC ROUTES
+Route::get('/m/{uuid}', [App\Http\Controllers\CRM\PublicMeetingController::class, 'show'])->name('crm.meetings.public.show');
+Route::post('/m/{uuid}/rsvp', [App\Http\Controllers\CRM\PublicMeetingController::class, 'rsvp'])->name('crm.meetings.public.rsvp');
+
 // --- Routes handled by Catch-all at bottom ---
-Route::get('/', [\App\Http\Controllers\CMS\PublicSiteController::class, 'serve'])->name('psp.home');
+Route::get('/', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
+    return redirect()->route('login');
+})->name('psp.home');
 Route::get('/{slug}', [\App\Http\Controllers\CMS\PublicSiteController::class, 'serve'])
     ->where('slug', '.*')
     ->name('psp.dynamic');

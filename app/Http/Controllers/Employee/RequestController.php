@@ -54,6 +54,7 @@ class RequestController extends Controller
 
             case 'overtime':
                 $requests = OvertimeRequest::where('employee_id', $user->employee->id)
+                    ->with('project')
                     ->latest()
                     ->paginate(15);
                 break;
@@ -93,5 +94,79 @@ class RequestController extends Controller
             // Pass options if needed for forms (e.g. Swaps need eligible employees?)
             // 'swapOptions' => ...
         ]);
+    }
+
+    /**
+     * Cancel / Withdraw logic for various request types
+     */
+    public function cancel(Request $request)
+    {
+        $validated = $request->validate([
+            'id' => 'required|integer',
+            'type' => 'required|string|in:overtime,wfh,swaps,regularization,floating,leave'
+        ]);
+
+        $user = auth()->user();
+        $employeeId = $user->employee->id;
+        $id = $validated['id'];
+        $type = $validated['type'];
+
+        $model = null;
+        switch ($type) {
+            case 'overtime': $model = OvertimeRequest::query(); break;
+            case 'wfh': $model = WfhRequest::query(); break;
+            case 'swaps': $model = ShiftSwap::query(); break;
+            case 'regularization': $model = AttendanceRegularization::query(); break;
+            case 'floating': $model = \App\Models\FloatingHolidayRequest::query(); break;
+            case 'leave': $model = \App\Models\LeaveRequest::query(); break;
+        }
+
+        if (!$model) {
+            return back()->with('error', 'Invalid request type.')->setStatusCode(303);
+        }
+
+        // Fetch the request and ensure ownership
+        $record = $model->where('id', $id)->first();
+
+        if (!$record) {
+            return back()->with('error', 'Request not found.')->setStatusCode(303);
+        }
+
+        // Ownership check - handle swaps differently (requester or recipient)
+        if ($type === 'swaps') {
+            if ($record->requester_id != $employeeId && $record->recipient_id != $employeeId) {
+                return back()->with('error', 'Unauthorized.')->setStatusCode(303);
+            }
+        } else {
+            // Check employee_id or user_id mapping
+            $ownerId = $record->employee_id ?? $record->user_id ?? null;
+            $compareId = ($record->user_id) ? $user->id : $employeeId;
+            
+            if ($ownerId != $compareId) {
+                return back()->with('error', 'Unauthorized action.')->setStatusCode(303);
+            }
+        }
+
+        // Logic: 
+        // 1. If Pending -> Mark as 'Cancelled' directly.
+        // 2. If Approved -> Mark as 'Cancellation Requested'.
+        
+        $currentStatus = strtolower($record->status);
+        
+        if ($currentStatus === 'pending') {
+            // Respect existing model's case if possible, or force one
+            // We'll try to detect if it uses title case or lower case
+            $record->status = (isset($record->status) && ctype_upper($record->status[0])) ? 'Cancelled' : 'cancelled';
+            $record->save();
+            return back()->with('success', 'Request has been cancelled.')->setStatusCode(303);
+        } 
+        
+        if ($currentStatus === 'approved') {
+            $record->status = 'Cancellation Requested';
+            $record->save();
+            return back()->with('success', 'Cancellation request submitted for approval.')->setStatusCode(303);
+        }
+
+        return back()->with('error', 'Request cannot be cancelled in its current state (already ' . $currentStatus . ').')->setStatusCode(303);
     }
 }

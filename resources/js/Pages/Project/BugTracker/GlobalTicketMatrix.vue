@@ -298,9 +298,9 @@
                                                 <div class="text-sm font-bold text-slate-800 truncate max-w-[280px] group-hover/row:text-emerald-700 transition-colors">{{ bug.subject }}</div>
                                             </div>
                                             <div class="text-sm mt-1.5 flex items-center gap-3 font-black uppercase tracking-widest leading-none">
-                                                <span class="text-slate-400">{{ bug.project.name }}</span>
+                                                <span class="text-slate-400">{{ bug.project?.name }}</span>
                                                 <span v-if="bug.module" class="h-1 w-1 bg-slate-300 rounded-full"></span>
-                                                <span v-if="bug.module" class="text-emerald-600">{{ bug.module.name }}</span>
+                                                <span v-if="bug.module" class="text-emerald-600">{{ bug.module?.name }}</span>
                                             </div>
                                         </td>
                                         <td v-if="!selectedBugId" class="px-6 py-4 whitespace-nowrap hidden lg:table-cell">
@@ -870,6 +870,12 @@ onMounted(() => {
     // Handle specific custom view from URL
     const urlParams = new URLSearchParams(window.location.search);
     const viewId = urlParams.get('view');
+    const bugIdFromUrl = urlParams.get('bug');
+    
+    if (bugIdFromUrl) {
+        selectedBugId.value = parseInt(bugIdFromUrl);
+    }
+
     if (viewId === 'pulse') {
         viewMode.value = 'pulse';
     } else if (viewId === 'system-manager-approval') {
@@ -894,7 +900,7 @@ onMounted(() => {
     if (props.filters.timeframe) store.timeFrame = props.filters.timeframe;
 
     // Priority 2: If fresh visit (no URL filters) and store has history, apply store context
-    const hasUrlFilters = props.filters.project_id || props.filters.module_id || props.filters.timeframe || props.filters.search || viewId;
+    const hasUrlFilters = props.filters.project_id || props.filters.module_id || props.filters.timeframe || props.filters.search || viewId || bugIdFromUrl;
     if (!hasUrlFilters && (store.selectedProject || store.selectedModule)) {
          router.get(route('bugs.index'), { 
             tab: 'tracker',

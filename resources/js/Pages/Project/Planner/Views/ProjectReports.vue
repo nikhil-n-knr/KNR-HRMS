@@ -45,12 +45,12 @@
         <!-- KPI Cards -->
         <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
              <div class="col-span-2 md:col-span-1 bg-white/90 backdrop-blur-xl p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                 <p class="text-xs font-bold text-gray-400 uppercase">Total Scope (Hours)</p>
-                 <h3 class="text-2xl font-black text-indigo-900 mt-1">{{ stats.total_scope }}h</h3>
-                 <p class="text-xs text-gray-500 mt-2 flex justify-between">
-                    <span>Allocated: {{ stats.total_hours }}h</span>
-                    <span :class="stats.remaining_hours < 0 ? 'text-red-500' : 'text-emerald-500'">{{ stats.remaining_hours }}h left</span>
-                 </p>
+                  <p class="text-xs font-bold text-gray-400 uppercase">Portfolio Scope (Hours)</p>
+                  <h3 class="text-2xl font-black text-indigo-900 mt-1">{{ stats.total_scope }}h</h3>
+                  <p class="text-xs text-gray-500 mt-2 flex justify-between">
+                     <span>Invested: {{ stats.total_actual }}h</span>
+                     <span :class="stats.remaining_hours < 0 ? 'text-red-500' : 'text-emerald-500'">{{ stats.remaining_hours }}h left</span>
+                  </p>
                  <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
                  </div>
@@ -76,9 +76,19 @@
              </div>
              
               <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-                 <p class="text-xs font-bold text-gray-400 uppercase">Avg. Burn</p>
-                 <h3 class="text-xl md:text-2xl font-black text-blue-600 mt-1">{{ stats.avg_daily }}h</h3>
-             </div>
+                  <p class="text-xs font-bold text-gray-400 uppercase">Avg. Burn</p>
+                  <h3 class="text-xl md:text-2xl font-black text-blue-600 mt-1">{{ stats.avg_daily }}h</h3>
+              </div>
+
+              <!-- AI Health & Forecast -->
+              <div class="col-span-2 md:col-span-1 bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
+                  <p class="text-xs font-bold text-gray-400 uppercase">AI Health Status</p>
+                  <div class="flex items-center gap-2 mt-1">
+                      <div class="w-2 h-2 rounded-full animate-pulse" :class="getHealthDotColor(stats.health_score)"></div>
+                      <h3 class="text-sm font-black uppercase tracking-tight" :class="getHealthTextColor(stats.health_score)">{{ stats.health_score }}</h3>
+                  </div>
+                  <p class="text-[10px] font-bold text-gray-500 mt-2 uppercase">Est. Finish: <span class="text-indigo-600">{{ stats.forecast_finish }}</span></p>
+              </div>
         </div>
 
         <!-- Charts -->
@@ -193,12 +203,15 @@ const filters = ref({
 
 const stats = ref({ 
     total_hours: 0, 
+    total_actual: 0,
     holiday_hours: 0, 
     resource_count: 0, 
     avg_daily: 0,
     total_scope: 0,
     total_points: 0,
-    remaining_hours: 0
+    remaining_hours: 0,
+    health_score: 'N/A',
+    forecast_finish: 'Unknown'
 });
 
 const chartData = ref({ projects: {}, employees: {}, points: {} });
@@ -242,20 +255,65 @@ const handleSearch = (q) => {
 };
 
 const exportExcel = () => {
-    const params = new URLSearchParams(filters.value).toString();
-    window.location.href = route('planner.reports.export') + '?' + params;
+    const params = new URLSearchParams(filters.value);
+    params.set('format', 'excel'); // Request the new multi-page excel format
+    window.location.href = route('planner.reports.export') + '?' + params.toString();
+};
+
+const getHealthDotColor = (s) => {
+    if (s?.includes('Healthy')) return 'bg-emerald-500';
+    if (s?.includes('Critical')) return 'bg-red-500';
+    return 'bg-amber-500';
+};
+
+const getHealthTextColor = (s) => {
+    if (s?.includes('Healthy')) return 'text-emerald-700';
+    if (s?.includes('Critical')) return 'text-red-700';
+    return 'text-amber-700';
 };
 
 // Charts Computed
-const projectChartData = computed(() => ({
-    labels: Object.keys(chartData.value.projects),
-    datasets: [{ label: 'Planned Hours', data: Object.values(chartData.value.projects), backgroundColor: '#6366f1', borderRadius: 6 }]
-}));
+const projectChartData = computed(() => {
+    const keys = Object.keys(chartData.value.projects || {});
+    return {
+        labels: keys,
+        datasets: [
+            { 
+                label: 'Planned', 
+                data: keys.map(k => chartData.value.projects[k].planned), 
+                backgroundColor: '#e2e8f0', 
+                borderRadius: 4 
+            },
+            { 
+                label: 'Actual', 
+                data: keys.map(k => chartData.value.projects[k].actual), 
+                backgroundColor: '#6366f1', 
+                borderRadius: 4 
+            }
+        ]
+    };
+});
 
-const employeeChartData = computed(() => ({
-    labels: Object.keys(chartData.value.employees),
-    datasets: [{ label: 'Hours', data: Object.values(chartData.value.employees), backgroundColor: ['#3b82f6','#10b981','#f59e0b','#ef4444','#8b5cf6'], borderWidth: 0 }]
-}));
+const employeeChartData = computed(() => {
+    const keys = Object.keys(chartData.value.employees || {});
+    return {
+        labels: keys,
+        datasets: [
+            { 
+                label: 'Planned', 
+                data: keys.map(k => chartData.value.employees[k].planned), 
+                backgroundColor: '#cbd5e1', 
+                borderRadius: 4 
+            },
+            { 
+                label: 'Actual', 
+                data: keys.map(k => chartData.value.employees[k].actual), 
+                backgroundColor: '#10b981', 
+                borderRadius: 4 
+            }
+        ]
+    };
+});
 
 const pointsChartData = computed(() => ({
     labels: Object.keys(chartData.value.points || {}),
@@ -271,9 +329,11 @@ const pointsChartData = computed(() => ({
 const chartOptions = {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { display: false } },
+    plugins: { 
+        legend: { display: true, position: 'bottom', labels: { boxWidth: 10, font: { size: 10 } } } 
+    },
     scales: {
-        y: { beginAtZero: true, grid: { display: false } }, // Minimalist grid
+        y: { beginAtZero: true, grid: { color: '#f1f5f9' } },
         x: { grid: { display: false } }
     }
 };

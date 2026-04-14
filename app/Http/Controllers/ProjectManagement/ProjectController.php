@@ -479,13 +479,39 @@ class ProjectController extends Controller
     {
         $this->authorize('view', $project);
 
+        // Ensure Default Stages Logic immediately
+        if ($project->stages()->count() === 0) {
+            $defaults = [
+                ['name' => 'To Do', 'type' => 'todo', 'color' => '#64748b'],
+                ['name' => 'In Progress', 'type' => 'doing', 'color' => '#3b82f6'],
+                ['name' => 'In Review', 'type' => 'review', 'color' => '#f59e0b'],
+                ['name' => 'Done', 'type' => 'done', 'color' => '#10b981'],
+            ];
+            foreach ($defaults as $i => $d) {
+                $project->stages()->create(array_merge($d, ['slug' => \Illuminate\Support\Str::slug($d['name']), 'order' => $i]));
+            }
+        }
+
+        // Ensure Default Priorities Logic
+        if ($project->priorities()->count() === 0) {
+            $defaults = [
+                ['name' => 'Low', 'color' => '#64748b'],
+                ['name' => 'Medium', 'color' => '#3b82f6'],
+                ['name' => 'High', 'color' => '#f97316'],
+                ['name' => 'Critical', 'color' => '#ef4444']
+            ];
+            foreach ($defaults as $i => $d) {
+                $project->priorities()->create(array_merge($d, ['order' => $i]));
+            }
+        }
+
         // Load metadata
         // We load 'assignments.assignee' to get the potential list of filterable users. 
         // In reality, we might want all employees in the system or just project members.
         // Let's assume project members for now.
         $project->load(['stages', 'priorities', 'assignments.assignee']);
 
-        $query = $project->tasks()->with(['assignees', 'creator', 'module', 'stage']);
+        $query = $project->tasks()->with(['assignees', 'creator', 'module', 'stage', 'sprint']);
 
         // 1. Status Filter
         if ($request->has('status') && !empty($request->status)) {
@@ -511,6 +537,11 @@ class ProjectController extends Controller
         // 4. Search
         if ($request->filled('search')) {
             $query->where('title', 'like', '%' . $request->search . '%');
+        }
+
+        // 5. Backlog Filter
+        if ($request->has('is_backlog') && $request->is_backlog !== '') {
+            $query->where('is_backlog', (bool) $request->is_backlog);
         }
 
         // 5. Export
@@ -548,10 +579,17 @@ class ProjectController extends Controller
 
         $tasks = $query->orderBy('id', 'desc')->paginate(20)->withQueryString();
 
+        $project->load(['modules' => fn($q) => $q->whereNull('parent_id')->with('childrenRecursive')]);
+
         return Inertia::render('Project/Task/Index', [
-            'project' => $project,
-            'tasks' => $tasks,
-            'filters' => $request->only(['status', 'priority', 'assignees', 'search'])
+            'project'   => $project,
+            'tasks'     => $tasks,
+            'filters'   => $request->only(['status', 'priority', 'assignees', 'search', 'is_backlog']),
+            'employees' => \App\Models\User::select('id', 'name')->with('employee:id,user_id,avatar')->whereHas('employee')->get()->map(function($u) {
+                return ['id' => $u->id, 'name' => $u->name, 'avatar' => $u->employee ? $u->employee->avatar : null];
+            }),
+            'sprints'   => $project->sprints()->select('id', 'name', 'status')->get(),
+            'modules'   => $project->modules,
         ]);
     }
 

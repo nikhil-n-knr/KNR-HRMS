@@ -1,0 +1,58 @@
+Teacher App
+	Staff modules
+		profile
+		attendance
+		studentdetails
+		salary
+		timetable
+		assignments
+		feedback
+		leavemanagement
+		lessonplan
+		proctorstudents
+		notification
+	Admin modules
+		dashboard
+		profile
+		notifications
+		staff
+		staff-attendance
+		students
+		approvals
+		visitors
+	Student modules
+		studentdashboard
+		profile
+		notifications
+		assignments
+		performance
+		interactions
+		quiz
+			details
+			take
+			results
+			analytics
+		orbit
+		studentdetails
+	Alumni modules
+		dashboardpage
+		event
+		blog
+		post
+		alumniprofile
+		individual
+		feedback
+		notification
+		addevent
+		addblog
+		addpost
+		comments
+		pollsandvote
+		messages
+		connections
+		myconnections (redirects to connections)
+	Management modules
+		finance
+		approvals
+		notifications
+		profile

@@ -57,7 +57,15 @@ class AuthController extends Controller
                 'device_details' => request()->header('User-Agent'), // Redundant but explicit as requested
             ], 'auth');
 
-            return response()->json(['message' => 'Logged in successfully']);
+            if (($request->wantsJson() || $request->ajax()) && !$request->header('X-Inertia')) {
+                return response()->json(['message' => 'Logged in successfully', 'user' => $user]);
+            }
+
+            if ($request->input('is_mobile')) {
+                return redirect()->route('mobile.dashboard');
+            }
+
+            return redirect()->intended('/dashboard');
         }
 
         // 3. Audit Failure
@@ -94,10 +102,23 @@ class AuthController extends Controller
         Auth::guard('web')->logout();
 
         $request->session()->invalidate();
-
         $request->session()->regenerateToken();
 
-        return response()->json(['message' => 'Logged out successfully']);
+        // Standard Laravel Cookie Name is often 'laravel_session'. 
+        // We defined SESSION_COOKIE=knr_office_session_v3 in .env
+        $cookieName = config('session.cookie');
+
+        $redirectUrl = str_contains($request->header('referer', ''), '/m/') ? '/m/login' : '/login';
+
+        $response = redirect($redirectUrl)
+            ->header('Clear-Site-Data', '"cookies", "storage", "cache"')
+            ->header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+            ->header('Pragma', 'no-cache');
+
+        // Explicitly forget the session cookie and CSRF cookie to be 100% sure
+        return $response
+            ->withCookie(cookie()->forget($cookieName))
+            ->withCookie(cookie()->forget('XSRF-TOKEN'));
     }
 
     public function impersonate(Request $request, \App\Services\Auth\ImpersonationService $impersonationService)

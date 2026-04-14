@@ -8,7 +8,7 @@ use Inertia\Inertia;
 use App\Models\Timesheet;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-use App\Services\Workflow\WorkflowService;
+use App\Services\WorkflowService;
 use App\Services\AI\AnomalyDetectionService;
 
 class TimesheetController extends Controller
@@ -312,7 +312,7 @@ class TimesheetController extends Controller
 
         $entries = \App\Models\Timesheet::where('employee_id', Auth::user()->employee->id)
             ->whereBetween('date', [$request->start_date, $request->end_date])
-            ->with(['project:id,name,code', 'task:id,title,code'])
+            ->with(['project:id,name,code', 'task:id,title'])
             ->get();
 
         return response()->json($entries);
@@ -434,7 +434,7 @@ class TimesheetController extends Controller
                 // Create
                 $project = \App\Models\Project::find($entry['project_id']);
                 
-                Timesheet::create([
+                $timesheet = Timesheet::create([
                     'employee_id' => $employee->id,
                     'date' => $entry['date'],
                     'project_id' => $project->id,
@@ -445,6 +445,12 @@ class TimesheetController extends Controller
                     'hours_spent' => $entry['hours'],
                     'status' => 'Submitted' // Auto-submit for now to appear in Approvals
                 ]);
+
+                $workflow = app(\App\Services\WorkflowService::class);
+                $instance = $workflow->initializeWorkflow('timesheet', $timesheet->id, Auth::user());
+                if (!$instance) {
+                    $timesheet->update(['status' => 'Approved']);
+                }
                 
                 $savedCount++;
             }

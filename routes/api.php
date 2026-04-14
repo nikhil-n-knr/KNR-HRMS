@@ -207,5 +207,69 @@ Route::get('test-email', function (\App\Services\Email\EmailService $emailServic
 // --- HARDWARE INTEGRATION ---
 Route::post('biometrics/push', [\App\Http\Controllers\Api\BiometricController::class, 'push']);
 
+// --- MOBILE V1 API ---
+Route::prefix('mobile/v1')->name('api.mobile.v1.')->group(function () {
+    // Public Routes
+    Route::post('login', [\App\Http\Controllers\Api\Mobile\V1\AuthController::class, 'login']);
+
+    // Protected Routes
+    Route::middleware('auth:sanctum')->group(function () {
+        Route::post('logout', [\App\Http\Controllers\Api\Mobile\V1\AuthController::class, 'logout']);
+        Route::get('me', [\App\Http\Controllers\Api\Mobile\V1\AuthController::class, 'me']);
+
+        // Attendance
+        Route::get('attendance', [\App\Http\Controllers\Api\Mobile\V1\AttendanceController::class, 'index']);
+        Route::post('attendance/clock-in', [\App\Http\Controllers\Api\Mobile\V1\AttendanceController::class, 'clockIn']);
+        Route::post('attendance/clock-out', [\App\Http\Controllers\Api\Mobile\V1\AttendanceController::class, 'clockOut']);
+        Route::post('attendance/sync', [\App\Http\Controllers\Api\Mobile\V1\AttendanceController::class, 'sync']);
+
+        // Tasks
+        Route::get('tasks', [\App\Http\Controllers\Api\Mobile\V1\TaskController::class, 'index']);
+        Route::get('tasks/{task}', [\App\Http\Controllers\Api\Mobile\V1\TaskController::class, 'show']);
+        Route::put('tasks/{task}/progress', [\App\Http\Controllers\Api\Mobile\V1\TaskController::class, 'updateProgress']);
+        Route::post('checklist/{checklist}/toggle', [\App\Http\Controllers\Api\Mobile\V1\TaskController::class, 'toggleChecklist']);
+
+        // Leave & WFH
+        Route::get('leave', [\App\Http\Controllers\Api\Mobile\V1\LeaveController::class, 'index']);
+        Route::get('leave/types', [\App\Http\Controllers\Api\Mobile\V1\LeaveController::class, 'getTypes']);
+        Route::post('leave/apply', [\App\Http\Controllers\Api\Mobile\V1\LeaveController::class, 'store']);
+        Route::post('wfh/apply', [\App\Http\Controllers\Api\Mobile\V1\LeaveController::class, 'store']);
+
+        // Bug Tracker
+        Route::get('bugs', [\App\Http\Controllers\Api\Mobile\V1\BugTrackerController::class, 'index']);
+        Route::post('bugs/close-all', [\App\Http\Controllers\Api\Mobile\V1\BugTrackerController::class, 'closeAll']);
+        Route::put('bugs/{bug}/status', [\App\Http\Controllers\Api\Mobile\V1\BugTrackerController::class, 'updateStatus']);
+
+        // Email Hub & Conversations
+        Route::get('/emails', [\App\Http\Controllers\Api\Mobile\V1\EmailHubController::class, 'index']);
+        Route::get('/emails/signals', [\App\Http\Controllers\Api\Mobile\V1\EmailHubController::class, 'signals']);
+        Route::get('/emails/{thread}', [\App\Http\Controllers\Api\Mobile\V1\EmailHubController::class, 'show']);
+        Route::post('/emails/reply', [\App\Http\Controllers\Api\Mobile\V1\EmailHubController::class, 'reply']);
+        Route::post('/emails/compose', [\App\Http\Controllers\Api\Mobile\V1\EmailHubController::class, 'compose']);
+
+        // Email Accounts (SMTP/IMAP Mapping)
+        Route::get('/email-accounts', [\App\Http\Controllers\Api\Mobile\V1\EmailAccountController::class, 'index']);
+        Route::post('/email-accounts', [\App\Http\Controllers\Api\Mobile\V1\EmailAccountController::class, 'store']);
+        Route::post('/email-accounts/{account}/toggle', [\App\Http\Controllers\Api\Mobile\V1\EmailAccountController::class, 'toggle']);
+
+        // Notifications
+        Route::get('/notifications', [\App\Http\Controllers\Api\Mobile\V1\NotificationController::class, 'index']);
+        Route::get('/notifications/unread-count', [\App\Http\Controllers\Api\Mobile\V1\NotificationController::class, 'unreadCount']);
+        Route::post('/notifications/{id}/read', [\App\Http\Controllers\Api\Mobile\V1\NotificationController::class, 'markRead']);
+
+        // Timesheets
+        Route::get('/timesheets', [\App\Http\Controllers\Api\Mobile\V1\TimesheetController::class, 'index']);
+        Route::post('/timesheets', [\App\Http\Controllers\Api\Mobile\V1\TimesheetController::class, 'store']);
+        
+        // Approvals (reusing manager logic but via mobile)
+        Route::get('approvals', [\App\Http\Controllers\Manager\ApprovalController::class, 'index']);
+        Route::post('approvals/action', [\App\Http\Controllers\Manager\ApprovalController::class, 'action']);
+
+        // Payslips
+        Route::get('payslips', [\App\Http\Controllers\Api\Mobile\V1\PayslipController::class, 'index']);
+        Route::get('payslips/download', [\App\Http\Controllers\Api\Mobile\V1\PayslipController::class, 'download']);
+    });
+});
+
 // Ghost Asset Detection (Public Pulse - Protected by API Key in real world)
 Route::post('/agent/pulse', [App\Http\Controllers\Api\GhostAssetController::class, 'pulse']);

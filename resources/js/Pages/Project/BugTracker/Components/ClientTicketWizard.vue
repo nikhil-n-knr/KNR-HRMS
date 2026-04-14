@@ -1,5 +1,5 @@
 <template>
-    <div class="max-w-4xl mx-auto py-12 px-4 font-inter text-slate-900">
+    <div class="w-full font-inter text-slate-900">
         <!-- Progress Stepper -->
         <div class="flex items-center justify-between mb-16 relative">
             <div class="absolute top-1/2 left-0 w-full h-0.5 bg-slate-100 -translate-y-1/2 z-0"></div>

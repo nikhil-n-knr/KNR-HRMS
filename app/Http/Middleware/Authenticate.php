@@ -24,6 +24,10 @@ class Authenticate extends Middleware
             return route('psp.login');
         }
 
+        if ($request->is('m/*') || $request->is('m')) {
+            return route('mobile.login');
+        }
+
         return route('login');
     }
 }
