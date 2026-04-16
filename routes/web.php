@@ -102,6 +102,10 @@ Route::middleware(['auth'])->group(function () {
 Route::middleware(['auth', 'verified'])->group(function () {
     // ... existing routes ...
 
+    Route::get('/admin/theme-settings', function () {
+        return Inertia::render('Admin/ThemeSettings');
+    })->name('admin.theme-settings');
+
 
 
     // Project Modules API
