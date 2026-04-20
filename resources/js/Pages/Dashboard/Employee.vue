@@ -36,8 +36,7 @@
       <section class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
         <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Modules</h2>
-            <p class="mt-2 text-lg font-black text-slate-900">Everything currently visible</p>
+            <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">HRMS</h2>
           </div>
           <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Live sync</p>
         </div>
@@ -51,41 +50,63 @@
         </div>
 
         <div v-else class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <Link
-            v-for="module in dashboardModules"
-            :key="module.id"
-            :href="module.href"
-            class="group rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg"
-          >
-            <div class="flex items-start justify-between gap-4">
-              <div class="flex items-center gap-3">
-                <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-500 text-sm font-black uppercase tracking-widest text-white shadow-md">
-                  {{ module.shortName }}
-                </div>
-                <div>
-                  <p class="text-xs font-black uppercase tracking-widest text-slate-400">{{ module.group }}</p>
-                  <h3 class="mt-1 text-lg font-black text-slate-900">{{ module.name }}</h3>
+          <template v-for="module in dashboardModules" :key="module.id">
+            <Link
+              v-if="!module.sub_modules.length"
+              :href="module.href"
+              class="group rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-500 text-sm font-black uppercase tracking-widest text-white shadow-md">
+                    {{ module.shortName }}
+                  </div>
+                  <div>
+                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">{{ module.group }}</p>
+                    <h3 class="mt-1 text-lg font-black text-slate-900">{{ module.name }}</h3>
+                  </div>
                 </div>
               </div>
-              <span class="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase tracking-widest text-slate-500">
-                {{ module.sub_modules.length }} Links
-              </span>
-            </div>
+            </Link>
 
-            <p class="mt-4 text-sm text-slate-500">
-              {{ module.sub_modules.length ? 'Open this module or jump straight into one of its linked sections.' : 'Open this module from the dashboard.' }}
-            </p>
+            <div
+              v-else
+              class="group rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-500 text-sm font-black uppercase tracking-widest text-white shadow-md">
+                    {{ module.shortName }}
+                  </div>
+                  <div>
+                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">{{ module.group }}</p>
+                    <h3 class="mt-1 text-lg font-black text-slate-900">{{ module.name }}</h3>
+                  </div>
+                </div>
 
-            <div v-if="module.sub_modules.length" class="mt-4 flex flex-wrap gap-2">
-              <span
-                v-for="subModule in module.sub_modules"
-                :key="subModule.id"
-                class="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600"
-              >
-                {{ subModule.name }}
-              </span>
+                <div class="flex flex-col items-end gap-2">
+                  <button
+                    type="button"
+                    @click.prevent="toggleSubmodules(module.id)"
+                    class="rounded-full border border-slate-200 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
+                  >
+                    {{ expandedModuleId === module.id ? 'Hide submodules' : 'submodules' }}
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="expandedModuleId === module.id" class="mt-4 space-y-3">
+                <Link
+                  v-for="subModule in module.sub_modules"
+                  :key="subModule.id"
+                  :href="getSubmoduleHref(subModule)"
+                  class="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-white"
+                >
+                  {{ subModule.name }}
+                </Link>
+              </div>
             </div>
-          </Link>
+          </template>
         </div>
       </section>
 
@@ -159,6 +180,7 @@ const props = defineProps({
 
 const modulesLoading = ref(true);
 const sidebarModules = ref([]);
+const expandedModuleId = ref(null);
 
 const firstName = computed(() => (props.user?.name || 'User').split(' ')[0]);
 
@@ -170,6 +192,14 @@ const dashboardModules = computed(() =>
     shortName: getShortName(module.name),
   }))
 );
+
+const toggleSubmodules = (moduleId) => {
+  expandedModuleId.value = expandedModuleId.value === moduleId ? null : moduleId;
+};
+
+const getSubmoduleHref = (subModule) => {
+  return normalizeHref(subModule.route || subModule.href || '#');
+};
 
 const formatModule = (key) => {
   return key.replace(/_/g, ' ');
