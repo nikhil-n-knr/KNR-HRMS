@@ -1,6 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
-import { Link, router, Head } from '@inertiajs/vue3';
+import { Link, router, Head, useForm } from '@inertiajs/vue3';
 import { useAuthStore } from '@/stores/auth';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import EmployeeDocumentsTab from './Tabs/EmployeeDocumentsTab.vue'; 
@@ -36,7 +36,8 @@ import {
     SparklesIcon,
     Squares2X2Icon,
     ArrowPathRoundedSquareIcon,
-    BanknotesIcon
+    BanknotesIcon,
+    CameraIcon
 } from '@heroicons/vue/24/outline';
 
 const authStore = useAuthStore();
@@ -60,6 +61,35 @@ const showBankModal = ref(false);
 const showCareerDna = ref(false);
 const showFamilyModal = ref(false);
 const selectedFamilyMember = ref(null);
+
+const avatarForm = useForm({
+    avatar: null
+});
+
+const fileInput = ref(null);
+
+const triggerAvatarUpload = () => {
+    if (props.employee.uuid) {
+        fileInput.value.click();
+    }
+};
+
+const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        avatarForm.avatar = file;
+        avatarForm.post(route('employee.profile.update-avatar', props.employee.uuid), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success("Profile picture updated!");
+            },
+            onError: (err) => {
+                toast.error("Failed to update profile picture.");
+            }
+        });
+    }
+};
 
 const tabs = [
     { id: 'overview', name: 'Overview', icon: Squares2X2Icon },
@@ -142,9 +172,30 @@ const getStatusStyles = (status) => {
                         <div class="flex flex-col md:flex-row gap-10 items-center md:items-start text-center md:text-left">
                             <!-- Avatar Terminal -->
                             <div class="relative group/avatar">
-                                <div class="h-32 w-32 rounded-[2.5rem] bg-slate-900 flex items-center justify-center text-4xl font-black text-indigo-400 border-4 border-white shadow-2xl shadow-slate-300 transform group-hover/avatar:rotate-6 transition-transform">
-                                    {{ getInitials(employee.first_name, employee.last_name) }}
+                                <div 
+                                    @click="triggerAvatarUpload"
+                                    class="h-32 w-32 rounded-[2.5rem] bg-slate-900 flex items-center justify-center text-4xl font-black text-indigo-400 border-4 border-white shadow-2xl shadow-slate-300 transform group-hover/avatar:rotate-6 transition-transform cursor-pointer overflow-hidden relative"
+                                >
+                                    <template v-if="employee.avatar_url">
+                                        <img :src="employee.avatar_url" class="w-full h-full object-cover" :alt="employee.first_name" />
+                                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
+                                            <CameraIcon class="w-8 h-8 text-white" />
+                                        </div>
+                                    </template>
+                                    <template v-else>
+                                        {{ getInitials(employee.first_name, employee.last_name) }}
+                                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
+                                            <CameraIcon class="w-8 h-8 text-white" />
+                                        </div>
+                                    </template>
                                 </div>
+                                <input 
+                                    type="file" 
+                                    ref="fileInput" 
+                                    class="hidden" 
+                                    accept="image/*" 
+                                    @change="handleAvatarChange" 
+                                />
                                 <div class="absolute -bottom-2 -right-2 w-10 h-10 bg-emerald-500 border-4 border-white rounded-2xl flex items-center justify-center text-white shadow-lg" title="Operative Status: Active">
                                     <ShieldCheckIcon class="w-5 h-5" />
                                 </div>

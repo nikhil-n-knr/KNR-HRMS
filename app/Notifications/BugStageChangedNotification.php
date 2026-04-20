@@ -36,14 +36,24 @@ class BugStageChangedNotification extends Notification
 
     public function toArray(object $notifiable): array
     {
+        $projectName = $this->bug->project?->name ?? null;
+
         return [
             'bug_id' => $this->bug->id,
             'subject' => $this->bug->subject,
             'old_stage' => $this->oldStage,
             'new_stage' => $this->newStage,
             'priority' => $this->bug->priority,
+            'project_id' => $this->bug->project_id,
+            'project_name' => $projectName,
             'type' => 'bug_stage_changed',
-            'message' => "Bug #{$this->bug->id}: Moved to {$this->newStage} [{$this->bug->subject}]",
+            'changes' => [
+                'stage' => [
+                    'old' => $this->oldStage,
+                    'new' => $this->newStage,
+                ],
+            ],
+            'message' => "Bug #{$this->bug->id} [{$this->bug->subject}] moved from {$this->oldStage} to {$this->newStage}" . ($projectName ? " in {$projectName}." : '.'),
             'url' => '/projects/bugs?tab=tracker&bug=' . $this->bug->id
         ];
     }

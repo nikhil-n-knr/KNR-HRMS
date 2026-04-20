@@ -1,0 +1,1 @@
+import{L as a,r as i}from"./app-ChgzMNoz.js";const v=a("toast",()=>{const e=i([]),o=(s,r="success",c=3e3)=>{const n=Date.now();e.value.push({id:n,message:s,type:r}),setTimeout(()=>{t(n)},c)},t=s=>{e.value=e.value.filter(r=>r.id!==s)};return{toasts:e,add:o,remove:t,success:s=>o(s,"success"),error:s=>o(s,"error"),info:s=>o(s,"info"),warning:s=>o(s,"warning")}});export{v as u};

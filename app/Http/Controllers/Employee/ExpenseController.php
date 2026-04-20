@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\Project;
-use App\Services\Workflow\WorkflowService;
+use App\Services\WorkflowService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -139,7 +139,7 @@ class ExpenseController extends Controller
             'description' => $request->description,
             'status' => 'Pending',
             'receipt_path' => $receiptPath,
-            'employee_id' => $employee->id,
+            'employee_id' => auth()->user()->employee_id,
             'project_id' => $request->project_id,
             'is_billable' => $request->is_billable ?? false,
             'payout_method' => $request->payout_method ?? 'payroll',
@@ -151,14 +151,9 @@ class ExpenseController extends Controller
         
         // Initiate Workflow
         try {
-            $workflowService->initiate($expense);
+            $workflowService->initializeWorkflow('expense', $expense->id, auth()->user(), $category->workflow_id);
         } catch (\Exception $e) {
-            // Log error but don't fail the request completely if workflow fails? 
-            // Better to fail so user knows.
-            // But Expense is created. Let's redirect with warning usually.
-            // For now, let it bubble or catch:
-            // $expense->delete(); return back()->withErrors...
-            // Assuming WorkflowService is robust.
+            \Log::error('Expense Workflow Error: ' . $e->getMessage());
         }
 
         return back()->with('success', 'Expense Claim Submitted Successfully')->setStatusCode(303);

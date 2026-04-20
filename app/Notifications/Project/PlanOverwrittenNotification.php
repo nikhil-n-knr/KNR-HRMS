@@ -51,8 +51,13 @@ class PlanOverwrittenNotification extends Notification
                     ->line('Changes detected:');
 
         foreach ($this->changes as $field => $data) {
-            $old = is_array($data['old']) ? json_encode($data['old']) : $data['old'];
-            $new = is_array($data['new']) ? json_encode($data['new']) : $data['new'];
+            // Ensure $data is an array; if it's a string, wrap it
+            if (!is_array($data)) {
+                $data = ['old' => '', 'new' => $data];
+            }
+
+            $old = is_array($data['old'] ?? null) ? json_encode($data['old']) : ($data['old'] ?? 'N/A');
+            $new = is_array($data['new'] ?? null) ? json_encode($data['new']) : ($data['new'] ?? 'N/A');
             $mail->line("- **{$field}**: Changed from '{$old}' to '{$new}'");
         }
 

@@ -102,6 +102,7 @@ import ActivityPulse3D from '@/Components/Dashboard/Widgets/ActivityPulse3D.vue'
 import AttendanceWidget from '@/Components/Dashboard/Widgets/AttendanceWidget.vue';
 import LeaveWidget from '@/Components/Dashboard/Widgets/LeaveWidget.vue';
 import CompensationHub from '@/Components/Dashboard/Widgets/CompensationHub.vue';
+import CheckInCard from '@/Components/Dashboard/Widgets/CheckInCard.vue';
 import CareerCatalyst from '@/Components/Dashboard/Widgets/CareerCatalyst.vue';
 import DashboardDock from '@/Components/Dashboard/DashboardDock.vue';
 import CommandPalette from '@/Components/Dashboard/CommandPalette.vue';
@@ -117,9 +118,10 @@ const props = defineProps({
 const layout = ref(props.user.preferences?.dashboard_layout || [
     { x: 0, y: 0, w: 8, h: 14, i: 'pulse' },
     { x: 8, y: 0, w: 4, h: 14, i: 'catalyst' },
-    { x: 0, y: 14, w: 4, h: 10, i: 'attendance' },
-    { x: 4, y: 14, w: 4, h: 10, i: 'leave' },
-    { x: 8, y: 14, w: 4, h: 10, i: 'compensation' },
+    { x: 0, y: 14, w: 4, h: 10, i: 'checkin' },
+    { x: 4, y: 14, w: 4, h: 10, i: 'attendance' },
+    { x: 8, y: 14, w: 4, h: 10, i: 'leave' },
+    { x: 0, y: 24, w: 4, h: 10, i: 'compensation' },
 ]);
 
 const currentTime = ref('');
@@ -139,7 +141,8 @@ const getWidgetComponent = (id) => {
         'attendance': AttendanceWidget,
         'leave': LeaveWidget,
         'compensation': CompensationHub,
-        'catalyst': CareerCatalyst
+        'catalyst': CareerCatalyst,
+        'checkin': CheckInCard
     };
     return map[id];
 };
@@ -155,7 +158,8 @@ const isModuleEnabled = (id) => {
         'attendance': 'attendance',
         'leave': 'leave_management',
         'compensation': 'payroll',
-        'catalyst': 'all' 
+        'catalyst': 'all',
+        'checkin': 'attendance'
     };
     if (map[id] === 'all') return true;
     return props.enabledModules.includes(map[id]) || id === 'pulse'; 

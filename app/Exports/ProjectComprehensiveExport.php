@@ -53,6 +53,14 @@ class ProjectComprehensiveExport implements WithMultipleSheets
         // Sheet 4: Team Performance / Leaderboard
         $sheets[] = new Sheets\TeamPerformanceSheet($this->assignments, $this->startDate, $this->endDate);
 
+        if ($this->projectId) {
+            // Sheet 5: Timeline Extensions
+            $sheets[] = new Sheets\ProjectExtensionsSheet($this->projectId);
+
+            // Sheet 6: Execution Velocity Analysis
+            $sheets[] = new Sheets\VelocityAnalysisSheet($this->projectId);
+        }
+
         return $sheets;
     }
 }

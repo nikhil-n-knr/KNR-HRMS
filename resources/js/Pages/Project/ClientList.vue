@@ -41,7 +41,14 @@
                  </span>
             </template>
 
-            <template #actions="{ row }">
+            <template #cell-contract_end="{ item: row }">
+                <span v-if="row.contract_end" class="text-sm text-gray-700">
+                    {{ new Date(row.contract_end).toLocaleDateString('en-GB') }}
+                </span>
+                <span v-else class="text-sm text-gray-400">Not set</span>
+            </template>
+
+            <template #rowActions="{ item: row }">
                 <div class="flex items-center gap-2">
                     <button 
                         v-can="'edit-client'"
@@ -219,8 +226,8 @@ const openModal = (client = null) => {
         form.code = client.code;
         form.contact_person = client.contact_person;
         form.email = client.email;
-        form.contract_start = client.contract_start;
-        form.contract_end = client.contract_end;
+        form.contract_start = client.contract_start ? client.contract_start.split('T')[0] : '';
+        form.contract_end = client.contract_end ? client.contract_end.split('T')[0] : '';
         form.portal_access = !!client.portal_access;
     } else {
         form.reset();

@@ -140,6 +140,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::get('/', [App\Http\Controllers\ProjectManagement\WorkflowArchitectController::class, 'index'])->name('index');
         Route::post('/stages', [App\Http\Controllers\ProjectManagement\WorkflowArchitectController::class, 'storeStage'])->name('stages.store');
         Route::put('/stages/{stage}', [App\Http\Controllers\ProjectManagement\WorkflowArchitectController::class, 'updateStage'])->name('stages.update');
+        Route::post('/stages/{stage}/people', [App\Http\Controllers\ProjectManagement\WorkflowArchitectController::class, 'updatePeopleConfig'])->name('stages.people.update');
         Route::delete('/stages/{stage}', [App\Http\Controllers\ProjectManagement\WorkflowArchitectController::class, 'deleteStage'])->name('stages.destroy');
         Route::post('/reorder', [App\Http\Controllers\ProjectManagement\WorkflowArchitectController::class, 'reorderStages'])->name('stages.reorder');
     });
@@ -366,7 +367,30 @@ Route::middleware(['auth'])->group(function () {
 
     // Employee Self-Service Profile (UUID-based)
     Route::get('/my-profile/{uuid}', [EmployeeProfileController::class, 'show'])->name('employee.profile');
+    Route::post('/my-profile/{uuid}/update-avatar', [EmployeeProfileController::class, 'updateAvatar'])->name('employee.profile.update-avatar');
+    Route::get('/employee/avatar/{uuid}', [EmployeeProfileController::class, 'streamAvatar'])->name('employee.avatar');
     Route::get('/me', [EmployeeProfileController::class, 'hub'])->name('employee.hub');
+    Route::get('/employee/work', [App\Http\Controllers\Employee\Work\EmployeeWorkController::class, 'index'])->name('employee.work.index');
+    Route::prefix('/employee/work')->name('employee.work.')->group(function () {
+        Route::post('/defaults', [App\Http\Controllers\Employee\Work\EmployeeWorkController::class, 'saveDefaults'])->name('defaults.save');
+        Route::delete('/defaults', [App\Http\Controllers\Employee\Work\EmployeeWorkController::class, 'clearDefaults'])->name('defaults.clear');
+        Route::post('/tasks/{task}/status', [App\Http\Controllers\Employee\Work\EmployeeWorkTaskController::class, 'updateStatus'])->name('tasks.status');
+        Route::post('/tasks/{task}/move-next', [App\Http\Controllers\Employee\Work\EmployeeWorkTaskController::class, 'moveNext'])->name('tasks.move-next');
+        Route::post('/tasks/{task}/comments', [App\Http\Controllers\Employee\Work\EmployeeWorkTaskController::class, 'storeComment'])->name('tasks.comments.store');
+        Route::get('/tasks/{task}/checklists', [App\Http\Controllers\Employee\Work\EmployeeWorkTaskController::class, 'listChecklist'])->name('tasks.checklists.index');
+        Route::post('/tasks/{task}/checklists', [App\Http\Controllers\Employee\Work\EmployeeWorkTaskController::class, 'storeChecklist'])->name('tasks.checklists.store');
+        Route::post('/tasks/{task}/checklists/bulk', [App\Http\Controllers\Employee\Work\EmployeeWorkTaskController::class, 'storeChecklistBulk'])->name('tasks.checklists.bulk-store');
+        Route::post('/tasks/{task}/checklists/{checklist}/toggle', [App\Http\Controllers\Employee\Work\EmployeeWorkTaskController::class, 'toggleChecklist'])->name('tasks.checklists.toggle');
+        Route::post('/tasks/{task}/drift', [App\Http\Controllers\Employee\Work\EmployeeWorkTaskController::class, 'submitDrift'])->name('tasks.drift.store');
+
+        Route::post('/bugs/{bug}/status', [App\Http\Controllers\Employee\Work\EmployeeWorkBugController::class, 'updateStatus'])->name('bugs.status');
+        Route::post('/bugs/{bug}/comments', [App\Http\Controllers\Employee\Work\EmployeeWorkBugController::class, 'storeComment'])->name('bugs.comments.store');
+        Route::post('/bugs/{bug}/drift', [App\Http\Controllers\Employee\Work\EmployeeWorkBugController::class, 'submitDrift'])->name('bugs.drift.store');
+
+        Route::get('/ops360', [App\Http\Controllers\Employee\Work\EmployeeWorkController::class, 'ops360'])->name('ops360');
+        Route::post('/presets', [App\Http\Controllers\Employee\Work\EmployeeWorkController::class, 'savePreset'])->name('presets.save');
+        Route::delete('/presets/{presetKey}', [App\Http\Controllers\Employee\Work\EmployeeWorkController::class, 'deletePreset'])->name('presets.delete');
+    });
 
     // --- Employee Modules ---
     
@@ -391,6 +415,8 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
     // Actions
     Route::post('/attendance/clock-in', [App\Http\Controllers\Employee\AttendanceController::class, 'clockIn'])->name('employee.attendance.clock-in');
     Route::post('/attendance/clock-out', [App\Http\Controllers\Employee\AttendanceController::class, 'clockOut'])->name('employee.attendance.clock-out');
+    Route::post('/attendance/auto-check-in', [App\Http\Controllers\Employee\AttendanceController::class, 'autoCheckIn'])->name('employee.attendance.auto-check-in');
+    Route::get('/api/employee/attendance/today-status', [App\Http\Controllers\Employee\AttendanceController::class, 'todayStatus'])->name('api.employee.attendance.today-status');
     
     Route::get('/attendance/holidays-list/export', [App\Http\Controllers\Employee\HolidayController::class, 'export'])->name('attendance.holidays.export');
     Route::get('/attendance/holidays-list', [App\Http\Controllers\Employee\HolidayController::class, 'index'])->name('attendance.holidays.list');
@@ -914,7 +940,9 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
          ->parameter('clients', 'client'); // Parameter name {client}
 
     Route::post('projects/clients/{client}/invite', [App\Http\Controllers\ProjectManagement\ClientController::class, 'inviteUser'])->name('projects.clients.invite');
-         
+    Route::post('projects/clients/{client}/assign-project', [App\Http\Controllers\ProjectManagement\ClientController::class, 'assignProject'])->name('projects.clients.assign-project');
+    Route::post('projects/clients/{client}/unassign-project', [App\Http\Controllers\ProjectManagement\ClientController::class, 'unassignProject'])->name('projects.clients.unassign-project');
+
     // Planner UI & API (Universal)
     Route::get('/projects/planner', function (\Illuminate\Http\Request $request) { 
         return Inertia::render('Project/Planner/Index', [
@@ -950,6 +978,14 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
     
     Route::resource('projects', App\Http\Controllers\ProjectManagement\ProjectController::class);
     Route::post('projects/{project}/planner/bulk-assign', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'bulkAssign'])->name('projects.planner.bulk-assign');
+    Route::get('projects/{project}/performance-metrics', [App\Http\Controllers\Admin\ProjectPerformanceController::class, 'getMetrics'])->name('projects.performance.metrics');
+    Route::post('projects/{project}/toggle-lock', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'toggleLock'])->name('projects.toggle-lock');
+    Route::post('projects/{project}/extensions', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'recordExtension'])->name('projects.extensions.store');
+    Route::get('projects/{project}/extensions/pending', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'pendingExtensions'])->name('projects.extensions.pending');
+    Route::post('projects/{project}/extensions/{extension}/approve', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'approveExtension'])->name('projects.extensions.approve');
+    Route::post('projects/{project}/extensions/{extension}/reject', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'rejectExtension'])->name('projects.extensions.reject');
+    Route::get('projects/{project}/extensions/analytics', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'getExtensionStats'])->name('projects.extensions.analytics');
+    Route::get('projects/{project}/extensions/export', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'exportExtensions'])->name('projects.extensions.export');
     
     // Sprints & Stages (Dynamic Board)
     Route::apiResource('projects.stages', App\Http\Controllers\ProjectManagement\ProjectStageController::class);
@@ -1077,6 +1113,10 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
         // System Settings
         Route::get('/settings', [App\Http\Controllers\Admin\SystemSettingController::class, 'index'])->name('settings.index');
         Route::post('/settings', [App\Http\Controllers\Admin\SystemSettingController::class, 'store'])->name('settings.store');
+
+        // Project Progress Manual Update
+        Route::get('projects/progress', [App\Http\Controllers\ProjectManagement\ProjectProgressController::class, 'index'])->name('projects.progress.index');
+        Route::put('projects/{project}/progress', [App\Http\Controllers\ProjectManagement\ProjectProgressController::class, 'update'])->name('projects.progress.update');
 
         // Compliance Rules (Phase 1)
         Route::get('/compliance/settings', [App\Http\Controllers\Admin\ComplianceSettingsController::class, 'index'])->name('compliance.settings.index');
@@ -1234,6 +1274,7 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
             Route::post('/manual', [\App\Http\Controllers\Admin\AttendanceController::class, 'storeManual'])->name('manual.store');
             Route::post('/manual/bulk', [\App\Http\Controllers\Admin\AttendanceController::class, 'bulkImport'])->name('manual.bulk');
             Route::post('/manual/bulk-mark', [\App\Http\Controllers\Admin\AttendanceController::class, 'storeBulkMark'])->name('manual.bulk-mark.store');
+            Route::get('/manual/shift-info', [\App\Http\Controllers\Admin\AttendanceController::class, 'getShiftInfo'])->name('manual.shift-info');
 
             // Intelligence Tabs
             Route::get('/policies', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'policies')->name('policies');
@@ -1513,6 +1554,7 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
         Route::post('/referrals', [\App\Http\Controllers\Employee\ReferralController::class, 'store'])->name('referrals.store');
 
         Route::get('/my-approvals', [\App\Http\Controllers\Employee\MyApprovalsController::class, 'index'])->name('my-approvals.index');
+        Route::post('/my-approvals/action', [\App\Http\Controllers\Employee\MyApprovalsController::class, 'action'])->name('my-approvals.action');
         Route::post('/my-approvals/bulk', [\App\Http\Controllers\Employee\MyApprovalsController::class, 'bulkAction'])->name('my-approvals.bulk');
 
         // Leave Requests (Employee)

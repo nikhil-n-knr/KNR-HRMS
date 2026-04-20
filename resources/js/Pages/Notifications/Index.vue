@@ -60,20 +60,27 @@
                             <div class="flex-1">
                                 <div class="flex justify-between items-start">
                                     <h3 class="font-bold text-gray-900 text-sm">{{ notification.title }}</h3>
-                                    <span class="text-xs text-gray-400 font-mono">{{ notification.created_at }}</span>
+                                    <div class="text-right">
+                                        <span class="block text-xs text-gray-400 font-mono">{{ notification.created_at }}</span>
+                                        <span class="block text-[11px] text-gray-500 font-semibold">{{ notification.created_at_full }}</span>
+                                    </div>
                                 </div>
                                 <p class="text-gray-600 text-sm mt-1 mb-3">
                                     {{ notification.message }}
                                 </p>
                                 
-                                <!-- Meta Data Badges -->
-                                <div class="flex gap-2 mb-4" v-if="notification.data">
-                                    <span v-if="notification.data.old_stage" class="text-sm bg-gray-100 text-gray-500 px-2 py-0.5 rounded">
-                                        {{ notification.data.old_stage }} &rarr; {{ notification.data.new_stage }}
-                                    </span>
-                                    <span v-if="notification.data.moved_by" class="text-sm bg-gray-100 text-gray-500 px-2 py-0.5 rounded">
-                                        By {{ notification.data.moved_by }}
-                                    </span>
+                                <!-- Detailed Context -->
+                                <div class="mb-4" v-if="Array.isArray(notification.details) && notification.details.length">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                                        <div
+                                            v-for="detail in notification.details"
+                                            :key="`${notification.id}-${detail.label}-${detail.value}`"
+                                            class="text-xs bg-slate-50 border border-slate-200 text-slate-700 px-2 py-1 rounded-md"
+                                        >
+                                            <span class="font-black text-slate-500 uppercase tracking-wide">{{ detail.label }}:</span>
+                                            <span class="ml-1 font-semibold">{{ detail.value }}</span>
+                                        </div>
+                                    </div>
                                 </div>
 
                                 <!-- Actions -->

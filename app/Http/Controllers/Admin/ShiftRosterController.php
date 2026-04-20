@@ -7,6 +7,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use App\Models\Employee;
 use App\Models\Shift;
+use App\Models\Holiday;
 use App\Models\AttendanceLog; // For specific day overrides (Optional)
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -72,13 +73,42 @@ class ShiftRosterController extends Controller
             $rosterData[$entry->employee_id][$d] = $entry->shift_id;
         }
 
+        // 4. Fetch Global Work Days & Holidays
+        $defaultShift = Shift::where('is_default', true)->first();
+        $workDayDefaults = [
+            'mon'=>true, 'tue'=>true, 'wed'=>true, 'thu'=>true, 'fri'=>true, 
+            'sat'=>false, 'sun'=>false
+        ];
+
+        if ($defaultShift && is_array($defaultShift->work_days)) {
+            $globalWorkDays = [];
+            foreach (['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as $day) {
+                $globalWorkDays[$day] = in_array(ucfirst($day), $defaultShift->work_days);
+            }
+        } else {
+            $globalWorkDays = $workDayDefaults;
+        }
+
+        $holidays = Holiday::whereYear('date', '>=', $start->year)
+            ->whereYear('date', '<=', $end->year)
+            ->get(['date', 'name', 'type'])
+            ->map(function($h) {
+                return [
+                    'date' => $h->date->format('Y-m-d'),
+                    'name' => $h->name,
+                    'type' => $h->type ?? 'fixed'
+                ];
+            });
+
         if ($request->wantsJson() || $request->has('json')) {
             return response()->json([
                 'employees' => $employees,
                 'shifts' => $shifts,
                 'start' => $startStr,
                 'end' => $endStr,
-                'roster' => $rosterData
+                'roster' => $rosterData,
+                'workDays' => $globalWorkDays,
+                'holidays' => $holidays
             ]);
         }
 
@@ -92,7 +122,9 @@ class ShiftRosterController extends Controller
                 'shifts' => $shifts,
                 'start' => $startStr,
                 'end' => $endStr,
-                'roster' => $rosterData
+                'roster' => $rosterData,
+                'workDays' => $globalWorkDays,
+                'holidays' => $holidays
             ]);
         }
 
@@ -103,6 +135,8 @@ class ShiftRosterController extends Controller
             'end' => $endStr,
             'locations' => \App\Models\Location::select('id', 'name')->get(),
             'departments' => \App\Models\Department::select('id', 'name')->get(),
+            'workDays' => $globalWorkDays,
+            'holidays' => $holidays
         ]);
     }
 

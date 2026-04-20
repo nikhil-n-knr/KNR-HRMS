@@ -290,63 +290,117 @@
                         </button>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                        <!-- Primary Handler -->
-                        <div class="space-y-4">
-                            <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-4">Primary Handler Mode</label>
-                            <div class="space-y-3">
-                                <div v-for="type in ['specific_user', 'role', 'team', 'manager', 'team_lead']" :key="type"
-                                     @click="peopleForm.approver_type = type"
-                                     :class="[
-                                         peopleForm.approver_type === type ? 'border-indigo-500 bg-indigo-50/50 ring-2 ring-indigo-500/10' : 'border-slate-100 hover:border-slate-300 bg-slate-50/30',
-                                         'p-4 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between group'
-                                     ]">
-                                    <span class="text-sm font-bold capitalize text-slate-700">{{ type.replace('_', ' ') }}</span>
-                                    <div :class="peopleForm.approver_type === type ? 'bg-indigo-500 shadow-lg shadow-indigo-500/40' : 'bg-slate-200'" class="w-3 h-3 rounded-full transition-all"></div>
+                    <div class="space-y-12">
+                        <!-- Section: SLA & Priority -->
+                        <div class="bg-indigo-50/30 p-8 rounded-[2.5rem] border border-indigo-100 shadow-sm">
+                            <h3 class="flex items-center gap-3 text-sm font-black text-indigo-600 uppercase tracking-[0.2em] mb-6">
+                                <ClockIcon class="w-5 h-5" />
+                                Service Level & Priority
+                            </h3>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="space-y-2">
+                                    <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest">SLA Autoclose Days</label>
+                                    <input type="number" v-model="peopleForm.auto_close_days" class="w-full bg-white border-slate-200 rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all" />
+                                    <p class="text-[10px] italic text-slate-400">Tickets will auto-verify after X days of inactivity in this stage.</p>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- Target Selection -->
-                        <div class="space-y-6">
-                            <div v-if="peopleForm.approver_type === 'specific_user'">
-                                <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Select User</label>
-                                <select v-model="peopleForm.user_id" class="w-full bg-slate-50 border-transparent rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all">
-                                    <option :value="null">Choose specific user...</option>
-                                    <option v-for="u in users" :key="u.id" :value="u.id">{{ u.name }}</option>
-                                </select>
-                            </div>
-
-                            <div v-if="peopleForm.approver_type === 'role'">
-                                <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Select Role</label>
-                                <select v-model="peopleForm.role_id" class="w-full bg-slate-50 border-transparent rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all">
-                                    <option v-for="r in roles" :key="r.id" :value="r.id">{{ r.name }}</option>
-                                </select>
-                            </div>
-
-                            <div v-if="peopleForm.approver_type === 'team'">
-                                <label class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-3">Select Team</label>
-                                <select v-model="peopleForm.team_id" class="w-full bg-slate-50 border-transparent rounded-2xl px-5 py-4 text-sm font-bold focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all">
-                                    <option v-for="t in teams" :key="t.id" :value="t.id">{{ t.name }}</option>
-                                </select>
-                            </div>
+                        <!-- Section: Stage Personnel (Searchable) -->
+                        <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-8">
+                            <h3 class="flex items-center gap-3 text-sm font-black text-slate-900 uppercase tracking-[0.2em]">
+                                <UserGroupIcon class="w-5 h-5 text-emerald-500" />
+                                Stage Personnel (In-Charge)
+                            </h3>
                             
-                            <div class="p-6 bg-slate-900 rounded-[2rem] text-white">
-                                <p class="text-xs font-black text-indigo-400 uppercase tracking-[0.2em] mb-4">Stage Logic</p>
-                                <ul class="space-y-3">
-                                    <li class="flex items-start gap-3">
-                                        <div class="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center shrink-0 mt-0.5">
-                                            <CheckIcon class="w-3 h-3 text-white" />
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                <div class="space-y-4">
+                                    <label class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest">Participating Roles</label>
+                                    <MultiUserSelect 
+                                        v-model="selectedRoleIds" 
+                                        :items="roles" 
+                                        placeholder="Search roles (QA, Lead...)"
+                                    />
+                                </div>
+                                <div class="space-y-4">
+                                    <label class="block text-[10px] font-black text-emerald-500 uppercase tracking-widest">Participating Users</label>
+                                    <MultiUserSelect 
+                                        v-model="selectedUserIds" 
+                                        :items="users" 
+                                        placeholder="Search 100s of employees..."
+                                    />
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section: Operational Protocol -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div class="bg-slate-900 p-8 rounded-[2.5rem] text-white shadow-2xl space-y-6">
+                                <h3 class="flex items-center gap-3 text-sm font-black text-indigo-400 uppercase tracking-[0.2em]">
+                                    <CpuChipIcon class="w-5 h-5" />
+                                    Operational Protocol
+                                </h3>
+                                
+                                <div class="space-y-4">
+                                    <div class="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                                        <div>
+                                            <span class="text-xs font-black uppercase tracking-widest">Mandatory Verification</span>
+                                            <p class="text-[10px] text-white/40 mt-1">Requires explicit human sign-off</p>
                                         </div>
-                                        <p class="text-xs font-medium text-slate-300">Participants will receive instant alerts upon stage entry.</p>
-                                    </li>
-                                    <li class="flex items-start gap-3">
-                                        <div class="w-5 h-5 rounded-full bg-indigo-500 flex items-center justify-center shrink-0 mt-0.5">
-                                            <CheckIcon class="w-3 h-3 text-white" />
+                                        <div @click="peopleForm.requires_verification = !peopleForm.requires_verification"
+                                             class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200"
+                                             :class="peopleForm.requires_verification ? 'bg-indigo-500' : 'bg-white/10'">
+                                            <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out"
+                                                  :class="peopleForm.requires_verification ? 'translate-x-5' : 'translate-x-0'"></span>
                                         </div>
-                                        <p class="text-xs font-medium text-slate-300">Alerts automatically clear for participants when the ticket exits this stage.</p>
-                                    </li>
-                                </ul>
+                                    </div>
+
+                                    <div class="space-y-2">
+                                        <label class="block text-[10px] font-black text-white/50 uppercase tracking-widest">Assigned Mentor</label>
+                                        <select v-model="peopleForm.mentor_id" class="w-full bg-white/5 border-white/10 rounded-2xl px-5 py-4 text-sm font-bold text-white focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all">
+                                            <option :value="null" class="text-slate-900">Choose from personnel...</option>
+                                            <option v-for="u in mentorOptions" :key="u.id" :value="u.id" class="text-slate-900">{{ u.name }}</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="space-y-6">
+                                <!-- Security & Portal -->
+                                <div class="bg-rose-50/50 p-8 rounded-[2.5rem] border border-rose-100 space-y-6">
+                                    <h3 class="flex items-center gap-3 text-sm font-black text-rose-600 uppercase tracking-[0.2em]">
+                                        <ShieldCheckIcon class="w-5 h-5" />
+                                        Security & Portal Support
+                                    </h3>
+                                    
+                                    <div class="space-y-4">
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <span class="text-xs font-black uppercase tracking-widest text-slate-800">Is Client Visible?</span>
+                                                <p class="text-[10px] text-slate-400 mt-0.5">Show this stage on client portal</p>
+                                            </div>
+                                            <div @click="peopleForm.is_client_visible = !peopleForm.is_client_visible"
+                                                 class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200"
+                                                 :class="peopleForm.is_client_visible ? 'bg-rose-500' : 'bg-slate-200'">
+                                                <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out"
+                                                      :class="peopleForm.is_client_visible ? 'translate-x-5' : 'translate-x-0'"></span>
+                                            </div>
+                                        </div>
+
+                                        <div class="flex items-center justify-between">
+                                            <div>
+                                                <span class="text-xs font-black uppercase tracking-widest text-slate-800">Notify Reporter</span>
+                                                <p class="text-[10px] text-slate-400 mt-0.5">Auto-email client on stage entry</p>
+                                            </div>
+                                            <div @click="peopleForm.notify_client = !peopleForm.notify_client"
+                                                 class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200"
+                                                 :class="peopleForm.notify_client ? 'bg-indigo-600' : 'bg-slate-200'">
+                                                <span class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white transition duration-200 ease-in-out"
+                                                      :class="peopleForm.notify_client ? 'translate-x-5' : 'translate-x-0'"></span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -367,6 +421,7 @@
 
 <script setup>
 import { ref, onMounted, nextTick } from 'vue';
+import { router } from '@inertiajs/vue3';
 import { 
     ChevronUpIcon, 
     ChevronDownIcon, 
@@ -386,6 +441,8 @@ import {
     UserIcon
 } from '@heroicons/vue/24/outline';
 import axios from 'axios';
+import MultiUserSelect from '@/Components/MultiUserSelect.vue';
+import { computed } from 'vue';
 
 const props = defineProps({
     workflow: Object,
@@ -411,7 +468,34 @@ const peopleForm = ref({
     user_id: null,
     role_id: null,
     team_id: null,
-    additional_approvers: []
+    additional_approvers: [],
+    stage_personnel: [],
+    notify_client: false,
+    auto_close_days: 0,
+    requires_verification: false,
+    mentor_id: null
+});
+
+const selectedUserIds = computed({
+    get: () => (peopleForm.value.stage_personnel || []).filter(p => p.type === 'user').map(p => p.id),
+    set: (ids) => {
+        const others = (peopleForm.value.stage_personnel || []).filter(p => p.type !== 'user');
+        peopleForm.value.stage_personnel = [...others, ...ids.map(id => ({ type: 'user', id: Number(id) }))];
+    }
+});
+
+const selectedRoleIds = computed({
+    get: () => (peopleForm.value.stage_personnel || []).filter(p => p.type === 'role').map(p => p.id),
+    set: (ids) => {
+        const others = (peopleForm.value.stage_personnel || []).filter(p => p.type !== 'role');
+        peopleForm.value.stage_personnel = [...others, ...ids.map(id => ({ type: 'role', id: Number(id) }))];
+    }
+});
+
+const mentorOptions = computed(() => {
+    const userIds = selectedUserIds.value;
+    if (!userIds.length) return users.value; // Fallback if none selected
+    return users.value.filter(u => userIds.includes(u.id));
 });
 
 const openPeopleManager = (stage) => {
@@ -421,15 +505,33 @@ const openPeopleManager = (stage) => {
         user_id: stage.user_id,
         role_id: stage.role_id,
         team_id: stage.team_id,
-        additional_approvers: stage.additional_approvers || []
+        additional_approvers: stage.additional_approvers || [],
+        stage_personnel: stage.stage_personnel || [],
+        notify_client: !!stage.notify_client,
+        auto_close_days: stage.auto_close_days || 0,
+        requires_verification: !!stage.requires_verification,
+        mentor_id: stage.mentor_id
     };
     showPeopleModal.value = true;
+};
+
+const togglePersonnel = (type, id) => {
+    const index = peopleForm.value.stage_personnel.findIndex(p => p.type === type && p.id === id);
+    if (index === -1) {
+        peopleForm.value.stage_personnel.push({ type, id });
+    } else {
+        peopleForm.value.stage_personnel.splice(index, 1);
+    }
+};
+
+const isPersonnelSelected = (type, id) => {
+    return peopleForm.value.stage_personnel.some(p => p.type === type && p.id === id);
 };
 
 const savePeopleConfig = async () => {
     isSaving.value = true;
     try {
-        await axios.post(route('bugs.stages.people.update', selectedStage.value.id), peopleForm.value);
+        await axios.post(route('workflow-architect.stages.people.update', selectedStage.value.id), peopleForm.value);
         
         // Update local state
         const idx = localStages.value.findIndex(s => s.id === selectedStage.value.id);
@@ -438,6 +540,7 @@ const savePeopleConfig = async () => {
         }
         
         showPeopleModal.value = false;
+        router.reload({ only: ['workflow'] });
     } catch (e) {
         console.error("Failed to save people config", e);
     } finally {
@@ -501,6 +604,7 @@ const saveOrder = async () => {
         const orderPayload = localStages.value.map((s, i) => ({ id: s.id, order: i + 1 }));
         await axios.post(route('workflow-architect.stages.reorder'), { stages: orderPayload });
         isOrderDirty.value = false;
+        router.reload({ only: ['workflow'] }); // Refresh workflow data to sync order
     } catch (e) {
         console.error("Reorder failed", e);
     } finally {

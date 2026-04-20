@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue';
 import axios from 'axios';
+import { useForm } from '@inertiajs/vue3';
 import { useToastStore } from '@/stores/toast';
 import PersonalDetailsModal from '@/Components/Modals/PersonalDetailsModal.vue';
 import FamilyMemberModal from '@/Components/Modals/FamilyMemberModal.vue';
@@ -19,7 +20,8 @@ import {
     GlobeAltIcon,
     ShieldCheckIcon,
     PhoneIcon,
-    ExclamationTriangleIcon
+    ExclamationTriangleIcon,
+    CameraIcon
 } from '@heroicons/vue/24/outline';
 
 const props = defineProps({
@@ -57,11 +59,68 @@ const deleteFamilyMember = async (member) => {
     }
 };
 
+const avatarForm = useForm({
+    avatar: null
+});
+
+const fileInput = ref(null);
+
+const triggerAvatarUpload = () => {
+    fileInput.value.click();
+};
+
+const handleAvatarChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        avatarForm.avatar = file;
+        avatarForm.post(route('employee.profile.update-avatar', props.employee.uuid), {
+            forceFormData: true,
+            preserveScroll: true,
+            onSuccess: () => {
+                toast.success("Profile picture updated!");
+                emit('refresh');
+            },
+            onError: (err) => {
+                toast.error("Failed to update profile picture.");
+            }
+        });
+    }
+};
+
 const formatDate = (d) => d ? new Date(d).toLocaleDateString() : '--';
 </script>
 
 <template>
     <div class="space-y-8 animate-in fade-in slide-in-from-bottom-5 duration-700 font-outfit pb-20">
+        <!-- Profile Picture Enhancement Section -->
+        <div class="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-slate-100 p-8 shadow-2xl shadow-slate-200/40 relative group overflow-hidden">
+            <div class="flex flex-col md:flex-row items-center gap-8 relative z-10">
+                <div class="relative group/avatar cursor-pointer" @click="triggerAvatarUpload">
+                    <div class="h-24 w-24 rounded-3xl bg-slate-900 flex items-center justify-center text-2xl font-black text-indigo-400 border-4 border-white shadow-xl overflow-hidden relative">
+                        <img v-if="employee.avatar_url" :src="employee.avatar_url" class="w-full h-full object-cover" />
+                        <UserIcon v-else class="w-10 h-10" />
+                        
+                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
+                            <CameraIcon class="w-6 h-6 text-white" />
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="text-center md:text-left">
+                    <h3 class="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Profile Identity Visual</h3>
+                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Update your professional profile picture</p>
+                    <div class="mt-4 flex flex-wrap justify-center md:justify-start gap-3">
+                        <button @click="triggerAvatarUpload" class="px-6 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-600 transition-all flex items-center gap-2 shadow-lg">
+                            <CameraIcon class="w-4 h-4" />
+                            Upload New Photo
+                        </button>
+                        <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleAvatarChange" />
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-3 uppercase tracking-widest font-black opacity-60">JPEG, PNG or JPG (Max 2MB)</p>
+                </div>
+            </div>
+        </div>
+
         <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
             <!-- Bio Terminal -->
             <div class="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-slate-100 p-8 shadow-2xl shadow-slate-200/40 relative group overflow-hidden">

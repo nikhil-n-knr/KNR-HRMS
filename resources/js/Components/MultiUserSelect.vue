@@ -1,4 +1,5 @@
 <script setup>
+/** Build Trigger: v1.0.1 - Robust syncSelected **/
 import { computed, ref, watch } from 'vue'
 import { Combobox, ComboboxInput, ComboboxButton, ComboboxOptions, ComboboxOption, TransitionRoot } from '@headlessui/vue'
 import { CheckIcon, ChevronUpDownIcon, XMarkIcon } from '@heroicons/vue/20/solid'
@@ -32,12 +33,20 @@ const selectedItems = ref([]);
 
 // Sync from parent (IDs -> Objects)
 const syncSelected = (val) => {
-    if (!val) {
+    // Robust array check - handles proxies, nulls, and primitives
+    const valArray = Array.isArray(val) ? val : (val ? [val] : []);
+    
+    // Safety check for empty items (common during initial load)
+    if (!props.items?.length) {
         selectedItems.value = [];
         return;
     }
-    // Map IDs to Items (Coerce to String for safe comparison if needed, or Number)
-    selectedItems.value = props.items.filter(i => val.map(v => Number(v)).includes(Number(i[props.valueKey])));
+
+    const valNumbers = valArray.map(v => Number(v));
+    selectedItems.value = props.items.filter(i => {
+        const itemVal = Number(i[props.valueKey]);
+        return valNumbers.includes(itemVal);
+    });
 };
 
 watch(() => props.modelValue, (newVal) => {

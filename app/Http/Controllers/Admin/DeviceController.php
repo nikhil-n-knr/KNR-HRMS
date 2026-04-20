@@ -31,17 +31,20 @@ class DeviceController extends Controller
         $validated = $request->validate([
             'name' => 'required|string',
             'serial_number' => 'required|string|unique:biometric_devices',
-            'ip_address' => 'required|string|max:255', // Relaxed to string to allow hostnames
-            'port' => 'nullable|integer',
+            'ip_address' => 'required|string|max:255', 
+            'port' => 'required|integer',
             'username' => 'nullable|string',
             'password' => 'nullable|string',
-            'protocol' => 'nullable|string',
-            'location_name' => 'nullable|string',
+            'protocol' => 'required|string',
+            'location_name' => 'required|string',
             'description' => 'nullable|string',
             'heartbeat_interval' => 'nullable|integer',
             'attendance_zone_id' => 'nullable|exists:attendance_zones,id',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'is_office_wifi' => 'boolean'
         ]);
+
+        $validated['tenant_id'] = auth()->user()->tenant_id;
 
         BiometricDevice::create($validated);
         return response()->json(['message' => 'Node successfully registered in mesh.']);
@@ -50,18 +53,19 @@ class DeviceController extends Controller
     public function update(Request $request, BiometricDevice $device)
     {
         $validated = $request->validate([
-            'name' => 'sometimes|string',
-            'serial_number' => 'sometimes|string|unique:biometric_devices,serial_number,' . $device->id,
-            'ip_address' => 'sometimes|string|max:255',
-            'port' => 'nullable|integer',
+            'name' => 'sometimes|required|string',
+            'serial_number' => 'sometimes|required|string|unique:biometric_devices,serial_number,' . $device->id,
+            'ip_address' => 'sometimes|required|string|max:255',
+            'port' => 'sometimes|required|integer',
+            'protocol' => 'sometimes|required|string',
+            'location_name' => 'sometimes|required|string',
             'username' => 'nullable|string',
             'password' => 'nullable|string',
-            'protocol' => 'nullable|string',
-            'location_name' => 'nullable|string',
             'description' => 'nullable|string',
             'heartbeat_interval' => 'nullable|integer',
             'attendance_zone_id' => 'nullable|exists:attendance_zones,id',
-            'is_active' => 'boolean'
+            'is_active' => 'boolean',
+            'is_office_wifi' => 'boolean'
         ]);
 
         $device->update($validated);

@@ -3,7 +3,10 @@
 namespace App\Http\Controllers\ProjectManagement;
 
 use App\Http\Controllers\Controller;
+use App\Models\Client;
 use App\Models\Project;
+use App\Models\ProjectExtension;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -104,7 +107,7 @@ class ProjectController extends Controller
 
         $project->load(['client', 'sprints' => function($q) {
              $q->where('status', 'active');
-        }, 'assignments.assignee']);
+        }, 'assignments.assignee', 'extensions.task', 'extensions.creator', 'documents']);
 
         // Members (unique)
         // Members (unique Users)
@@ -692,6 +695,496 @@ class ProjectController extends Controller
         $this->logger->log('project_management', 'update', "Project details updated: {$project->name}", ['project_id' => $project->id]);
 
         return back()->with('success', 'Project details updated successfully.')->setStatusCode(303);
+    }
+
+    /**
+     * Dedicated Lock Toggle to avoid generic project update validation.
+     */
+    public function toggleLock(Request $request, Project $project)
+    {
+        $validated = $request->validate([
+            'is_locked' => 'required|boolean',
+            'plan_lock_recipients' => 'nullable|array'
+        ]);
+
+        $project->update($validated);
+        
+        $this->logger->log('project_management', 'lock_toggle', "Project lock status changed to: " . ($project->is_locked ? 'Locked' : 'Unlocked'), ['project_id' => $project->id]);
+
+        return response()->json([
+            'success' => true, 
+            'is_locked' => (bool)$project->is_locked,
+            'message' => 'Project governance updated.'
+        ]);
+    }
+
+    /**
+     * Record a project extension (Time/Effort).
+     */
+    public function recordExtension(Request $request, Project $project)
+    {
+        $validated = $request->validate([
+            'task_id'             => 'nullable|exists:project_tasks,id',
+            'category'            => 'required|in:priority_conflict,scope_change,complexity_drag',
+            'type'                => 'nullable|in:time,effort,both',
+            'days_added'          => 'required|integer|min:0',
+            'hours_added'         => 'required|numeric|min:0',
+            'reason'              => 'required|string|min:5',
+            'notes'               => 'nullable|string',
+            'original_start_date' => 'nullable|date',
+            'original_end_date'   => 'nullable|date',
+            'extended_end_date'   => 'required|date',
+            'extension_meta'      => 'nullable|array',
+        ]);
+
+        // Derive type from category for backward compatibility
+        $typeMap = [
+            'priority_conflict' => 'time',
+            'scope_change'      => 'both',
+            'complexity_drag'   => 'both',
+        ];
+        $type = $validated['type'] ?? $typeMap[$validated['category']] ?? 'both';
+
+        // 1. Snapshot original baseline if not set
+        if (is_null($project->original_planned_deadline)) {
+            $project->original_planned_deadline = $project->deadline;
+        }
+        if (is_null($project->original_estimated_hours)) {
+            $project->original_estimated_hours = $project->tasks()->sum('estimated_hours') ?: 0;
+            if ($project->estimated_hours == 0) {
+                $project->estimated_hours = $project->original_estimated_hours;
+            }
+        }
+
+        // 2. Create Extension Record
+        $extension = $project->extensions()->create([
+            'task_id'             => $validated['task_id'] ?? null,
+            'category'            => $validated['category'],
+            'type'                => $type,
+            'days_added'          => $validated['days_added'],
+            'hours_added'         => $validated['hours_added'],
+            'reason'              => $validated['reason'],
+            'notes'               => $validated['notes'] ?? null,
+            'original_start_date' => $validated['original_start_date'] ?? null,
+            'original_end_date'   => $validated['original_end_date']   ?? null,
+            'extended_end_date'   => $validated['extended_end_date'],
+            'extension_meta'      => $validated['extension_meta']      ?? null,
+            'created_by'          => auth()->id(),
+        ]);
+
+        // 3. Update Task: set due_date to extended_end_date, add effort hours
+        if (!empty($validated['task_id'])) {
+            $task = \App\Models\Task::find($validated['task_id']);
+            if ($task) {
+                $task->due_date = $validated['extended_end_date'];
+                
+                // If total_efforts is 0, it means this is the first extension record.
+                // We must initialize it with the original estimate before adding the drift hours.
+                if (($task->total_efforts ?? 0) <= 0) {
+                    $task->total_efforts = $task->estimated_hours;
+                }
+
+                $task->total_efforts += $validated['hours_added'];
+                $task->save();
+            }
+        }
+
+        // 4. Roll project deadline and estimated hours forward
+        if ($validated['days_added'] > 0 && $project->deadline) {
+            $project->deadline = $project->deadline->addDays($validated['days_added']);
+        }
+        if ($validated['hours_added'] > 0) {
+            $project->estimated_hours = ($project->estimated_hours ?? 0) + $validated['hours_added'];
+        }
+        $project->save();
+
+        $categoryLabel = \App\Models\ProjectExtension::CATEGORIES[$validated['category']] ?? $validated['category'];
+        $this->logger->log('project_management', 'project_extension',
+            "[{$categoryLabel}] +{$validated['days_added']}d +{$validated['hours_added']}h → New End: {$validated['extended_end_date']}", [
+                'project_id' => $project->id,
+                'task_id'    => $validated['task_id'] ?? null,
+                'category'   => $validated['category'],
+            ]
+        );
+
+        return response()->json([
+            'success'   => true,
+            'message'   => 'Extension recorded successfully.',
+            'extension' => $extension->load('creator'),
+        ]);
+    }
+
+
+    /**
+     * Get Extension Stats for Visual Analytics.
+     */
+    public function getExtensionStats(Project $project)
+    {
+        return response()->json($this->buildExtensionGovernancePayload($project));
+    }
+
+    public function exportExtensions(\App\Models\Project $project)
+    {
+        $filename = 'Project_Extensions_' . str_replace(' ', '_', $project->name) . '_' . now()->format('Y-m-d') . '.xlsx';
+
+        return \Maatwebsite\Excel\Facades\Excel::download(
+            new \App\Exports\ProjectExtensionGovernanceExport($project),
+            $filename
+        );
+    }
+
+    public function pendingExtensions(Request $request, Project $project): JsonResponse
+    {
+        $this->authorize('view', $project);
+        $this->authorizeExtensionReview($request);
+
+        $extensions = $project->extensions()
+            ->with(['creator:id,name,avatar', 'task:id,title'])
+            ->latest()
+            ->limit(300)
+            ->get()
+            ->filter(function (ProjectExtension $extension) {
+                $status = data_get($extension->extension_meta, 'approval_status', 'pending');
+
+                return in_array($status, ['pending', null, ''], true);
+            })
+            ->values();
+
+        return response()->json([
+            'success' => true,
+            'count' => $extensions->count(),
+            'extensions' => $extensions,
+        ]);
+    }
+
+    public function approveExtension(Request $request, Project $project, ProjectExtension $extension): JsonResponse
+    {
+        $this->authorize('view', $project);
+        $this->authorizeExtensionReview($request);
+        $this->assertProjectExtensionOwnership($project, $extension);
+
+        $validated = $request->validate([
+            'note' => 'nullable|string|max:500',
+        ]);
+
+        $meta = is_array($extension->extension_meta) ? $extension->extension_meta : [];
+        $currentStatus = $meta['approval_status'] ?? 'pending';
+
+        if ($currentStatus === 'approved') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Extension is already approved.',
+                'extension' => $extension,
+            ]);
+        }
+
+        if ($currentStatus === 'rejected') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Rejected extension cannot be approved directly. Create a new drift record or reset status.',
+            ], 422);
+        }
+
+        $meta['approval_status'] = 'approved';
+        $meta['approval_by'] = $request->user()->id;
+        $meta['approval_at'] = now()->toIso8601String();
+        if (!empty($validated['note'])) {
+            $meta['approval_note'] = $validated['note'];
+        }
+
+        $extension->extension_meta = $meta;
+        $extension->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Extension approved successfully.',
+            'extension' => $extension->fresh(['creator:id,name,avatar', 'task:id,title']),
+        ]);
+    }
+
+    public function rejectExtension(Request $request, Project $project, ProjectExtension $extension): JsonResponse
+    {
+        $this->authorize('view', $project);
+        $this->authorizeExtensionReview($request);
+        $this->assertProjectExtensionOwnership($project, $extension);
+
+        $validated = $request->validate([
+            'reason' => 'required|string|min:5|max:500',
+        ]);
+
+        $meta = is_array($extension->extension_meta) ? $extension->extension_meta : [];
+        $currentStatus = $meta['approval_status'] ?? 'pending';
+
+        if ($currentStatus === 'approved') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Approved extension cannot be rejected directly. Reverse via governance flow.',
+            ], 422);
+        }
+
+        if ($currentStatus === 'rejected') {
+            return response()->json([
+                'success' => true,
+                'message' => 'Extension is already rejected.',
+                'extension' => $extension,
+            ]);
+        }
+
+        $meta['approval_status'] = 'rejected';
+        $meta['approval_by'] = $request->user()->id;
+        $meta['approval_at'] = now()->toIso8601String();
+        $meta['rejection_reason'] = $validated['reason'];
+
+        $extension->extension_meta = $meta;
+        $extension->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Extension rejected successfully.',
+            'extension' => $extension->fresh(['creator:id,name,avatar', 'task:id,title']),
+        ]);
+    }
+
+    private function authorizeExtensionReview(Request $request): void
+    {
+        if (!$request->user()->hasRole(['Super Admin', 'Admin', 'Manager'])) {
+            abort(403, 'You are not authorized to review extension drift records.');
+        }
+    }
+
+    private function assertProjectExtensionOwnership(Project $project, ProjectExtension $extension): void
+    {
+        if ((int) $extension->project_id !== (int) $project->id) {
+            abort(404);
+        }
+    }
+
+    private function buildExtensionGovernancePayload(Project $project): array
+    {
+        $project->loadMissing([
+            'tasks.assignees.department',
+            'tasks.assignments',
+            'tasks.timesheets' => fn ($query) => $query->whereIn('status', ['Approved', 'approved']),
+        ]);
+
+        $extensions = $project->extensions()
+            ->with([
+                'creator:id,name,avatar',
+                'task:id,title,start_date,due_date,total_efforts,estimated_hours,status',
+                'task.assignees:id,first_name,last_name,avatar,department_id',
+                'task.assignees.department:id,name',
+            ])
+            ->orderBy('created_at', 'asc')
+            ->get();
+
+        $allocatedHours = (float) \App\Models\WorkAssignment::where('project_id', $project->id)->sum('allocated_hours');
+        $actualHours = (float) \App\Models\Timesheet::where('project_id', $project->id)
+            ->whereIn('status', ['Approved', 'approved'])
+            ->sum('hours_spent');
+
+        $baselineHours = (float) ($project->original_estimated_hours
+            ?? $project->tasks->sum('estimated_hours')
+            ?? $project->estimated_hours
+            ?? 0);
+        $currentHours = (float) ($project->estimated_hours ?: ($baselineHours + $extensions->sum('hours_added')));
+
+        $baselineDeadline = $project->original_planned_deadline ?? $project->deadline;
+        $originalDays = 0;
+        if ($project->start_date && $baselineDeadline) {
+            $originalDays = max(1, \Carbon\Carbon::parse($project->start_date)->diffInDays(\Carbon\Carbon::parse($baselineDeadline)));
+        }
+
+        $totalDaysAdded = (int) $extensions->sum('days_added');
+        $totalHoursAdded = (float) $extensions->sum('hours_added');
+        $driftPct = $originalDays > 0 ? round(($totalDaysAdded / $originalDays) * 100, 1) : 0.0;
+
+        $byCategory = [];
+        foreach (ProjectExtension::CATEGORIES as $category => $label) {
+            $categoryExtensions = $extensions->where('category', $category)->values();
+            $slowdownValues = $categoryExtensions
+                ->map(fn ($extension) => (float) data_get($extension->extension_meta, 'slowdown_ratio', 0))
+                ->filter(fn ($value) => $value > 0)
+                ->values();
+
+            $days = (int) $categoryExtensions->sum('days_added');
+            $hours = (float) $categoryExtensions->sum('hours_added');
+            $resourcesAdded = (int) $categoryExtensions->sum(fn ($extension) => (int) data_get($extension->extension_meta, 'additional_resources', 0));
+
+            $byCategory[$category] = [
+                'label' => $label,
+                'count' => $categoryExtensions->count(),
+                'days' => $days,
+                'hours' => $hours,
+                'days_added' => $days,
+                'hours_added' => $hours,
+                'resources_added' => $resourcesAdded,
+                'avg_slowdown' => $slowdownValues->isNotEmpty() ? round($slowdownValues->avg(), 2) : 0,
+            ];
+        }
+
+        $timeline = $extensions->values()->map(function ($extension, $index) {
+            return [
+                'id' => $extension->id,
+                'round' => $index + 1,
+                'date' => $extension->created_at->format('Y-m-d'),
+                'recorded_at' => $extension->created_at->toIso8601String(),
+                'category' => $extension->category,
+                'category_label' => $extension->category_label,
+                'days' => (int) $extension->days_added,
+                'hours' => (float) $extension->hours_added,
+                'reason' => $extension->reason,
+                'notes' => $extension->notes,
+                'original_start_date' => $extension->original_start_date?->format('Y-m-d'),
+                'original_end_date' => $extension->original_end_date?->format('Y-m-d'),
+                'extended_end_date' => $extension->extended_end_date?->format('Y-m-d'),
+                'extension_meta' => $extension->extension_meta,
+                'task_id' => $extension->task_id,
+                'task_title' => $extension->task?->title,
+                'display_type' => $extension->task_id ? 'Task Scoped' : 'Project Wide',
+                'user' => $extension->creator?->name ?? 'System',
+                'user_avatar' => $extension->creator?->avatar,
+            ];
+        });
+
+        $personPerformance = $this->buildExtensionPersonPerformance($project, $extensions);
+
+        return [
+            'success' => true,
+            'project' => [
+                'id' => $project->id,
+                'name' => $project->name,
+                'code' => $project->code,
+                'start_date' => $project->start_date?->format('Y-m-d'),
+                'original_hours' => $baselineHours,
+                'original_deadline' => $baselineDeadline?->format('Y-m-d'),
+                'current_hours' => $currentHours,
+                'current_deadline' => $project->deadline?->format('Y-m-d'),
+                'allocated_hours' => $allocatedHours,
+                'actual_hours' => $actualHours,
+            ],
+            'extensions' => $extensions->append('category_label')->values(),
+            'stats' => [
+                'total_days_added' => $totalDaysAdded,
+                'total_hours_added' => $totalHoursAdded,
+                'total_extended_days' => $totalDaysAdded,
+                'total_extended_hours' => $totalHoursAdded,
+                'drift_pct' => $driftPct,
+                'original_days' => $originalDays,
+                'allocated_hours' => $allocatedHours,
+                'actual_hours' => $actualHours,
+                'by_category' => $byCategory,
+                'reason_breakdown' => $extensions->groupBy('category')->map->count(),
+                'timeline' => $timeline,
+            ],
+            'person_performance' => $personPerformance,
+        ];
+    }
+
+    private function buildExtensionPersonPerformance(Project $project, $extensions): array
+    {
+        $people = [];
+
+        foreach ($project->tasks as $task) {
+            $approvedTimesheets = $task->timesheets ?? collect();
+            $lastEntryDate = $approvedTimesheets->max('date');
+            $taskExtensions = $extensions->where('task_id', $task->id);
+            $taskExtensionDays = (int) $taskExtensions->sum('days_added');
+            $completionVarianceDays = null;
+            $statusBucket = null;
+
+            if ($task->due_date && $lastEntryDate) {
+                $completionVarianceDays = \Carbon\Carbon::parse($task->due_date)
+                    ->diffInDays(\Carbon\Carbon::parse($lastEntryDate), false);
+
+                if ($completionVarianceDays > 0) {
+                    $statusBucket = 'delayed';
+                } elseif ($completionVarianceDays < 0) {
+                    $statusBucket = 'fast';
+                } else {
+                    $statusBucket = 'on_time';
+                }
+            } elseif ($task->due_date && \Carbon\Carbon::parse($task->due_date)->isPast() && !in_array(strtolower((string) $task->status), ['done', 'completed', 'testing'], true)) {
+                $completionVarianceDays = \Carbon\Carbon::parse($task->due_date)->diffInDays(now());
+                $statusBucket = 'overdue';
+            }
+
+            foreach ($task->assignees as $assignee) {
+                $personId = $assignee->id;
+                if (!isset($people[$personId])) {
+                    $people[$personId] = [
+                        'id' => $personId,
+                        'name' => trim(($assignee->first_name ?? '') . ' ' . ($assignee->last_name ?? '')),
+                        'avatar' => $assignee->avatar,
+                        'team' => $assignee->department?->name ?? ($assignee->designation ?? 'Unassigned'),
+                        'tasks_count' => 0,
+                        'on_time_tasks' => 0,
+                        'delayed_tasks' => 0,
+                        'fast_tasks' => 0,
+                        'overdue_tasks' => 0,
+                        'total_delay_days' => 0,
+                        'total_saved_days' => 0,
+                        'total_extension_days' => 0,
+                        'extensions_count' => 0,
+                        'variance_samples' => 0,
+                        'variance_total_days' => 0,
+                    ];
+                }
+
+                $people[$personId]['tasks_count']++;
+                $people[$personId]['total_extension_days'] += $taskExtensionDays;
+                $people[$personId]['extensions_count'] += $taskExtensions->count();
+
+                if ($statusBucket === 'delayed') {
+                    $people[$personId]['delayed_tasks']++;
+                    $people[$personId]['total_delay_days'] += abs((int) $completionVarianceDays);
+                } elseif ($statusBucket === 'fast') {
+                    $people[$personId]['fast_tasks']++;
+                    $people[$personId]['total_saved_days'] += abs((int) $completionVarianceDays);
+                } elseif ($statusBucket === 'overdue') {
+                    $people[$personId]['overdue_tasks']++;
+                    $people[$personId]['total_delay_days'] += abs((int) $completionVarianceDays);
+                } elseif ($statusBucket === 'on_time') {
+                    $people[$personId]['on_time_tasks']++;
+                }
+
+                if ($completionVarianceDays !== null) {
+                    $people[$personId]['variance_samples']++;
+                    $people[$personId]['variance_total_days'] += (int) $completionVarianceDays;
+                }
+            }
+        }
+
+        $all = collect(array_values($people))->map(function ($person) {
+            $tasksCount = max(1, (int) $person['tasks_count']);
+            $lateTasks = (int) $person['delayed_tasks'] + (int) $person['overdue_tasks'];
+
+            $person['on_time_pct'] = round(($person['on_time_tasks'] / $tasksCount) * 100, 1);
+            $person['late_pct'] = round(($lateTasks / $tasksCount) * 100, 1);
+            $person['avg_variance_days'] = $person['variance_samples'] > 0
+                ? round($person['variance_total_days'] / $person['variance_samples'], 1)
+                : 0;
+            $person['tasks'] = $person['tasks_count'];
+            $person['on_time'] = $person['on_time_tasks'];
+            $person['delayed'] = $person['delayed_tasks'] + $person['overdue_tasks'];
+            $person['faster'] = $person['fast_tasks'];
+
+            unset($person['variance_samples'], $person['variance_total_days']);
+
+            return $person;
+        })->values();
+
+        return [
+            'delayed' => $all
+                ->filter(fn ($person) => $person['total_extension_days'] > 0 || $person['delayed'] > 0)
+                ->sortByDesc('total_extension_days')
+                ->sortByDesc('total_delay_days')
+                ->values(),
+            'fast' => $all
+                ->filter(fn ($person) => $person['fast_tasks'] > 0)
+                ->sortByDesc('total_saved_days')
+                ->values(),
+            'all' => $all->sortByDesc('tasks_count')->values(),
+        ];
     }
 
     private function createModulesRecursively($projectId, $parentId, $modules)

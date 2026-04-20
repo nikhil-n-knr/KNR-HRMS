@@ -6,6 +6,7 @@
         v-bind="$attrs"
         :value="modelValue"
         @input="$emit('update:modelValue', $event.target.value)"
+        @change="$emit('update:modelValue', $event.target.value)"
         class="w-full rounded-xl shadow-sm transition-all text-sm py-2.5 px-4 bg-white/50 backdrop-blur-sm hover:bg-white"
         :class="[
           colorClasses,

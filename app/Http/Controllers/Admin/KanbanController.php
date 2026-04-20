@@ -566,7 +566,8 @@ class KanbanController extends Controller
             'activities.user',
             'dependencies',
             'dependents',
-            'pullRequests.user'
+            'pullRequests.user',
+            'extensions.creator'
         ]);
 
         $task->assignees->each(function ($assignee) {

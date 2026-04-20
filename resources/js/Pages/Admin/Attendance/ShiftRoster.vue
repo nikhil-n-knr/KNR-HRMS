@@ -85,9 +85,13 @@
                             </button>
                         </div>
                         <div class="flex-1 flex overflow-x-auto hide-scrollbar">
-                            <div v-for="day in days" :key="day" class="min-w-[140px] w-full p-4 text-center border-r border-slate-800 last:border-0 hover:bg-slate-800/50 transition-all">
+                            <div v-for="day in days" :key="day" 
+                                class="min-w-[140px] w-full p-4 text-center border-r border-slate-800 last:border-0 hover:bg-slate-800/50 transition-all"
+                                :class="{'bg-rose-950/30': isOffDay(day)}"
+                            >
                                 <p class="text-sm font-black text-slate-500 uppercase tracking-widest mb-2">{{ day.toLocaleDateString('en-US', { weekday: 'short' }) }}</p>
                                 <p class="text-xl font-black text-white tracking-tighter tabular-nums leading-none">{{ day.getDate() }}</p>
+                                <p v-if="getHolidayName(day)" class="text-[10px] font-black text-rose-400 uppercase tracking-tighter mt-1 truncate px-1">{{ getHolidayName(day) }}</p>
                             </div>
                         </div>
                     </div>
@@ -122,7 +126,7 @@
                                 <div v-for="day in days" :key="day" class="min-w-[140px] w-full border-r border-gray-50 p-2.5 flex items-center justify-center">
                                     <div 
                                         class="w-full h-full py-4 rounded-2xl flex flex-col items-center justify-center border-2 transition-all text-center px-2 cursor-pointer shadow-sm active:scale-95 group/shift relative overflow-hidden"
-                                        :class="getShiftStyles(getShiftForDay(emp, day))"
+                                        :class="getShiftStyles(getShiftForDay(emp, day), day)"
                                     >
                                         <div class="absolute inset-y-0 left-0 w-1 opacity-20 bg-current"></div>
                                         <span class="text-sm font-black uppercase tracking-widest truncate w-full leading-none">{{ getShiftForDay(emp, day).name }}</span>
@@ -164,7 +168,7 @@
                                 <span class="text-sm font-black text-slate-400 uppercase tracking-widest mb-3 opacity-60">{{ day.toLocaleDateString('en-US', { weekday: 'short' }) }} {{ day.getDate() }}</span>
                                 <div 
                                     class="w-full py-4 px-2 rounded-2xl border-2 flex flex-col items-center justify-center text-center transition-all shadow-sm active:scale-95"
-                                    :class="getShiftStyles(getShiftForDay(emp, day))"
+                                    :class="getShiftStyles(getShiftForDay(emp, day), day)"
                                 >
                                     <span class="text-sm font-black uppercase truncate w-full leading-none">{{ getShiftForDay(emp, day).name }}</span>
                                     <span v-if="!getShiftForDay(emp, day).isDefault" class="text-sm font-black mt-2 tabular-nums opacity-70">
@@ -260,6 +264,8 @@ const employees = ref({ data: [] });
 const shifts = ref([]);
 const roster = ref({});
 const selection = ref(new Set());
+const currentWorkDays = ref({});
+const currentHolidays = ref([]);
 
 const dateRange = ref({
     start: new Date().toISOString().slice(0, 10),
@@ -314,6 +320,8 @@ const fetchRoster = async () => {
         employees.value = res.data.employees;
         shifts.value = res.data.shifts;
         roster.value = res.data.roster || {};
+        currentWorkDays.value = res.data.workDays || {};
+        currentHolidays.value = res.data.holidays || [];
     } catch (e) {
         toast.error("Failed to load matrix");
     } finally {
@@ -371,13 +379,32 @@ const getShiftForDay = (employee, date) => {
     return { name: '--', color: 'gray', isDefault: true };
 };
 
-const getShiftStyles = (shift) => {
-    if (shift.isDefault) return 'bg-slate-50/20 text-slate-300 border-slate-100/50 opacity-60';
+const getShiftStyles = (shift, day) => {
+    const isOff = isOffDay(day);
+    
+    if (shift.isDefault) {
+        if (isOff) return 'bg-rose-50/50 text-rose-600 border-rose-100 shadow-sm opacity-100';
+        return 'bg-slate-50/20 text-slate-300 border-slate-100/50 opacity-60';
+    }
+    
     if (shift.name.includes('Morning') || (shift.start_time && shift.start_time < '10:00:00')) 
         return 'bg-amber-50/50 text-amber-600 border-amber-200 shadow-sm shadow-amber-500/5 backdrop-blur-sm';
     if (shift.name.includes('Night') || (shift.start_time && shift.start_time > '18:00:00')) 
         return 'bg-indigo-50/50 text-indigo-700 border-indigo-200 shadow-sm shadow-indigo-500/5 backdrop-blur-sm';
     return 'bg-emerald-50/50 text-emerald-600 border-emerald-200 shadow-sm shadow-emerald-500/5 backdrop-blur-sm';
+};
+
+const isOffDay = (date) => {
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' }).toLowerCase();
+    const isWeeklyOff = currentWorkDays.value[dayName] === false;
+    const dateStr = date.toISOString().slice(0, 10);
+    const isHoliday = currentHolidays.value.some(h => h.date === dateStr);
+    return isWeeklyOff || isHoliday;
+};
+
+const getHolidayName = (date) => {
+    const dateStr = date.toISOString().slice(0, 10);
+    return currentHolidays.value.find(h => h.date === dateStr)?.name;
 };
 </script>
 

@@ -36,38 +36,48 @@
         <!-- Details Cards -->
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             <!-- Info -->
-            <div class="md:col-span-2 bg-white rounded-xl shadow-sm border border-gray-100 p-6 space-y-6">
-                <h3 class="text-lg font-semibold text-gray-800 border-b pb-2">Client Details</h3>
+            <div class="md:col-span-2 bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-6 space-y-6">
+                <h3 class="text-lg font-semibold text-gray-800 border-b border-gray-100 pb-3 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                    </svg>
+                    Client Details
+                </h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-xs uppercase tracking-wide text-gray-400 font-bold mb-1">Contact Person</label>
+                    <div class="p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                        <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-black mb-1">Contact Person</label>
                         <div class="text-gray-900 font-medium">{{ client.contact_person || 'N/A' }}</div>
                     </div>
-                     <div>
-                        <label class="block text-xs uppercase tracking-wide text-gray-400 font-bold mb-1">Email</label>
+                     <div class="p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                        <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-black mb-1">Email</label>
                         <div class="text-gray-900 font-medium">{{ client.email || 'N/A' }}</div>
                     </div>
-                     <div>
-                        <label class="block text-xs uppercase tracking-wide text-gray-400 font-bold mb-1">Status</label>
-                         <span v-if="client.portal_access" class="px-2 py-1 rounded-full text-xs font-bold bg-green-100 text-green-700">
-                            Portal Active
+                     <div class="p-4 bg-gray-50/50 rounded-xl border border-gray-100 md:col-span-2 flex justify-between items-center">
+                        <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-black">Portal Status</label>
+                         <span v-if="client.portal_access" class="px-3 py-1 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 tracking-wider uppercase border border-emerald-200 shadow-sm">
+                            Active
                          </span>
-                         <span v-else class="px-2 py-1 rounded-full text-xs font-bold bg-gray-100 text-gray-600">
+                         <span v-else class="px-3 py-1 rounded-full text-[10px] font-black bg-gray-100 text-gray-500 tracking-wider uppercase border border-gray-200">
                             Offline
                          </span>
                     </div>
                 </div>
                 
-                <div class="border-t pt-4">
-                    <h4 class="text-sm font-bold text-gray-900 mb-3">Service Contract</h4>
-                    <div class="flex gap-8">
-                        <div>
-                             <label class="block text-xs uppercase tracking-wide text-gray-400 font-bold mb-1">Start Date</label>
-                            <div class="text-gray-600 font-mono">{{ client.contract_start || 'Not set' }}</div>
+                <div class="border-t border-gray-100 pt-5">
+                    <h4 class="text-sm font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Service Contract
+                    </h4>
+                    <div class="grid grid-cols-2 gap-6">
+                        <div class="p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                             <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-black mb-1">Start Date</label>
+                            <div class="text-gray-800 font-bold">{{ client.contract_start ? new Date(client.contract_start).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric'}) : 'Not set' }}</div>
                         </div>
-                         <div>
-                             <label class="block text-xs uppercase tracking-wide text-gray-400 font-bold mb-1">End Date</label>
-                            <div class="text-gray-600 font-mono">{{ client.contract_end || 'Not set' }}</div>
+                         <div class="p-4 bg-gray-50/50 rounded-xl border border-gray-100">
+                             <label class="block text-[10px] uppercase tracking-widest text-gray-500 font-black mb-1">End Date</label>
+                            <div class="text-gray-800 font-bold">{{ client.contract_end ? new Date(client.contract_end).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric'}) : 'Not set' }}</div>
                         </div>
                     </div>
                 </div>
@@ -75,14 +85,51 @@
 
             <!-- Stats / Projects -->
             <div class="space-y-6">
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Active Projects</h3>
-                    <div v-if="client.projects && client.projects.length" class="space-y-3">
-                        <div v-for="project in client.projects" :key="project.id" class="p-3 bg-gray-50 rounded-lg hover:bg-emerald-50 transition border border-gray-200">
-                            <div class="font-medium text-emerald-700">{{ project.name }}</div>
-                            <div class="flex justify-between items-center text-xs mt-1">
-                                <span class="font-mono text-gray-500">{{ project.code }}</span>
-                                <span class="capitalize px-1.5 py-0.5 rounded bg-white border text-gray-600">{{ project.status }}</span>
+                <div class="bg-white/80 backdrop-blur-xl shadow-xl border border-white/50 rounded-2xl p-6 transition-all duration-300">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                            </svg>
+                            Linked Projects
+                        </h3>
+                        <button @click="showAssignModal = true" class="text-xs px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-600 hover:text-white font-black tracking-wider uppercase transition-all duration-200 shadow-sm">
+                            Map Project
+                        </button>
+                    </div>
+                    
+                    <div v-if="client.projects && client.projects.length" class="space-y-4">
+                        <div v-for="project in client.projects" :key="project.id" class="p-4 bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-lg hover:-translate-y-0.5 hover:border-emerald-200 transition-all duration-300 group relative">
+                            <!-- Unlink Action -->
+                            <button @click.prevent="unassignProject(project)" class="absolute top-4 right-4 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all duration-200" title="Unlink Project">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
+
+                            <div class="pr-8">
+                                <h4 class="font-bold text-gray-900 group-hover:text-emerald-700 transition-colors text-sm">
+                                    <Link :href="route('projects.index', { project: project.id })">{{ project.name }}</Link>
+                                </h4>
+                                <div class="flex items-center gap-2 mt-2">
+                                    <span class="font-mono text-[10px] uppercase text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full font-bold tracking-widest">{{ project.code }}</span>
+                                    <span class="capitalize px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 text-[10px] font-black tracking-widest">{{ project.status }}</span>
+                                </div>
+                            </div>
+                            
+                            <div class="mt-4 grid grid-cols-3 gap-2 border-t border-gray-50 pt-4">
+                                <div>
+                                    <div class="text-[9px] uppercase font-black tracking-widest text-gray-400">Tasks</div>
+                                    <div class="text-sm font-bold text-gray-800">{{ project.tasks_count || 0 }}</div>
+                                </div>
+                                <div>
+                                    <div class="text-[9px] uppercase font-black tracking-widest text-gray-400">Sprints</div>
+                                    <div class="text-sm font-bold text-gray-800">{{ project.sprints_count || 0 }}</div>
+                                </div>
+                                 <div class="text-right">
+                                    <div class="text-[9px] uppercase font-black tracking-widest text-gray-400">Progress</div>
+                                    <div class="text-sm font-black text-emerald-600">{{ project.manual_progress_percentage || 0 }}%</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -92,11 +139,16 @@
                 </div>
 
                 <!-- Client Users -->
-                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-800">Client Users</h3>
-                        <button @click="showInviteModal = true" class="text-sm text-emerald-600 hover:text-emerald-900 font-medium">
-                            + Invite User
+                <div class="bg-white/80 backdrop-blur-xl shadow-xl border border-white/50 rounded-2xl p-6 transition-all duration-300">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
+                            </svg>
+                            Client Users
+                        </h3>
+                        <button @click="showInviteModal = true" class="text-xs px-3 py-1.5 bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-600 hover:text-white font-black tracking-wider uppercase transition-all duration-200 shadow-sm">
+                            Invite User
                         </button>
                     </div>
                     
@@ -154,6 +206,30 @@
             </div>
         </Modal>
 
+        <!-- Assign Project Modal -->
+        <Modal :show="showAssignModal" @close="showAssignModal = false" max-width="md">
+            <div class="p-6">
+                <h2 class="text-lg font-bold text-gray-900 mb-4">Map Project to Client</h2>
+                <form @submit.prevent="submitAssign" class="space-y-4">
+                    <div>
+                        <InputLabel value="Select Project" />
+                        <select v-model="assignForm.project_id" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500" required>
+                            <option value="">-- Choose Project --</option>
+                            <option v-for="proj in unassignedProjects" :key="proj.id" :value="proj.id">
+                                {{ proj.name }} ({{ proj.code }})
+                            </option>
+                        </select>
+                        <InputError :message="assignForm.errors.project_id" />
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 mt-6">
+                        <SecondaryButton @click="showAssignModal = false">Cancel</SecondaryButton>
+                        <PrimaryButton :disabled="assignForm.processing" class="!bg-emerald-600 hover:!bg-emerald-700">Map Project</PrimaryButton>
+                    </div>
+                </form>
+            </div>
+        </Modal>
+
         <!-- Invite Modal -->
         <Modal :show="showInviteModal" @close="showInviteModal = false">
 ...
@@ -204,8 +280,32 @@ import { ref } from 'vue';
 defineOptions({ layout: MainLayout });
 
 const props = defineProps({
-    client: Object
+    client: Object,
+    unassignedProjects: Array
 });
+
+// Assign Project Logic
+const showAssignModal = ref(false);
+const assignForm = useForm({
+    project_id: ''
+});
+
+const submitAssign = () => {
+    assignForm.post(route('projects.clients.assign-project', props.client.id), {
+        onSuccess: () => {
+            showAssignModal.value = false;
+            assignForm.reset();
+        }
+    });
+};
+
+const unassignProject = (project) => {
+    if (confirm(`Are you sure you want to unlink ${project.name} from this client? Users will immediately lose access.`)) {
+        router.post(route('projects.clients.unassign-project', props.client.id), { project_id: project.id }, {
+            preserveScroll: true
+        });
+    }
+};
 
 const showInviteModal = ref(false);
 const inviteForm = useForm({

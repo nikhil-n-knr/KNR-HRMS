@@ -1,0 +1,133 @@
+Employee Workbench Completion Plan
+Date: 2026-04-15
+Status: Phase 1 + core Phase 2/3 completed, hardening pending
+
+Objective
+Deliver a production-safe employee-only execution desk for:
+1) My Tasks
+2) My Bugs
+
+Employees can perform only restricted execution actions (status, move-next, comments, checklist toggles, drift submission) with strict assignment-based authorization and no board-level administrative edits.
+
+Completed Baseline
+- Dedicated employee route and page shell exist.
+- Navigation links to My Work exist (profile and personal hub).
+- Restricted employee endpoints exist for:
+  - task status update
+  - task move-next
+  - task comments
+  - task checklist toggle
+  - bug status update
+  - bug comments
+  - task drift submit
+  - bug drift submit
+- TaskPolicy and BugTicketPolicy are implemented and registered.
+- My Work page now has actionable controls (status/comment/checklist/drift).
+
+Pending Completion Backlog
+
+P0 (must finish before release)
+1) Drift approval lifecycle
+- Add explicit lifecycle state to drift payload/meta: pending, approved, rejected.
+- Add manager approval endpoints for task and bug drift.
+- Add audit trail for approval decisions (who, when, reason).
+
+2) Backend guardrails and consistency
+- Ensure bug stage transitions are restricted to valid stage set (prefer project/workflow-specific scope).
+- Validate task stage transitions against current stage order (no illegal backward/skip unless allowed).
+- Enforce checklist ownership rule consistently when assigned_to exists.
+
+3) Error and UX resilience
+- Standardize API error shape for all employee work endpoints.
+- Add user-friendly handling for 401/403/404/422/500 in My Work page.
+- Disable duplicate submissions while requests are in progress.
+
+4) Tests (blocking)
+- Add feature tests for assignment-only access.
+- Add policy tests for TaskPolicy and BugTicketPolicy.
+- Add workflow tests for each employee action endpoint.
+- Add drift submission tests (happy path + zero days/hours + unauthorized).
+
+P1 (strongly recommended)
+1) Pagination and filters
+- Add UI pagination controls for both task and bug tabs.
+- Add server-driven stage/status filters in UI (not only search).
+
+2) UI modularization
+- Split current page into smaller components:
+  - Tabs/MyTasksTab
+  - Tabs/MyBugsTab
+  - Forms/DriftCaptureForm
+- Keep logic centralized in composables where useful.
+
+3) Observability
+- Add structured logs for employee actions:
+  - action_type
+  - entity_type/entity_id
+  - previous/new stage
+  - request_id
+  - actor_id
+
+P2 (post-release)
+1) Manager review workspace for pending drift.
+2) Aggregated drift analytics by category and employee.
+3) Notification hooks for drift approval/rejection outcomes.
+
+Corner Case Matrix (must be handled)
+
+A. Authorization and data leakage
+- Employee tries action on unassigned task/bug -> return 403.
+- Employee guesses another checklist ID under same task route -> return 404/403.
+- User has role upgrade or assignment revoked during active session -> enforce latest DB state on each action.
+
+B. Stage transitions
+- Task has no next stage but move-next requested -> 422 with clear message.
+- Submitted stage_id not in task project stages -> 404/422.
+- Bug stage from unrelated workflow accepted accidentally -> reject via scoped validation.
+
+C. Drift submission
+- days_added=0 and hours_added=0 -> reject 422.
+- Missing reason or too short reason -> reject 422.
+- Invalid category -> reject 422.
+- Extended date before original date -> reject 422 unless explicitly allowed by policy.
+- Duplicate rapid drift submissions -> idempotency guard or debounce at UI.
+
+D. Comment and checklist
+- Empty comment or whitespace-only -> reject 422.
+- Checklist toggle on already stale row (deleted item) -> return 404 gracefully.
+- Concurrent toggles from two users -> last write wins, UI reloads authoritative state.
+
+E. Frontend state and transport
+- CSRF token missing/expired -> redirect or standardized auth error handling.
+- Partial reload race after rapid actions -> queue refresh or optimistic update with rollback.
+- Network timeout -> surface retry option and do not clear draft inputs.
+
+F. Data integrity
+- project_extensions.task_id nullable handling for bug drift with no linked task.
+- task_checklists.assigned_to type standardization (users vs employees) must be consistent across policy and controller checks.
+
+Execution Sequence (recommended)
+Step 1: Implement drift approval lifecycle (P0.1).
+Step 2: Tighten transition validation and checklist ownership checks (P0.2).
+Step 3: Standardize endpoint errors + frontend handling (P0.3).
+Step 4: Add policy/feature test suite and make green (P0.4).
+Step 5: Add pagination/filter UX and component split (P1).
+
+Acceptance Criteria
+1) Employee can act only on assigned tasks/bugs.
+2) All action endpoints return deterministic errors for invalid input/authorization.
+3) Drift always saved with category, metadata source, actor, and review status.
+4) Test suite covers all critical and corner cases listed in P0.
+5) No diagnostics errors in touched files.
+
+Release Checklist
+- Run backend tests for employee work and policies.
+- Smoke test task and bug actions using employee account.
+- Smoke test unauthorized attempts with another employee account.
+- Verify logs for action traceability.
+- Confirm no manager/admin board capabilities exposed in My Work.
+
+Notes
+- Keep /projects/{project}/board as manager/admin control plane.
+- Keep employee workbench as a strict execution surface.
+- Prefer explicit deny-by-default for any new employee action endpoints.

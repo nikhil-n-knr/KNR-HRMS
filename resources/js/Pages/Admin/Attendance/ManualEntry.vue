@@ -14,6 +14,11 @@
                     <p class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mt-1.5 leading-none px-0.5">Manual Pulse Injection</p>
                 </div>
             </div>
+
+            <div class="flex items-center gap-4">
+                <button @click="showSettingsModal = true" class="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl flex items-center justify-center hover:bg-slate-200 transition-all border border-slate-200 group">
+                    <i class="fas fa-cog group-hover:rotate-90 transition-transform"></i>
+                </button>
              
             <nav class="flex bg-slate-100 p-1 rounded-xl border border-slate-200 shadow-inner overflow-x-auto no-scrollbar">
                 <button 
@@ -27,6 +32,7 @@
                     {{ tab.replace('_', ' ') }}
                 </button>
             </nav>
+            </div>
         </div>
 
         <!-- Compact Registry Terminal -->
@@ -61,9 +67,20 @@
                             <div class="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-emerald-600 border border-emerald-200 shadow-sm transition-transform hover:rotate-12 group">
                                 <i class="fas fa-id-card text-base"></i>
                             </div>
-                            <div>
+                            <div v-if="fetchingShift" class="flex items-center gap-2">
+                                <i class="fas fa-circle-notch animate-spin text-emerald-500"></i>
+                                <span class="text-xs font-black text-slate-400 uppercase tracking-widest">Syncing Shift...</span>
+                            </div>
+                            <div v-else-if="currentShiftInfo">
                                 <span class="block text-xs font-black text-emerald-600 uppercase tracking-[0.2em] leading-none mb-1.5">Active Assignment</span>
-                                <span class="text-sm font-black text-emerald-800 uppercase tracking-tighter leading-none">Standard Shift Profile [09:00 - 18:00]</span>
+                                <span class="text-sm font-black text-emerald-800 uppercase tracking-tighter leading-none">
+                                    {{ currentShiftInfo.name }} [{{ currentShiftInfo.start_time }} - {{ currentShiftInfo.end_time }}]
+                                    <span v-if="currentShiftInfo.is_non_working" class="ml-2 text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">OFF DAY</span>
+                                </span>
+                            </div>
+                            <div v-else>
+                                <span class="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] leading-none mb-1.5">No Assignment</span>
+                                <span class="text-sm font-black text-slate-600 uppercase tracking-tighter leading-none">Standard fallback applies</span>
                             </div>
                         </div>
                     </div>
@@ -261,6 +278,12 @@
                                         <th class="px-5 py-4 text-center">
                                             <span class="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Protocol</span>
                                         </th>
+                                        <th class="px-5 py-4 text-center">
+                                            <span class="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Check-In</span>
+                                        </th>
+                                        <th class="px-5 py-4 text-center">
+                                            <span class="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Check-Out</span>
+                                        </th>
                                         <th class="px-5 py-4 text-left">
                                             <span class="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Context</span>
                                         </th>
@@ -290,6 +313,16 @@
                                                     <option value="Half Day">HALF DAY</option>
                                                     <option value="On Leave">ON LEAVE</option>
                                                 </select>
+                                            </div>
+                                        </td>
+                                        <td class="px-5 py-4">
+                                            <div class="flex justify-center">
+                                                <input type="time" v-model="item.in_time" class="bg-slate-50 border border-slate-200 rounded-lg h-9 px-3 text-sm font-black text-slate-700 focus:bg-white transition-all shadow-sm" />
+                                            </div>
+                                        </td>
+                                        <td class="px-5 py-4">
+                                            <div class="flex justify-center">
+                                                <input type="time" v-model="item.out_time" class="bg-slate-50 border border-slate-200 rounded-lg h-9 px-3 text-sm font-black text-slate-700 focus:bg-white transition-all shadow-sm" />
                                             </div>
                                         </td>
                                         <td class="px-5 py-4">
@@ -350,16 +383,58 @@
             </div>
         </div>
     </div>
+
+    <!-- Terminal Settings Modal -->
+    <PremiumModal 
+        :show="showSettingsModal" 
+        @close="showSettingsModal = false" 
+        title="Terminal Configuration" 
+        subtitle="Operational Restrictions"
+        icon="fa-cog"
+        maxWidth="md"
+    >
+        <div class="space-y-6 p-2">
+            <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <div>
+                  <h4 class="text-sm font-black text-slate-800 uppercase tracking-tight">Restrict Holiday Entry</h4>
+                  <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Prevent manual logs on holidays</p>
+                </div>
+                <Toggle v-model="settings.restrict_holidays" />
+            </div>
+
+            <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <div>
+                  <h4 class="text-sm font-black text-slate-800 uppercase tracking-tight">Force Shift Pre-fill</h4>
+                  <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Auto-sync times with shift profile</p>
+                </div>
+                <Toggle v-model="settings.force_shift_prefill" />
+            </div>
+
+            <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-200">
+                <div>
+                  <h4 class="text-sm font-black text-slate-800 uppercase tracking-tight">Status Lock</h4>
+                  <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Ignore off-day markers</p>
+                </div>
+                <Toggle v-model="settings.ignore_off_day_status" />
+            </div>
+
+            <button @click="showSettingsModal = false" class="w-full h-12 bg-slate-900 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-lg active:scale-95">
+                Commit Config
+            </button>
+        </div>
+    </PremiumModal>
   </component>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch } from 'vue';
 import { useForm, Head } from '@inertiajs/vue3';
 import axios from 'axios';
 import { useToastStore } from '@/stores/toast';
 import AttendanceLayout from '@/Layouts/AttendanceLayout.vue';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import PremiumModal from '@/Components/PremiumModal.vue';
+import Toggle from '@/Components/Toggle.vue';
 
 defineOptions({ layout: MainLayout });
 
@@ -371,6 +446,13 @@ const props = defineProps({
 
 const toast = useToastStore();
 const activeTab = ref('single');
+const showSettingsModal = ref(false);
+
+const settings = ref({
+    restrict_holidays: true,
+    force_shift_prefill: true,
+    ignore_off_day_status: false
+});
 
 const getTabIcon = (tab) => {
     switch(tab) {
@@ -393,6 +475,40 @@ const singleForm = useForm({
 
 const employees = ref([]);
 const searching = ref(false);
+const fetchingShift = ref(false);
+const currentShiftInfo = ref(null);
+
+const fetchShiftInfo = async () => {
+    if (!singleForm.employee_id || !singleForm.date) return;
+    
+    fetchingShift.value = true;
+    try {
+        const res = await axios.get(route('admin.attendance.manual.shift-info'), {
+            params: {
+                employee_id: singleForm.employee_id,
+                date: singleForm.date
+            }
+        });
+        currentShiftInfo.value = res.data;
+        
+        if (settings.value.force_shift_prefill) {
+            singleForm.in_time = res.data.start_time;
+            singleForm.out_time = res.data.end_time;
+            if (res.data.is_non_working && !settings.value.ignore_off_day_status) {
+                singleForm.status = 'Absent';
+            } else {
+                singleForm.status = 'Present';
+            }
+        }
+    } catch (e) {
+        toast.error('Failed to sync shift info');
+    } finally {
+        fetchingShift.value = false;
+    }
+};
+
+watch(() => singleForm.employee_id, fetchShiftInfo);
+watch(() => singleForm.date, fetchShiftInfo);
 
 const searchEmployees = async (query = '') => {
     searching.value = true;
@@ -489,8 +605,10 @@ const fetchBulkMarkList = async () => {
                 employee_id: emp.id,
                 name: `${emp.first_name} ${emp.last_name}`,
                 code: emp.employee_code,
+                shift_id: shiftId,
                 shift_name: shift.name,
-                shift_time: `${shift.start_time?.slice(0,5)} - ${shift.end_time?.slice(0,5)}`,
+                in_time: shift.start_time?.slice(0,5),
+                out_time: shift.end_time?.slice(0,5),
                 status: 'Present',
                 remarks: ''
             };
@@ -524,6 +642,9 @@ const submitBulkMark = () => {
     bulkMarkForm.entries = selectedItems.map(item => ({
         employee_id: item.employee_id,
         status: item.status,
+        in_time: item.in_time,
+        out_time: item.out_time,
+        shift_id: item.shift_id,
         remarks: item.remarks
     }));
 

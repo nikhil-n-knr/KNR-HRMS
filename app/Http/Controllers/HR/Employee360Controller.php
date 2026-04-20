@@ -25,16 +25,18 @@ class Employee360Controller extends Controller
     {
 
         // 1. RBAC Check (Super Admin, Admin, HR Manager, Manager)
-        if (!Auth::user()->hasRole(['Super Admin', 'Admin', 'HR Manager', 'Manager'])) {
+        if (!Auth::user()->hasRole(['Super Admin', 'Admin', 'HR Manager', 'HR Admin', 'Manager', 'Team Manager', 'Team Lead'])) {
             abort(403, 'Unauthorized access to 360 Employee Reports.');
         }
 
         // 2. Fetch accessible employees based on role
         $query = Employee::with('user:id,name,email')->where('status', 'active');
         
-        if (Auth::user()->hasRole('Manager') && !Auth::user()->hasRole(['Super Admin', 'Admin', 'HR Manager'])) {
-            // Managers only see themselves or their direct reports (assuming reporting_to logic or teams)
-            $query->where('reporting_to', Auth::id());
+        if (!Auth::user()->hasRole(['Super Admin', 'Admin', 'HR Manager', 'HR Admin']) && Auth::user()->hasRole(['Manager', 'Team Manager', 'Team Lead'])) {
+            $hasDirectReports = Employee::where('status', 'active')->where('reporting_to', Auth::id())->exists();
+            if ($hasDirectReports) {
+                $query->where('reporting_to', Auth::id());
+            }
         }
 
         $employees = $query->get()->map(function($e) {
@@ -59,12 +61,23 @@ class Employee360Controller extends Controller
         $start = $request->input('start_date', now()->subDays(30)->format('Y-m-d'));
         $end = $request->input('end_date', now()->format('Y-m-d'));
 
-        $metrics = $this->service->getDashboardMetrics($employee, $start, $end);
+        $options = [
+            'task_page' => (int) $request->input('task_page', 1),
+            'task_per_page' => (int) $request->input('task_per_page', 4),
+            'task_status' => $request->input('task_status', 'all'),
+            'task_priority' => $request->input('task_priority', ''),
+            'bug_page' => (int) $request->input('bug_page', 1),
+            'bug_per_page' => (int) $request->input('bug_per_page', 4),
+            'bug_status' => $request->input('bug_status', 'all'),
+            'bug_priority' => $request->input('bug_priority', ''),
+        ];
+
+        $metrics = $this->service->getDashboardMetrics($employee, $start, $end, $options);
 
         // Load profile extra details
         $profile = [
             'name' => $employee->user->name ?? ($employee->first_name . ' ' . $employee->last_name),
-            'avatar' => $employee->avatar,
+            'avatar' => $employee->avatar_url,
             'designation' => $employee->designation,
             'department' => $employee->department->name ?? 'N/A'
         ];
@@ -90,12 +103,17 @@ class Employee360Controller extends Controller
 
     protected function authorizeAccess(Employee $employee)
     {
-        if (!Auth::user()->hasRole(['Super Admin', 'Admin', 'HR Manager', 'Manager'])) {
+        if (!Auth::user()->hasRole(['Super Admin', 'Admin', 'HR Manager', 'HR Admin', 'Manager', 'Team Manager', 'Team Lead'])) {
             abort(403);
         }
 
-        if (Auth::user()->hasRole('Manager') && !Auth::user()->hasRole(['Super Admin', 'Admin', 'HR Manager'])) {
-            if ($employee->reporting_to !== Auth::id()) {
+        if (!Auth::user()->hasRole(['Super Admin', 'Admin', 'HR Manager', 'HR Admin']) && Auth::user()->hasRole(['Manager', 'Team Manager', 'Team Lead'])) {
+            // Only enforce direct-report check when reporting_to hierarchy exists for this manager
+            $hasAnyDirectReports = Employee::where('status', 'active')
+                ->where('reporting_to', Auth::id())
+                ->exists();
+
+            if ($hasAnyDirectReports && $employee->reporting_to !== Auth::id()) {
                 abort(403, 'You can only view your direct reports.');
             }
         }

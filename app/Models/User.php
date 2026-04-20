@@ -101,7 +101,28 @@ class User extends Authenticatable
     }
 
     public function employee() {
-        return $this->hasOne(Employee::class);
+        // Primary: Linked via employees.user_id (standard)
+        return $this->hasOne(Employee::class, 'user_id');
+    }
+
+    /**
+     * Resilient helper to always get an employee profile if possible
+     */
+    public function getEmployeeProfile()
+    {
+        if ($this->employee) return $this->employee;
+
+        // Fallback: If User.employee_id (code) is set, find by code
+        if ($this->employee_id) {
+            $emp = Employee::where('employee_code', $this->employee_id)->first();
+            if ($emp) {
+                // Auto-fix link for next time
+                $emp->update(['user_id' => $this->id]);
+                return $emp;
+            }
+        }
+
+        return null;
     }
     
     /**

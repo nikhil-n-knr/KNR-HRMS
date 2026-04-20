@@ -112,6 +112,11 @@
                         <i class="fas fa-circle text-[5px] mr-1.5" :class="device.status === 'online' ? 'animate-pulse' : ''"></i>
                         {{ (device.status || 'OFFLINE').toUpperCase() }}
                     </span>
+
+                    <span v-if="device.is_office_wifi" class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-widest bg-emerald-600 text-white shadow-sm flex items-center gap-1.5 ml-2">
+                        <i class="fas fa-wifi text-[8px]"></i>
+                        OFFICE WIFI
+                    </span>
                     
                     <div class="text-right">
                         <p class="text-xs font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Last Pulse</p>
@@ -136,66 +141,87 @@
                 <div class="space-y-6">
                     <div class="space-y-2">
                         <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Node Designation</label>
-                        <input v-model="form.name" type="text" placeholder="e.g. CORE-ALPHA-01" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-tight h-12">
+                        <input v-model="form.name" type="text" placeholder="e.g. CORE-ALPHA-01" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-tight h-12" :class="{'border-rose-500 ring-rose-500/10': errors.name}">
+                        <p v-if="errors.name" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.name[0] }}</p>
                     </div>
 
                     <div class="grid grid-cols-2 gap-5">
                         <div class="space-y-2">
                             <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Access Channel (IP/Host)</label>
-                            <input v-model="form.ip_address" type="text" placeholder="192.168.1.1 or iot-node.local" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12" :class="{'border-rose-500': errors.ip_address}">
-                            <p v-if="errors.ip_address" class="text-xs font-black text-rose-500 uppercase px-1">{{ errors.ip_address[0] }}</p>
+                            <input v-model="form.ip_address" type="text" placeholder="192.168.1.1 or iot-node.local" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12" :class="{'border-rose-500 ring-rose-500/10': errors.ip_address}">
+                            <p v-if="errors.ip_address" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.ip_address[0] }}</p>
                         </div>
                         <div class="space-y-2">
                             <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Port</label>
-                            <input v-model="form.port" type="number" placeholder="4370" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12">
+                            <input v-model="form.port" type="number" placeholder="4370" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12" :class="{'border-rose-500 ring-rose-500/10': errors.port}">
+                            <p v-if="errors.port" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.port[0] }}</p>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-5">
                         <div class="space-y-2">
                             <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Serial Index</label>
-                            <input v-model="form.serial_number" type="text" placeholder="SN-XXXX" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12" :class="{'border-rose-500': errors.serial_number}">
-                            <p v-if="errors.serial_number" class="text-xs font-black text-rose-500 uppercase px-1">{{ errors.serial_number[0] }}</p>
+                            <input v-model="form.serial_number" type="text" placeholder="SN-XXXX" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12" :class="{'border-rose-500 ring-rose-500/10': errors.serial_number}">
+                            <p v-if="errors.serial_number" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.serial_number[0] }}</p>
                         </div>
                         <div class="space-y-2">
                             <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Mapping Alias (Location)</label>
-                            <input v-model="form.location_name" type="text" placeholder="e.g. MAIN LOBBY - NORTH" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12">
+                            <input v-model="form.location_name" type="text" placeholder="e.g. MAIN LOBBY - NORTH" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12" :class="{'border-rose-500 ring-rose-500/10': errors.location_name}">
+                            <p v-if="errors.location_name" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.location_name[0] }}</p>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-5">
                         <div class="space-y-2">
                             <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Auth ID (Username)</label>
-                            <input v-model="form.username" type="text" placeholder="ADMIN" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12">
+                            <input v-model="form.username" type="text" placeholder="ADMIN" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12" :class="{'border-rose-500 ring-rose-500/10': errors.username}">
+                            <p v-if="errors.username" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.username[0] }}</p>
                         </div>
                         <div class="space-y-2">
                             <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Security Key (Password)</label>
-                            <input v-model="form.password" type="password" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12">
+                            <input v-model="form.password" type="password" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase h-12" :class="{'border-rose-500 ring-rose-500/10': errors.password}">
+                            <p v-if="errors.password" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.password[0] }}</p>
                         </div>
                     </div>
 
                     <div class="grid grid-cols-2 gap-5">
                         <div class="space-y-2">
                             <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Infrastructure Protocol</label>
-                            <select v-model="form.protocol" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black uppercase text-slate-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all cursor-pointer h-12 appearance-none tracking-widest leading-none">
+                            <select v-model="form.protocol" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black uppercase text-slate-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all cursor-pointer h-12 appearance-none tracking-widest leading-none" :class="{'border-rose-500 ring-rose-500/10': errors.protocol}">
                                 <option value="TCP">TCP/IP Protocol</option>
                                 <option value="UDP">UDP Stream</option>
                                 <option value="HTTP">REST/HTTP Mesh</option>
                                 <option value="WS">Websocket Protocol</option>
                             </select>
+                            <p v-if="errors.protocol" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.protocol[0] }}</p>
                         </div>
                         <div class="space-y-2">
                             <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Deployment Zone</label>
-                            <select v-model="form.attendance_zone_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black uppercase text-slate-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all cursor-pointer h-12 appearance-none tracking-widest leading-none">
+                            <select v-model="form.attendance_zone_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black uppercase text-slate-600 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all cursor-pointer h-12 appearance-none tracking-widest leading-none" :class="{'border-rose-500 ring-rose-500/10': errors.attendance_zone_id}">
                                 <option value="">GLOBAL ARCHITECTURE</option>
                                 <option v-for="z in zones" :key="z.id" :value="z.id">{{ z.name.toUpperCase() }}</option>
                             </select>
+                            <p v-if="errors.attendance_zone_id" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.attendance_zone_id[0] }}</p>
                         </div>
+                    </div>
+
+                    <div class="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex items-center justify-between">
+                        <div class="flex items-center gap-4">
+                            <div class="w-10 h-10 rounded-xl bg-white border border-emerald-200 flex items-center justify-center text-emerald-600 shadow-sm">
+                                <i class="fas fa-wifi"></i>
+                            </div>
+                            <div>
+                                <h4 class="text-sm font-black text-slate-800 uppercase tracking-tight">Office WiFi Node</h4>
+                                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">Allow automatic IP-based check-in</p>
+                            </div>
+                        </div>
+                        <Toggle v-model="form.is_office_wifi" />
                     </div>
 
                     <div class="space-y-2">
                         <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">System Description</label>
-                        <textarea v-model="form.description" rows="2" placeholder="HARDWARE SPECIFICATIONS OR DEPLOYMENT NOTES..." class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase resize-none"></textarea>
+                        <textarea v-model="form.description" rows="2" placeholder="HARDWARE SPECIFICATIONS OR DEPLOYMENT NOTES..." class="w-full bg-slate-50 border border-slate-200 rounded-xl py-3 px-5 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase resize-none" :class="{'border-rose-500 ring-rose-500/10': errors.description}"></textarea>
+                        <p v-if="errors.description" class="text-[10px] font-black text-rose-500 uppercase px-1">{{ errors.description[0] }}</p>
                     </div>
 
                     <div class="flex justify-end gap-3 pt-6 border-t border-slate-100">
@@ -221,6 +247,7 @@ import { useToastStore } from '@/stores/toast';
 import AttendanceLayout from '@/Layouts/AttendanceLayout.vue';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import PremiumModal from '@/Components/PremiumModal.vue';
+import Toggle from '@/Components/Toggle.vue';
 
 defineOptions({ layout: MainLayout });
 
@@ -251,7 +278,8 @@ const form = ref({
     description: '',
     heartbeat_interval: 60,
     attendance_zone_id: '', 
-    is_active: true 
+    is_active: true,
+    is_office_wifi: false
 });
 const isEditing = ref(false);
 const editingId = ref(null);
@@ -285,7 +313,8 @@ const openCreateModal = () => {
         description: '',
         heartbeat_interval: 60,
         attendance_zone_id: '', 
-        is_active: true 
+        is_active: true,
+        is_office_wifi: false
     };
     showModal.value = true;
 };
@@ -302,10 +331,10 @@ const submit = async () => {
     errors.value = {};
     try {
         if (isEditing.value) {
-            await axios.put(route('admin.attendance.devices.update', editingId.value), form.value);
+            await axios.put(route('admin.attendance.devices_resource.update', editingId.value), form.value);
             toast.success('Node synchronized');
         } else {
-            await axios.post(route('admin.attendance.devices.store'), form.value);
+            await axios.post(route('admin.attendance.devices_resource.store'), form.value);
             toast.success('Node deployed');
         }
         showModal.value = false;
@@ -323,7 +352,7 @@ const submit = async () => {
 const deleteDevice = async (id) => {
     if (!confirm('Decommission this node?')) return;
     try {
-        await axios.delete(route('admin.attendance.devices.destroy', id));
+        await axios.delete(route('admin.attendance.devices_resource.destroy', id));
         toast.success('Node dismantled');
         fetchDevices();
     } catch (e) {

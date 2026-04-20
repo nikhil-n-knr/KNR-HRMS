@@ -118,31 +118,168 @@
                             />
                         </div>
 
-                        <!-- Grid: Start Date, Due Date -->
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <BaseInput 
-                                v-model="form.start_date" 
-                                label="Start Date" 
-                                type="date"
-                                :error="form.errors.start_date" 
-                            />
-                            <BaseInput 
-                                v-model="form.due_date" 
-                                label="Due Date" 
-                                type="date"
-                                :error="form.errors.due_date" 
-                            />
+                        <!-- Grid: Start Date, Due Date + Extension Trigger -->
+                        <div class="space-y-2">
+                            <!-- Lock notice when schedule is locked -->
+                            <div v-if="form.is_locked && isEditing" class="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-xl">
+                                <svg class="w-3.5 h-3.5 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                                <p class="text-[10px] font-black text-amber-700 uppercase tracking-wider">Schedule Locked — dates are read-only. Use "Record Extension" to update the timeline.</p>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div class="relative">
+                                    <BaseInput
+                                        v-model="form.start_date"
+                                        label="Start Date"
+                                        type="date"
+                                        :error="form.errors.start_date"
+                                        :disabled="form.is_locked && isEditing"
+                                        :inputClass="(form.is_locked && isEditing) ? 'opacity-60 cursor-not-allowed bg-gray-50' : ''"
+                                    />
+                                    <div v-if="form.is_locked && isEditing" class="absolute right-3 top-8 pointer-events-none">
+                                        <svg class="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"/></svg>
+                                    </div>
+                                </div>
+                                <div class="relative">
+                                    <!-- Locked: show clickable date that opens extension modal -->
+                                    <div v-if="form.is_locked && isEditing">
+                                        <BaseInput
+                                            :model-value="form.due_date"
+                                            @update:modelValue="tryInterceptDueDate"
+                                            label="Due Date"
+                                            type="date"
+                                            :error="form.errors.due_date"
+                                            inputClass="border-amber-200 bg-amber-50/60 font-bold text-amber-700"
+                                        />
+                                        <p class="-mt-3 text-[10px] font-black text-amber-500 uppercase tracking-wider">Changing a locked due date opens the extension confirmation flow.</p>
+                                    </div>
+                                    <!-- Unlocked: normal editable -->
+                                    <BaseInput
+                                        v-else
+                                        v-model="form.due_date"
+                                        label="Due Date"
+                                        type="date"
+                                        :error="form.errors.due_date"
+                                    />
+                                </div>
+                            </div>
                         </div>
+
+                        <!-- Schedule Extension Panel (always visible in edit mode) -->
+                        <div v-if="isEditing" class="rounded-2xl border transition-all"
+                            :class="totalDriftHours > 0 || totalDriftDays > 0 ? 'bg-rose-50 border-rose-200' : 'bg-gray-50 border-gray-100'">
+
+                            <!-- Stats row -->
+                            <div class="flex items-center gap-0 divide-x"
+                                :class="totalDriftHours > 0 || totalDriftDays > 0 ? 'divide-rose-100' : 'divide-gray-100'">
+                                <div class="flex-1 px-4 py-3">
+                                    <p class="text-[9px] font-black uppercase tracking-[0.2em]"
+                                        :class="totalDriftHours > 0 ? 'text-rose-400' : 'text-gray-300'">Extended Effort</p>
+                                    <p class="text-base font-black"
+                                        :class="totalDriftHours > 0 ? 'text-rose-700' : 'text-gray-300'">
+                                        {{ totalDriftHours > 0 ? '+' + totalDriftHours + 'h' : '—' }}
+                                    </p>
+                                </div>
+                                <div class="flex-1 px-4 py-3">
+                                    <p class="text-[9px] font-black uppercase tracking-[0.2em]"
+                                        :class="totalDriftDays > 0 ? 'text-rose-400' : 'text-gray-300'">Timeline Drift</p>
+                                    <p class="text-base font-black"
+                                        :class="totalDriftDays > 0 ? 'text-rose-700' : 'text-gray-300'">
+                                        {{ totalDriftDays > 0 ? '+' + totalDriftDays + 'd' : '—' }}
+                                    </p>
+                                </div>
+                                <div class="flex-1 px-4 py-3">
+                                    <p class="text-[9px] font-black uppercase tracking-[0.2em]"
+                                        :class="details?.extensions?.length > 0 ? 'text-indigo-400' : 'text-gray-300'">Extensions</p>
+                                    <p class="text-base font-black"
+                                        :class="details?.extensions?.length > 0 ? 'text-indigo-700' : 'text-gray-300'">
+                                        {{ details?.extensions?.length || 0 }}
+                                    </p>
+                                </div>
+                                <div class="px-4 py-3 flex flex-col gap-2">
+                                    <button
+                                        type="button"
+                                        @click="openExtensionWithSync('')"
+                                        class="flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all shadow-sm"
+                                        :class="form.is_locked
+                                            ? 'bg-rose-600 text-white hover:bg-rose-700'
+                                            : 'bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50'"
+                                    >
+                                        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                        {{ form.is_locked ? 'Record Extension (Required)' : 'Record Extension' }}
+                                    </button>
+                                    <!-- Sync hint -->
+                                    <p v-if="isEditing" class="text-[9px] text-gray-400 font-bold text-center uppercase tracking-wider">
+                                        ↑ Pre-fills from current task dates
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div v-if="details?.extensions?.length > 0" class="rounded-2xl border border-indigo-100 bg-white shadow-sm">
+                            <div class="flex items-center justify-between px-4 py-3 border-b border-indigo-50">
+                                <div>
+                                    <p class="text-[10px] font-black text-indigo-600 uppercase tracking-[0.2em]">Drift History</p>
+                                    <p class="text-[10px] text-gray-400 font-bold uppercase">Every extension round recorded for this task</p>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <button type="button" @click="scrollToAuditTrail" class="text-[10px] font-black text-indigo-600 uppercase tracking-widest hover:text-indigo-700">
+                                        View Full Audit
+                                    </button>
+                                    <button type="button" @click="openExtensionDashboard" class="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:text-rose-700">
+                                        Open Dashboard
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="px-4 py-4 overflow-x-auto">
+                                <div class="flex min-w-max items-stretch gap-3">
+                                    <div v-for="(ext, idx) in details.extensions" :key="ext.id" class="w-52 rounded-2xl border border-gray-100 bg-gray-50/70 p-3">
+                                        <div class="flex items-center justify-between gap-3">
+                                            <p class="text-[10px] font-black text-gray-500 uppercase tracking-widest">Round {{ idx + 1 }}</p>
+                                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide"
+                                                :class="{
+                                                    'bg-violet-100 text-violet-700': ext.category === 'priority_conflict',
+                                                    'bg-amber-100 text-amber-700': ext.category === 'scope_change',
+                                                    'bg-rose-100 text-rose-700': ext.category === 'complexity_drag',
+                                                    'bg-gray-100 text-gray-500': !ext.category,
+                                                }">
+                                                {{ ext.category_label || ext.category || 'Extension' }}
+                                            </span>
+                                        </div>
+                                        <p class="mt-3 text-xs font-black text-gray-800">{{ new Date(ext.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) }}</p>
+                                        <div class="mt-3 flex items-center gap-2 text-[10px] font-black uppercase tracking-wider">
+                                            <span class="rounded-lg bg-amber-100 px-2 py-1 text-amber-700">+{{ Number(ext.days_added || 0) }}d</span>
+                                            <span class="rounded-lg bg-rose-100 px-2 py-1 text-rose-700">+{{ Number(ext.hours_added || 0) }}h</span>
+                                        </div>
+                                        <p class="mt-3 line-clamp-2 text-[10px] font-bold text-gray-500">{{ ext.reason }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
 
                         <!-- Efforts & Lock -->
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-indigo-50/30 border border-indigo-100/50 rounded-2xl">
                              <BaseInput 
+                                v-if="!(form.is_locked && isEditing)"
                                 v-model="form.total_efforts" 
                                 label="Total Effort (Man-Hours)" 
                                 type="number"
                                 placeholder="Combined team effort"
                                 :error="form.errors.total_efforts" 
                             />
+                            <div v-else>
+                                <BaseInput
+                                    :model-value="form.total_efforts"
+                                    @update:modelValue="tryInterceptEfforts"
+                                    label="Total Effort (Man-Hours)"
+                                    type="number"
+                                    placeholder="Combined team effort"
+                                    :error="form.errors.total_efforts"
+                                    inputClass="border-amber-200 bg-amber-50/60 font-bold text-amber-700"
+                                />
+                                <p class="-mt-3 text-[10px] font-black text-amber-500 uppercase tracking-wider">Changing locked effort opens the extension confirmation flow.</p>
+                            </div>
                              <div class="flex flex-col justify-center">
                                 <label class="block font-black text-[10px] text-indigo-700 uppercase tracking-widest mb-2">Schedule Governance</label>
                                 <label class="relative inline-flex items-center cursor-pointer">
@@ -151,6 +288,79 @@
                                     <span class="ml-3 text-xs font-bold text-gray-700 uppercase tracking-widest">{{ form.is_locked ? 'Schedule Locked' : 'Schedule Open' }}</span>
                                 </label>
                              </div>
+                        </div>
+                        
+                        <!-- Task Extension Audit Trail Table -->
+                        <div v-if="details?.extensions?.length > 0" ref="auditTrailRef" class="space-y-3">
+                            <div class="flex items-center justify-between pl-1">
+                                <h4 class="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em]">Schedule &amp; Effort Audit Trail</h4>
+                                <span class="text-[9px] font-bold text-rose-500 uppercase tracking-widest">{{ details.extensions.length }} Extension(s) Recorded</span>
+                            </div>
+                            <div class="overflow-x-auto rounded-xl border border-gray-100">
+                                <table class="w-full text-[10px]">
+                                    <thead>
+                                        <tr class="bg-gray-50 border-b border-gray-100">
+                                            <th class="text-left px-3 py-2 font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">#</th>
+                                            <th class="text-left px-3 py-2 font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Category</th>
+                                            <th class="text-left px-3 py-2 font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Recorded On</th>
+                                            <th class="text-left px-3 py-2 font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Original Start</th>
+                                            <th class="text-left px-3 py-2 font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Original End</th>
+                                            <th class="text-left px-3 py-2 font-black text-rose-400 uppercase tracking-widest whitespace-nowrap">Extended End</th>
+                                            <th class="text-left px-3 py-2 font-black text-amber-400 uppercase tracking-widest whitespace-nowrap">+Days</th>
+                                            <th class="text-left px-3 py-2 font-black text-rose-400 uppercase tracking-widest whitespace-nowrap">+Hours</th>
+                                            <th class="text-left px-3 py-2 font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">Reason</th>
+                                            <th class="text-left px-3 py-2 font-black text-gray-400 uppercase tracking-widest whitespace-nowrap">By</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-gray-50">
+                                        <tr v-for="(ext, idx) in details.extensions" :key="ext.id" class="hover:bg-indigo-50/30 transition-all group">
+                                            <td class="px-3 py-2.5 font-black text-gray-300">{{ idx + 1 }}</td>
+                                            <td class="px-3 py-2.5 whitespace-nowrap">
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wide"
+                                                    :class="{
+                                                        'bg-violet-100 text-violet-700': ext.category === 'priority_conflict',
+                                                        'bg-amber-100 text-amber-700':  ext.category === 'scope_change',
+                                                        'bg-rose-100 text-rose-700':    ext.category === 'complexity_drag',
+                                                        'bg-gray-100 text-gray-500':    !ext.category,
+                                                    }">
+                                                    <span v-if="ext.category === 'priority_conflict'">⏱ Priority</span>
+                                                    <span v-else-if="ext.category === 'scope_change'">📋 Scope</span>
+                                                    <span v-else-if="ext.category === 'complexity_drag'">⚡ Complexity</span>
+                                                    <span v-else>—</span>
+                                                </span>
+                                            </td>
+                                            <td class="px-3 py-2.5 font-bold text-gray-500 whitespace-nowrap">{{ new Date(ext.created_at).toLocaleDateString('en-GB', { day:'2-digit', month:'short', year:'numeric' }) }}</td>
+                                            <td class="px-3 py-2.5 font-bold text-gray-500 whitespace-nowrap">{{ ext.original_start_date ? new Date(ext.original_start_date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : '—' }}</td>
+                                            <td class="px-3 py-2.5 font-bold text-gray-500 whitespace-nowrap">{{ ext.original_end_date ? new Date(ext.original_end_date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : '—' }}</td>
+                                            <td class="px-3 py-2.5 font-black whitespace-nowrap" :class="ext.extended_end_date ? 'text-rose-600' : 'text-gray-300'">{{ ext.extended_end_date ? new Date(ext.extended_end_date).toLocaleDateString('en-GB', { day:'2-digit', month:'short' }) : '—' }}</td>
+                                            <td class="px-3 py-2.5 whitespace-nowrap">
+                                                <span v-if="ext.days_added > 0" class="inline-flex items-center px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 font-black">+{{ ext.days_added }}d</span>
+                                                <span v-else class="text-gray-300">—</span>
+                                            </td>
+                                            <td class="px-3 py-2.5 whitespace-nowrap">
+                                                <span v-if="ext.hours_added > 0" class="inline-flex items-center px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-700 font-black">+{{ ext.hours_added }}h</span>
+                                                <span v-else class="text-gray-300">—</span>
+                                            </td>
+                                            <td class="px-3 py-2.5 max-w-[180px]">
+                                                <p class="font-black text-indigo-700 uppercase truncate">{{ ext.reason }}</p>
+                                                <!-- Category-specific meta preview -->
+                                                <p v-if="ext.extension_meta?.deficit_hours" class="text-[9px] text-violet-500 mt-0.5">Deficit: {{ ext.extension_meta.deficit_hours }}h · {{ ext.extension_meta.conflicting_priority }}</p>
+                                                <p v-if="ext.extension_meta?.scope_change_type" class="text-[9px] text-amber-500 mt-0.5">{{ ext.extension_meta.scope_change_type?.replace(/_/g,' ') }} · +{{ ext.extension_meta.additional_resources || 0 }} resources</p>
+                                                <p v-if="ext.extension_meta?.slowdown_ratio" class="text-[9px] text-rose-500 mt-0.5">{{ ext.extension_meta.slowdown_ratio }}× slower · {{ ext.extension_meta.complexity_factor?.replace(/_/g,' ') }}</p>
+                                            </td>
+                                            <td class="px-3 py-2.5 font-bold text-gray-500 whitespace-nowrap">{{ ext.creator?.name || '—' }}</td>
+                                        </tr>
+                                    </tbody>
+                                    <tfoot>
+                                        <tr class="bg-gray-50 border-t border-gray-200">
+                                            <td colspan="6" class="px-3 py-2 text-right font-black text-gray-400 uppercase tracking-widest text-[9px]">Totals</td>
+                                            <td class="px-3 py-2 font-black text-amber-700">+{{ totalDriftDays }}d</td>
+                                            <td class="px-3 py-2 font-black text-rose-700">+{{ totalDriftHours }}h</td>
+                                            <td colspan="2"></td>
+                                        </tr>
+                                    </tfoot>
+                                </table>
+                            </div>
                         </div>
 
                         <!-- Assignees -->
@@ -351,11 +561,27 @@
                 </div>
             </div>
         </Modal>
+        
+        <!-- Extension Recording Modal -->
+        <ProjectExtensionModal 
+            :show="showExtensionModal"
+            :project-id="form.project_id || projectId"
+            :task-id="taskId"
+            :original-start-date="extensionPrefill.original_start_date || details?.start_date || form.start_date"
+            :original-end-date="extensionPrefill.original_end_date || details?.due_date || form.due_date"
+            :original-efforts="extensionPrefill.original_efforts || details?.total_efforts || form.total_efforts"
+            :suggested-extended-date="extensionPrefill.suggested_end_date"
+            :suggested-total-efforts="extensionPrefill.suggested_total_efforts"
+            :extension-history="details?.extensions || []"
+            @close="closeExtensionModal"
+            @success="handleExtensionSuccess"
+            @view-audit="scrollToAuditTrail"
+        />
     </ModalLarge>
 </template>
 
 <script setup>
-import { ref, computed, watch, reactive } from 'vue';
+import { ref, computed, watch, reactive, nextTick } from 'vue';
 import { useForm } from '@inertiajs/vue3';
 import axios from 'axios';
 import dayjs from 'dayjs';
@@ -368,6 +594,7 @@ import BaseInput from '@/Components/BaseInput.vue';
 import BaseSelect from '@/Components/BaseSelect.vue';
 import Combobox from '@/Components/Combobox.vue';
 import MultiUserSelect from '@/Components/MultiUserSelect.vue';
+import ProjectExtensionModal from '@/Components/Project/ProjectExtensionModal.vue'
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
@@ -399,7 +626,63 @@ const loading = ref(false);
 const details = ref(null); // Full data for Edit mode
 const showGitFields = ref(false);
 const showTemplateSave = ref(false);
+const showExtensionModal = ref(false);
 const templateName = ref('');
+const auditTrailRef = ref(null);
+
+const totalDriftHours = computed(() => {
+    return details.value?.extensions?.reduce((sum, ext) => sum + Number(ext.hours_added || 0), 0) || 0;
+});
+
+const totalDriftDays = computed(() => {
+    return details.value?.extensions?.reduce((sum, ext) => sum + Number(ext.days_added || 0), 0) || 0;
+});
+
+// ── Auto-Sync Extension Pre-Fill ─────────────────────────────────────
+// Holds values that will be passed into ProjectExtensionModal as prefills.
+const extensionPrefill = reactive({
+    original_start_date: '',
+    original_end_date: '',
+    original_efforts: 0,
+    suggested_end_date: '',  // The new date the user typed
+    suggested_total_efforts: null,
+});
+
+/**
+ * Pre-fill extension modal from current task context and open it.
+ * Call this when user clicks "Record Extension" or when a date change
+ * is intercepted on a locked task.
+ */
+const openExtensionWithSync = (suggestedEndDate = '', suggestedTotalEfforts = null) => {
+    extensionPrefill.original_start_date = form.start_date || details.value?.start_date || '';
+    extensionPrefill.original_end_date   = form.due_date   || details.value?.due_date   || '';
+    extensionPrefill.original_efforts    = form.total_efforts || details.value?.total_efforts || 0;
+    extensionPrefill.suggested_end_date  = suggestedEndDate;
+    extensionPrefill.suggested_total_efforts = suggestedTotalEfforts === null || suggestedTotalEfforts === ''
+        ? null
+        : Number(suggestedTotalEfforts);
+    showExtensionModal.value = true;
+};
+
+/**
+ * Intercept a date-field change when task is locked.
+ * Instead of updating the form field, open the extension modal.
+ */
+const tryInterceptDueDate = (newVal) => {
+    if (form.is_locked && isEditing.value && newVal && newVal !== form.due_date) {
+        openExtensionWithSync(newVal);
+        return;
+    }
+    form.due_date = newVal;
+};
+
+const tryInterceptEfforts = (newVal) => {
+    if (form.is_locked && isEditing.value && newVal !== '' && Number(newVal) !== Number(form.total_efforts || 0)) {
+        openExtensionWithSync('', Number(newVal));
+        return;
+    }
+    form.total_efforts = newVal;
+};
 
 // --- Form & Data Management ---
 const form = useForm({
@@ -418,7 +701,7 @@ const form = useForm({
     total_efforts: 0,
     is_locked: false,
     git_branch_url: '',
-    git_pr_url: ''
+    git_pr_url: '',
 });
 
 const projectForm = reactive({
@@ -476,6 +759,19 @@ watch(() => form.project_id, (pid) => {
     }
 });
 
+// When the user manually unlocks the task (toggles is_locked to false),
+// carry any pending intercepted values into the form so they aren't lost.
+watch(() => form.is_locked, (locked, wasLocked) => {
+    if (wasLocked && !locked) {
+        if (extensionPrefill.suggested_end_date) {
+            form.due_date = extensionPrefill.suggested_end_date;
+        }
+        if (extensionPrefill.suggested_total_efforts !== null) {
+            form.total_efforts = extensionPrefill.suggested_total_efforts;
+        }
+    }
+});
+
 // --- Methods ---
 const resetForm = () => {
     form.reset();
@@ -530,15 +826,6 @@ const fetchTaskDetails = async () => {
     }
 };
 
-const applyTemplate = (tid) => {
-    const t = props.taskTemplates.find(x => x.id == tid);
-    if (!t) return;
-    form.title = t.name;
-    form.description = t.description || '';
-    form.priority = t.priority || 'Medium';
-    form.scrum_points = t.scrum_points || 0;
-};
-
 const submit = () => {
     if (isEditing.value) {
         form.put(route('projects.tasks.update', { project: form.project_id, task: form.id }), {
@@ -573,6 +860,32 @@ const handleDelete = () => {
 const close = () => {
     emit('close');
     resetForm();
+};
+
+const closeExtensionModal = () => {
+    showExtensionModal.value = false;
+    extensionPrefill.suggested_end_date = '';
+    extensionPrefill.suggested_total_efforts = null;
+};
+
+const handleExtensionSuccess = async () => {
+    closeExtensionModal();
+    await fetchTaskDetails();
+    emit('success');
+};
+
+const scrollToAuditTrail = async () => {
+    activeTab.value = 'general';
+    await nextTick();
+    auditTrailRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const openExtensionDashboard = () => {
+    const params = new URLSearchParams({
+        project: String(form.project_id || props.projectId || ''),
+        tab: 'extensions',
+    });
+    window.location.href = `${route('planner.index')}?${params.toString()}`;
 };
 
 // --- Sub-component Actions (Copied/Adapted from TaskDetailModal) ---
@@ -670,17 +983,25 @@ const saveAsTemplate = async () => {
 };
 
 const saveProjectSettings = async () => {
+    if (!projectForm.id) {
+        // Try to fallback to form.project_id if we are editing a task
+        if (form.project_id) {
+            projectForm.id = form.project_id;
+        } else {
+            toast.error('Project identifier missing. Cannot update governance.');
+            return;
+        }
+    }
+
     try {
-        await axios.put(route('projects.update', { project: projectForm.id }), {
+        await axios.post(route('projects.toggle-lock', { project: projectForm.id }), {
             is_locked: projectForm.is_locked,
-            plan_lock_recipients: projectForm.plan_lock_recipients,
-            _method: 'PUT' // For standard Inertia update if needed, but using axios here.
+            plan_lock_recipients: projectForm.plan_lock_recipients
         });
-        toast.success('Project governance updated');
-        // Refresh local projects list if possible, or just emit success to trigger reload
-        emit('success');
+        toast.success('Project governance updated.');
     } catch (e) {
-        toast.error('Failed to update project settings');
+        console.error(e);
+        toast.error('Failed to update project settings.');
     }
 };
 

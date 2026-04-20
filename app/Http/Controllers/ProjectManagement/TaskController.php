@@ -70,14 +70,36 @@ class TaskController extends Controller
             'scrum_points' => 'nullable|integer',
             'git_branch_url' => 'nullable|url',
             'git_pr_url' => 'nullable|url',
-            'due_date' => 'nullable|date'
+            'due_date' => 'nullable|date',
+            'total_efforts' => 'nullable|numeric',
+            'is_locked' => 'nullable|boolean',
+            // Extension Fields
+            'extension' => 'nullable|array',
+            'extension.hours_added' => 'numeric|min:0',
+            'extension.days_added' => 'integer|min:0',
+            'extension.reason' => 'string|required_with:extension',
+            'extension.notes' => 'nullable|string'
         ]);
 
-        DB::transaction(function () use ($validated, $task) {
-            $task->update($validated);
+        DB::transaction(function () use ($validated, $task, $project) {
+            $task->update(collect($validated)->except('extension')->toArray());
 
             if (isset($validated['assignees'])) {
                 $task->assignees()->sync($validated['assignees']);
+            }
+
+            // Handle Extension if provided
+            if (!empty($validated['extension'])) {
+                $ext = $validated['extension'];
+                $project->extensions()->create([
+                    'task_id' => $task->id,
+                    'type' => ($ext['hours_added'] > 0 && $ext['days_added'] > 0) ? 'both' : ($ext['hours_added'] > 0 ? 'effort' : 'time'),
+                    'hours_added' => $ext['hours_added'] ?? 0,
+                    'days_added' => $ext['days_added'] ?? 0,
+                    'reason' => $ext['reason'],
+                    'notes' => $ext['notes'] ?? null,
+                    'created_by' => auth()->id()
+                ]);
             }
 
             $task->activities()->create([

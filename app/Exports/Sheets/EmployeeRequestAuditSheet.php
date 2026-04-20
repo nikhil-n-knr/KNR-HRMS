@@ -58,7 +58,7 @@ class EmployeeRequestAuditSheet implements FromCollection, WithHeadings, WithTit
         }
 
         // 3. Swaps
-        $swaps = ShiftSwap::where('requestor_id', $this->employee->id)
+        $swaps = ShiftSwap::where('requester_id', $this->employee->id)
             ->whereBetween('created_at', [$this->start, $this->end])
             ->get();
         foreach($swaps as $s) {

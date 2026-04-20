@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Expense;
 use App\Models\ExpenseCategory;
 use App\Models\Project;
-use App\Services\Workflow\WorkflowService;
+use App\Services\WorkflowService;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 
@@ -83,7 +83,11 @@ class ExpenseController extends Controller
         ]);
         
         // Initiate Workflow
-        $workflowService->initiate($expense);
+        try {
+            $workflowService->initializeWorkflow('expense', $expense->id, auth()->user(), $category->workflow_id);
+        } catch (\Exception $e) {
+            \Log::error('Expense Workflow Error: ' . $e->getMessage());
+        }
 
         return back()->with('success', 'Expense Claim Submitted')->setStatusCode(303);
     }

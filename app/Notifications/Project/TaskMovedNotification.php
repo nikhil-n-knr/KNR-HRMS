@@ -33,6 +33,8 @@ class TaskMovedNotification extends Notification implements ShouldQueue
 
     public function toDatabase(object $notifiable): array
     {
+        $projectName = $this->task->project?->name ?? null;
+
         return [
             'type' => 'task_moved',
             'task_id' => $this->task->id,
@@ -41,7 +43,14 @@ class TaskMovedNotification extends Notification implements ShouldQueue
             'new_stage' => $this->newStage->name,
             'moved_by' => $this->mover->name,
             'project_id' => $this->task->project_id,
-            'message' => "Task '{$this->task->title}' moved to {$this->newStage->name} by {$this->mover->name}."
+            'project_name' => $projectName,
+            'changes' => [
+                'stage' => [
+                    'old' => $this->oldStage->name,
+                    'new' => $this->newStage->name,
+                ],
+            ],
+            'message' => "Task '{$this->task->title}' moved from {$this->oldStage->name} to {$this->newStage->name} by {$this->mover->name}" . ($projectName ? " in {$projectName}." : '.')
         ];
     }
 }
