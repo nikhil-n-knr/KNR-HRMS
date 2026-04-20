@@ -8,22 +8,25 @@
       <aside 
         v-if="!isGuestRoute"
         :class="[
-          'transition-all duration-300 flex flex-col fixed lg:relative h-full z-30 backdrop-blur-md bg-white/70 border-r border-white/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)]',
+          'transition-all duration-300 flex flex-col fixed lg:sticky top-0 h-screen z-[60] lg:z-30 backdrop-blur-md border-r border-white/50 shadow-[4px_0_24px_rgba(0,0,0,0.02)]',
           isSidebarOpen ? 'w-[280px] translate-x-0' : 'w-[280px] -translate-x-full lg:translate-x-0 lg:w-[80px]'
         ]"
+        :style="{ background: 'var(--sidebar-bg)', color: 'var(--sidebar-text)' }"
       >
         <!-- Logo Area & Mobile Controls -->
-        <div class="h-20 flex items-center justify-between px-6 lg:px-8 border-b border-white/40">
-           <div class="flex items-center gap-3">
-             <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-lg shadow-emerald-500/30 group-hover:rotate-12 transition-transform">
-               <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                 <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
-               </svg>
+        <div class="h-20 flex items-center justify-between px-6 lg:px-8 border-b border-white/40 sticky top-0 z-10 bg-[var(--sidebar-bg)]">
+           <Link :href="route('dashboard')" class="flex w-full items-center justify-center">
+             <div class="flex flex-col items-center text-center">
+               <img 
+                 src="https://knrint-website.blr1.digitaloceanspaces.com/KNR-WEBSITE/2026/site_logo/KNR-WEBSITE_f817360c-0c15-4992-bc1b-4df24f071612_KNR-Logo.png"
+                 alt="KNR Logo"
+                 class="h-8 w-auto sm:h-9 lg:h-10 object-contain"
+               >
+               <span v-show="isSidebarOpen" class="mt-1 text-[11px] sm:text-[12px] font-black tracking-tight text-emerald-800">
+                 HRMS
+               </span>
              </div>
-             <h1 v-show="isSidebarOpen" class="text-xl font-black bg-clip-text text-transparent bg-gradient-to-r from-emerald-800 to-teal-700 tracking-tighter">
-                HR<span class="text-emerald-500">.MS</span>
-             </h1>
-           </div>
+           </Link>
 
            <!-- Sidebar Internal Close (Mobile) -->
            <button @click="isSidebarOpen = false" class="lg:hidden w-8 h-8 flex items-center justify-center rounded-lg bg-slate-50 text-slate-400 active:scale-90 transition-all">
@@ -32,7 +35,7 @@
         </div>
         
         <!-- Navigation -->
-        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-6">
+        <nav class="flex-1 overflow-y-auto py-6 px-4 space-y-6 sidebar-scroll">
           
           <div v-for="(groupMods, groupName) in groupedModules" :key="groupName">
               <p v-show="isSidebarOpen" class="px-3 text-xs font-bold text-emerald-800/50 uppercase tracking-wider mb-2">{{ groupName }}</p>
@@ -96,6 +99,16 @@
               </div>
           </div>
 
+          <!-- Static Preferences -->
+          <div class="pt-4 border-t border-white/40">
+            <p v-show="isSidebarOpen" class="px-3 text-xs font-bold text-emerald-800/50 uppercase tracking-wider mb-2">Preferences</p>
+            <NavItem
+              :to="themeSettingsUrl"
+              icon="PaintBrushIcon"
+              label="Theme Settings"
+              :isOpen="isSidebarOpen"
+            />
+          </div>
         </nav>
 
         <!-- Session Controls (Bottom Anchor) -->
@@ -115,6 +128,7 @@
             </button>
           </div>
         </div>
+
       </aside>
 
       <!-- Mobile Overlay -->
@@ -125,11 +139,13 @@
       ></div>
 
       <!-- Main Content Block -->
-      <div class="flex-1 flex flex-col min-w-0 h-screen overflow-hidden relative">
+      <div class="flex-1 flex flex-col min-w-0 min-h-screen relative">
         <!-- Unified Premium Header (Dynamic Context) -->
         <header 
           v-if="!isGuestRoute" 
-          class="h-14 lg:h-20 flex items-center justify-between px-4 lg:px-8 flex-shrink-0 z-50 sticky top-0 transition-all duration-300 bg-white/70 backdrop-blur-xl lg:bg-transparent lg:backdrop-blur-none border-b lg:border-none border-white/50 shadow-sm lg:shadow-none"
+          class="h-14 lg:h-20 flex items-center justify-between px-4 lg:px-8 flex-shrink-0 z-50 transition-all duration-300 border-b border-white/50 shadow-sm"
+          :class="isNavbarSticky ? 'sticky top-0' : 'relative'"
+          :style="{ background: 'var(--header-bg)', color: 'var(--header-text)' }"
         >
           <div class="flex items-center gap-3">
             <!-- Sidebar Trigger: Mobile Primary -->
@@ -139,16 +155,17 @@
             >
               <i class="fas fa-bars-staggered text-[14px] lg:text-[16px] group-hover:rotate-12 transition-transform"></i>
             </button>
+
+            <!-- Home Button -->
+            <Link 
+              :href="route('dashboard')" 
+              class="flex items-center gap-2 px-3 py-2 rounded-xl bg-white/70 border border-white/60 text-emerald-800 shadow-sm hover:bg-white hover:text-emerald-700 transition-all active:scale-95"
+            >
+              <i class="fas fa-house text-[12px]"></i>
+              <span class="hidden lg:inline text-[11px] font-black uppercase tracking-widest">Home</span>
+            </Link>
             
-            <!-- Mobile Identity Core -->
-            <div class="lg:hidden flex items-center gap-2">
-               <div class="w-8 h-8 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white shadow-md">
-                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                   <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
-                 </svg>
-               </div>
-               <span class="text-[10px] font-black tracking-tighter text-slate-800 uppercase">HR<span class="text-emerald-600">.MS</span></span>
-            </div>
+            <!-- Mobile Identity Core removed -->
           </div>
 
           <!-- Search / Breadcrumbs Area (Desktop only) -->
@@ -256,10 +273,10 @@
         </header>
 
         <!-- Main View Area - Enhanced -->
-        <main ref="mainContentRef" class="flex-1 overflow-x-hidden overflow-y-auto scroll-smooth pb-32 lg:pb-8" :class="{'px-4 lg:px-8 pt-2': !isGuestRoute, 'px-0 pt-0': isAttendanceHub && !isGuestRoute}">
+        <main ref="mainContentRef" class="flex-1 overflow-x-hidden pb-32 lg:pb-8" :class="{'px-4 lg:px-8 pt-2': !isGuestRoute, 'px-0 pt-0': isAttendanceHub && !isGuestRoute}">
           
            <!-- Inertia Content (Unified) -->
-          <div class="h-full">
+          <div class="h-full" :class="isBoxedLayout ? 'max-w-6xl mx-auto w-full' : ''">
                <slot />
           </div>
 
@@ -329,6 +346,7 @@ import { router, usePage, Link } from '@inertiajs/vue3';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
 import { useAnalyticsStore } from '@/stores/analytics'; // Data Store
+import { useThemeStore } from '@/stores/theme';
 import NavItem from '@/Components/NavItem.vue';
 import ToastNotification from '@/Components/ToastNotification.vue';
 import GlobalLoader from '@/Components/GlobalLoader.vue';
@@ -358,6 +376,7 @@ import {
     BuildingOfficeIcon, 
     BanknotesIcon,
     CurrencyRupeeIcon,
+    PaintBrushIcon,
     MinusSmallIcon,
     CommandLineIcon,
     BugAntIcon
@@ -408,6 +427,16 @@ const profileUrl = computed(() => {
     return route('employee.hub');
 });
 
+// 2.5 Theme Store
+const themeStore = useThemeStore();
+const themeSettingsUrl = computed(() => {
+    try {
+        return route('admin.theme-settings');
+    } catch (e) {
+        return '/admin/theme-settings';
+    }
+});
+
 // 3. Computed Properties
 const hasAdminRole = computed(() => {
     const r = authStore.user?.role?.name;
@@ -427,12 +456,23 @@ const isAttendanceHub = computed(() => {
     return window.location.pathname.includes('/attendance');
 });
 
+const isNavbarSticky = computed(() => true);
+const isBoxedLayout = computed(() => themeStore.currentTheme.layout.layoutWidth === 'boxed');
+
 // 4. Watchers
 watch(() => page.props.flash, (flash) => {
     if (flash?.success) toastStore.success(flash.success);
     if (flash?.error) toastStore.error(flash.error);
     if (flash?.message) toastStore.info(flash.message);
 }, { deep: true });
+
+watch(
+    () => themeStore.currentTheme.layout.sidebarStyle,
+    (val) => {
+        isSidebarOpen.value = val !== 'collapsed';
+    },
+    { immediate: true }
+);
 
 // 5. Methods
 const switchContext = (ctx) => {
@@ -659,6 +699,7 @@ const getIconComponent = (iconName) => {
         'OfficeBuildingIcon': BuildingOfficeIcon,
         'BanknotesIcon': BanknotesIcon,
         'CurrencyRupeeIcon': CurrencyRupeeIcon,
+        'PaintBrushIcon': PaintBrushIcon,
         'CommandLineIcon': CommandLineIcon,
         'BugAntIcon': BugAntIcon,
     };
@@ -679,6 +720,8 @@ router.on('navigate', (event) => {
 
 // 6. Lifecycle Hooks
 onMounted(async () => {
+    themeStore.init();
+
     // Context Logic
     if (window.location.pathname.startsWith('/admin')) {
         currentContext.value = 'admin';
@@ -729,6 +772,7 @@ onMounted(async () => {
         }
     }
     */
+
 });
 
 onBeforeUnmount(() => {

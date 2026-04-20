@@ -1,186 +1,322 @@
 <template>
-    <div class="min-h-screen pb-24 relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-white to-emerald-50/50">
-        <!-- Dashboard Header: Cyber HUD -->
-        <header class="mb-14 px-8 pt-6 flex flex-col md:flex-row md:items-center justify-between gap-10">
-            <div class="space-y-4">
-                <div class="flex items-center gap-3 animate-fade-in">
-                    <div class="h-10 w-10 bg-slate-900 rounded-2xl flex items-center justify-center shadow-2xl shadow-slate-900/30">
-                        <CommandIcon class="w-6 h-6 text-emerald-500 animate-pulse-slow" />
-                    </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 bg-slate-900/10 text-slate-900 text-xs font-black rounded-full uppercase tracking-[0.2em] border border-slate-900/20">Operational_L1</span>
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-widest pl-2 border-l border-slate-200">Session_Active: 142ms</span>
-                        </div>
-                        <h1 class="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
-                            System_Control
-                            <span class="text-emerald-600 font-mono text-sm tracking-tighter bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-500/20 shadow-sm">v.42.0-Alpha</span>
-                        </h1>
-                    </div>
-                </div>
+  <div class="min-h-screen pb-24">
+    <div class="space-y-8">
+      <header class="rounded-3xl border border-white/60 bg-gradient-to-r from-emerald-50 via-white to-sky-50 p-6 shadow-sm">
+        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p class="text-[11px] font-black uppercase tracking-[0.4em] text-emerald-600">Admin Command Center</p>
+            <h1 class="mt-2 text-3xl font-black text-slate-900 tracking-tight">System Overview</h1>
+            <p class="mt-2 text-sm text-slate-500">Live operational metrics across tenants, projects, and infrastructure health.</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div class="rounded-2xl border border-white/60 bg-white/80 p-4 text-center">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Users</p>
+              <p class="mt-2 text-2xl font-black text-slate-900">{{ totalUsers }}</p>
             </div>
-            
-            <div class="flex items-center gap-6">
-                <!-- Advanced Metrics Hub -->
-                <div class="p-4 bg-white/60 border border-white/80 rounded-[2rem] flex items-center gap-12 shadow-2xl shadow-black/5 backdrop-blur-3xl group transition-all hover:bg-white/80">
-                    <div class="flex flex-col border-r border-slate-200/60 pr-12">
-                        <span class="text-sm font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-emerald-600 transition">Global Users</span>
-                        <div class="flex items-baseline gap-2">
-                             <span class="text-3xl font-black text-slate-900 tracking-tighter leading-none">{{ totalUsers }}</span>
-                             <span class="text-sm font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded shadow-sm">+8.2%</span>
-                        </div>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-sm font-black text-slate-400 tracking-widest uppercase mb-1">Service Integrity</span>
-                        <div class="flex items-center gap-3">
-                             <span class="text-3xl font-black text-slate-900 tracking-tighter leading-none">{{ system_health.uptime }}</span>
-                             <div class="flex gap-0.5">
-                                 <div v-for="i in 5" :key="i" class="w-1 h-4 bg-emerald-500 rounded-full animate-pulse" :style="{ animationDelay: `${i*150}ms` }"></div>
-                             </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex flex-col gap-2">
-                    <button class="h-14 w-14 bg-slate-900 text-white rounded-[1.5rem] flex items-center justify-center hover:bg-emerald-600 transition-all shadow-xl shadow-slate-900/20 group active:scale-95">
-                        <SettingsIcon class="w-6 h-6 group-hover:rotate-45 transition-transform" />
-                    </button>
-                </div>
+            <div class="rounded-2xl border border-white/60 bg-white/80 p-4 text-center">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Projects</p>
+              <p class="mt-2 text-2xl font-black text-slate-900">{{ totalProjects }}</p>
             </div>
-        </header>
-
-        <!-- Advanced Admin Grid -->
-        <div class="px-8 grid grid-cols-12 gap-10">
-            <!-- Left Col: Intelligence Pulse -->
-            <div class="col-span-12 lg:col-span-4 space-y-10">
-                <GlassCard class="h-[500px]" accent accentColor="bg-blue-500">
-                    <div class="flex-1">
-                        <IntelligencePulse 
-                            subtitle="Infrastructure Stream"
-                            :metrics="[
-                                { label: 'Node Clusters', value: system_health.node_active, growth: 'Stable', icon: ServerIcon },
-                                { label: 'Active Projects', value: totalProjects, growth: '+2', icon: BoxIcon },
-                            ]"
-                            :events="[
-                                { title: 'User Scaling Out', time: '8m ago', description: 'Instance_04 successfully replicated to Region_West_02.' },
-                                { title: 'Security Pass', time: '1h ago', description: 'Monthly vulnerability scan completed with 100% hygiene.' },
-                                { title: 'Tenant Sync', time: '3h ago', description: 'Global data consistency audit matched all shards.' },
-                            ]"
-                        />
-                    </div>
-                </GlassCard>
-
-                <GlassCard class="h-[300px]" accent accentColor="bg-amber-500">
-                    <div class="space-y-6">
-                        <header>
-                            <h3 class="text-xl font-black text-slate-900 uppercase tracking-tighter">Node_Telemetry</h3>
-                            <p class="text-xs text-slate-500 font-bold tracking-widest">Active Packet Stream</p>
-                        </header>
-                        <div class="grid grid-cols-2 gap-4">
-                            <div class="p-4 bg-slate-900/5 rounded-3xl border border-slate-900/10">
-                                <p class="text-sm font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Avg Latency</p>
-                                <p class="text-2xl font-black text-slate-900 text-center tracking-tighter">{{ nodeTelemetry.avg_latency }}</p>
-                            </div>
-                            <div class="p-4 bg-slate-900/5 rounded-3xl border border-slate-900/10">
-                                <p class="text-sm font-black text-slate-400 uppercase tracking-widest mb-1 text-center">Load Index</p>
-                                <p class="text-2xl font-black text-slate-900 text-center tracking-tighter">{{ system_health.cpu }}%</p>
-                            </div>
-                        </div>
-                        <div class="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
-                             <div class="h-full bg-emerald-500 transition-all duration-1000" :style="{ width: `${system_health.memory}%` }"></div>
-                        </div>
-                    </div>
-                </GlassCard>
+            <div class="rounded-2xl border border-white/60 bg-white/80 p-4 text-center">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Clients</p>
+              <p class="mt-2 text-2xl font-black text-slate-900">{{ totalClients }}</p>
             </div>
-
-            <!-- Right Col: Throughput & Analytics -->
-            <div class="col-span-12 lg:col-span-8 space-y-10">
-                <GlassCard class="flex-1 h-[450px]" accent accentColor="bg-emerald-500">
-                    <AdvancedAnalytics 
-                       title="Global_Throughput"
-                       subtitle="12-Hour Activity Matrix"
-                       :chartData="nodeTelemetry.load_trend"
-                       themeColor="#10b981"
-                       :metrics="[
-                           { label: 'Cloud Load', value: '42.4 GB/s', trend: 12.8 },
-                           { label: 'Active Sessions', value: totalUsers, trend: 4.2 },
-                           { label: 'DB Requests', value: '1.2M', trend: 22.5 }
-                       ]"
-                    />
-                </GlassCard>
-
-                <div class="grid grid-cols-2 gap-10">
-                    <GlassCard class="h-[350px]">
-                        <div class="space-y-6">
-                            <h4 class="text-sm font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                                <UsersIcon class="w-4 h-4 text-emerald-600" />
-                                Portfolio_Distribution
-                            </h4>
-                            <div class="space-y-4">
-                                <div v-for="stat in projectStats" :key="stat.status" class="flex flex-col gap-1">
-                                    <div class="flex justify-between text-sm font-black uppercase text-slate-500 tracking-widest">
-                                        <span>{{ stat.status }}</span>
-                                        <span class="text-slate-900 font-mono">{{ stat.count }}</span>
-                                    </div>
-                                    <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
-                                        <div class="h-full bg-slate-900 transition-all hover:bg-emerald-500" :style="{ width: `${(stat.count / totalProjects) * 100}%` }"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </GlassCard>
-
-                    <GlassCard class="h-[350px]" accent accentColor="bg-purple-500">
-                        <div class="space-y-6">
-                            <h4 class="text-sm font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-2">
-                                <ZapIcon class="w-4 h-4 text-amber-500" />
-                                Mission_Velocity
-                            </h4>
-                            <div class="flex-1 flex items-center justify-center relative py-10">
-                                <div class="w-32 h-32 border-8 border-slate-900 rounded-full flex items-center justify-center animate-spin-slow">
-                                    <div class="absolute inset-0 border-8 border-emerald-500 rounded-full border-t-transparent animate-reverse"></div>
-                                </div>
-                                <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none">
-                                    <span class="text-3xl font-black text-slate-900 tracking-tighter">84.2</span>
-                                    <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Efficiency</p>
-                                </div>
-                            </div>
-                        </div>
-                    </GlassCard>
-                </div>
+            <div class="rounded-2xl border border-white/60 bg-white/80 p-4 text-center">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tenants</p>
+              <p class="mt-2 text-2xl font-black text-slate-900">{{ activeTenants }}</p>
             </div>
+          </div>
         </div>
+      </header>
+
+      <section class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">System Health</p>
+              <h2 class="mt-2 text-xl font-black text-slate-900">Infrastructure Pulse</h2>
+            </div>
+            <span class="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-emerald-600">Live</span>
+          </div>
+
+          <div class="mt-6 grid grid-cols-2 gap-4">
+            <div class="rounded-2xl border border-slate-100 bg-white p-4">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">CPU Load</p>
+              <p class="mt-2 text-2xl font-black text-slate-900">{{ system_health.cpu }}%</p>
+            </div>
+            <div class="rounded-2xl border border-slate-100 bg-white p-4">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Memory</p>
+              <p class="mt-2 text-2xl font-black text-slate-900">{{ system_health.memory }}%</p>
+            </div>
+            <div class="rounded-2xl border border-slate-100 bg-white p-4">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Storage</p>
+              <p class="mt-2 text-2xl font-black text-slate-900">{{ system_health.storage }}%</p>
+            </div>
+            <div class="rounded-2xl border border-slate-100 bg-white p-4">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Uptime</p>
+              <p class="mt-2 text-2xl font-black text-slate-900">{{ system_health.uptime }}</p>
+            </div>
+          </div>
+
+          <div class="mt-6 rounded-2xl border border-slate-100 bg-white p-4">
+            <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Nodes Online</p>
+            <p class="mt-2 text-lg font-black text-slate-900">{{ system_health.node_active }} / {{ system_health.node_total }}</p>
+            <div class="mt-3 h-2 w-full rounded-full bg-slate-100">
+              <div class="h-2 rounded-full bg-emerald-500" :style="{ width: nodeHealthPercent + '%' }"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm lg:col-span-2">
+          <div class="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div>
+              <p class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Strategic Intelligence</p>
+              <h2 class="mt-2 text-xl font-black text-slate-900">Throughput Trend</h2>
+              <p class="mt-1 text-sm text-slate-500">Activity signal from recent system traffic.</p>
+            </div>
+            <div class="flex items-center gap-3 text-[10px] font-black uppercase tracking-widest text-slate-500">
+              <span class="rounded-full bg-emerald-50 px-3 py-1 text-emerald-600">Avg Latency {{ nodeTelemetry.avg_latency }}</span>
+              <span class="rounded-full bg-slate-100 px-3 py-1">Uptime {{ nodeTelemetry.uptime }}</span>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-12 gap-2 items-end h-40">
+            <div v-for="(value, idx) in loadTrend" :key="idx" class="col-span-1 flex items-end">
+              <div class="w-full rounded-full bg-emerald-500/80" :style="{ height: value + '%' }"></div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-2 gap-4 md:grid-cols-4">
+            <div class="rounded-2xl border border-slate-100 bg-white p-4">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Users</p>
+              <p class="mt-2 text-xl font-black text-slate-900">{{ totalUsers }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-100 bg-white p-4">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Projects</p>
+              <p class="mt-2 text-xl font-black text-slate-900">{{ totalProjects }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-100 bg-white p-4">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Node Count</p>
+              <p class="mt-2 text-xl font-black text-slate-900">{{ system_health.node_total }}</p>
+            </div>
+            <div class="rounded-2xl border border-slate-100 bg-white p-4">
+              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Integrity</p>
+              <p class="mt-2 text-xl font-black text-slate-900">{{ system_health.uptime }}</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
+        <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">HRMS</h2>
+          </div>
+          <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Synced with navigation</p>
+        </div>
+
+        <div v-if="modulesLoading" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-white/70 p-6 text-sm text-slate-400">
+          Loading modules...
+        </div>
+
+        <div v-else-if="dashboardModules.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-white/70 p-6 text-sm text-slate-400">
+          No modules available for this account.
+        </div>
+
+        <div v-else class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <template v-for="module in dashboardModules" :key="module.id">
+            <Link
+              v-if="!module.sub_modules.length"
+              :href="module.href"
+              class="group rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-500 text-sm font-black uppercase tracking-widest text-white shadow-md">
+                    {{ module.shortName }}
+                  </div>
+                  <div>
+                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">{{ module.group }}</p>
+                    <h3 class="mt-1 text-lg font-black text-slate-900">{{ module.name }}</h3>
+                  </div>
+                </div>
+              </div>
+            </Link>
+
+            <div
+              v-else
+              class="group rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
+            >
+              <div class="flex items-start justify-between gap-4">
+                <div class="flex items-center gap-3">
+                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500 to-sky-500 text-sm font-black uppercase tracking-widest text-white shadow-md">
+                    {{ module.shortName }}
+                  </div>
+                  <div>
+                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">{{ module.group }}</p>
+                    <h3 class="mt-1 text-lg font-black text-slate-900">{{ module.name }}</h3>
+                  </div>
+                </div>
+
+                <div class="flex flex-col items-end gap-2">
+                  <button
+                    type="button"
+                    @click.prevent="toggleSubmodules(module.id)"
+                    class="rounded-full border border-slate-200 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:border-emerald-200 hover:text-emerald-700"
+                  >
+                    {{ expandedModuleId === module.id ? 'Hide submodules' : 'submodules' }}
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="expandedModuleId === module.id" class="mt-4 space-y-3">
+                <Link
+                  v-for="subModule in module.sub_modules"
+                  :key="subModule.id"
+                  :href="getSubmoduleHref(subModule)"
+                  class="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-emerald-200 hover:bg-white"
+                >
+                  {{ subModule.name }}
+                </Link>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <section class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm lg:col-span-2">
+          <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Project Portfolio</h3>
+          <p class="mt-2 text-lg font-black text-slate-900">Status Distribution</p>
+
+          <div class="mt-6 space-y-4">
+            <div v-for="stat in projectStats" :key="stat.status" class="space-y-2">
+              <div class="flex items-center justify-between text-xs font-black uppercase tracking-widest text-slate-500">
+                <span>{{ stat.status }}</span>
+                <span class="text-slate-900">{{ stat.count }}</span>
+              </div>
+              <div class="h-2 w-full rounded-full bg-slate-100">
+                <div class="h-2 rounded-full bg-slate-900" :style="{ width: projectPercent(stat.count) + '%' }"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
+          <h3 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Tenant Usage</h3>
+          <p class="mt-2 text-lg font-black text-slate-900">Active Seats</p>
+          <div class="mt-6 space-y-4">
+            <div v-for="tenant in tenantUsage" :key="tenant.id" class="rounded-2xl border border-slate-100 bg-white p-4">
+              <div class="flex items-center justify-between">
+                <p class="text-xs font-black uppercase tracking-widest text-slate-500">{{ tenant.name || 'Tenant' }}</p>
+                <span class="text-sm font-black text-slate-900">{{ tenant.users_count }}</span>
+              </div>
+              <div class="mt-3 h-1.5 w-full rounded-full bg-slate-100">
+                <div class="h-1.5 rounded-full bg-emerald-500" :style="{ width: tenantPercent(tenant.users_count) + '%' }"></div>
+              </div>
+            </div>
+            <div v-if="tenantUsage.length === 0" class="rounded-2xl border border-dashed border-slate-200 bg-white p-6 text-center text-sm text-slate-400">
+              No tenant usage data available.
+            </div>
+          </div>
+        </div>
+      </section>
     </div>
+  </div>
 </template>
 
 <script setup>
-import { 
-    CommandIcon, SettingsIcon, ServerIcon, BoxIcon, ZapIcon, UsersIcon, ShieldCheckIcon 
-} from 'lucide-vue-next';
-import GlassCard from '@/Components/Common/GlassCard.vue';
-import IntelligencePulse from '@/Components/Dashboard/Advanced/IntelligencePulse.vue';
-import AdvancedAnalytics from '@/Components/Dashboard/Advanced/AdvancedAnalytics.vue';
+import { computed, onMounted, ref } from 'vue';
+import { Link } from '@inertiajs/vue3';
+import axios from 'axios';
 import MainLayout from '@/Layouts/MainLayout.vue';
 
 defineOptions({ layout: MainLayout });
 
-defineProps({
-    totalUsers: Number,
-    totalProjects: Number,
-    totalClients: Number,
-    activeTenants: Number,
-    tenantUsage: Array,
-    projectStats: Array,
-    system_health: Object,
-    nodeTelemetry: Object
+const props = defineProps({
+  totalUsers: Number,
+  totalProjects: Number,
+  totalClients: Number,
+  activeTenants: Number,
+  tenantUsage: Array,
+  projectStats: Array,
+  system_health: Object,
+  nodeTelemetry: Object
+});
+
+const modulesLoading = ref(true);
+const sidebarModules = ref([]);
+const expandedModuleId = ref(null);
+
+const nodeHealthPercent = computed(() => {
+  if (!props.system_health || !props.system_health.node_total) return 0;
+  return Math.round((props.system_health.node_active / props.system_health.node_total) * 100);
+});
+
+const loadTrend = computed(() => {
+  const raw = props.nodeTelemetry?.load_trend || [];
+  if (!raw.length) return [];
+  const max = Math.max(...raw, 1);
+  return raw.map(val => Math.max(5, Math.round((val / max) * 100)));
+});
+
+const projectPercent = (count) => {
+  const total = props.totalProjects || 1;
+  return Math.round((count / total) * 100);
+};
+
+const tenantPercent = (count) => {
+  const max = Math.max(...(props.tenantUsage || []).map(t => t.users_count || 0), 1);
+  return Math.round((count / max) * 100);
+};
+
+const normalizeHref = (href) => {
+  if (!href || href === '#') return '#';
+
+  try {
+    const url = new URL(href, window.location.origin);
+    return `${url.pathname}${url.search}${url.hash}`;
+  } catch (error) {
+    return href;
+  }
+};
+
+const getShortName = (name = '') => {
+  return name
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0])
+    .join('')
+    .toUpperCase() || 'MD';
+};
+
+const dashboardModules = computed(() =>
+  sidebarModules.value.map((module) => ({
+    ...module,
+    group: module.sidebar_group || 'Main Menu',
+    href: normalizeHref(module.route),
+    shortName: getShortName(module.name),
+  }))
+);
+
+const toggleSubmodules = (moduleId) => {
+  expandedModuleId.value = expandedModuleId.value === moduleId ? null : moduleId;
+};
+
+const getSubmoduleHref = (subModule) => {
+  return normalizeHref(subModule.route || subModule.href || '#');
+};
+
+onMounted(async () => {
+  try {
+    const response = await axios.get('/api/navigation');
+    sidebarModules.value = response.data?.data?.menu || response.data?.menu || [];
+  } catch (error) {
+    console.error('Failed to load dashboard modules', error);
+    sidebarModules.value = [];
+  } finally {
+    modulesLoading.value = false;
+  }
 });
 </script>
-
-<style scoped>
-.animate-fade-in { animation: fadeIn 0.8s ease-out forwards; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
-.animate-spin-slow { animation: spin 8s linear infinite; }
-.animate-reverse { animation: spin 4s linear infinite reverse; }
-@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
-</style>

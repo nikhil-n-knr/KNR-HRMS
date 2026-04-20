@@ -2,12 +2,18 @@
   <transition name="fade">
     <div v-if="uiStore.isLoading" class="fixed inset-0 z-50 flex items-center justify-center bg-white/50 backdrop-blur-sm">
       <div class="flex flex-col items-center">
-        <!-- Modern Spinner -->
-        <div class="relative w-16 h-16">
-          <div class="absolute inset-0 rounded-full border-4 border-emerald-100"></div>
-          <div class="absolute inset-0 rounded-full border-4 border-emerald-500 border-t-transparent animate-spin"></div>
+        <!-- KNR Breathing Loader -->
+        <div class="relative w-20 h-20 flex items-center justify-center">
+          <div class="absolute inset-0 rounded-full border-2 border-emerald-100"></div>
+          <div class="absolute inset-0 rounded-full border-2 border-emerald-500/60 breath-ring"></div>
+          <div class="absolute inset-2 rounded-full bg-white shadow-sm"></div>
+          <img
+            src="https://knrint-website.blr1.digitaloceanspaces.com/KNR-WEBSITE/2026/site_logo/KNR-WEBSITE_f817360c-0c15-4992-bc1b-4df24f071612_KNR-Logo.png"
+            alt="KNR Logo"
+            class="relative z-10 h-10 w-10 object-contain breath-logo"
+          />
         </div>
-        <p class="mt-4 text-emerald-800 font-medium text-sm animate-pulse">Processing...</p>
+        <p class="mt-4 text-emerald-800 font-medium text-sm tracking-wide">Loading...</p>
       </div>
     </div>
   </transition>
@@ -48,5 +54,22 @@ const uiStore = useUiStore();
 .slide-up-leave-to {
   transform: translate(-50%, 20px);
   opacity: 0;
+}
+</style>
+
+<style scoped>
+.breath-logo {
+  animation: breath 1.8s ease-in-out infinite;
+}
+.breath-ring {
+  animation: breath-ring 1.8s ease-in-out infinite;
+}
+@keyframes breath {
+  0%, 100% { transform: scale(0.98); opacity: 0.85; }
+  50% { transform: scale(1.06); opacity: 1; }
+}
+@keyframes breath-ring {
+  0%, 100% { transform: scale(0.95); opacity: 0.35; }
+  50% { transform: scale(1.1); opacity: 0.7; }
 }
 </style>
