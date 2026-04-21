@@ -30,7 +30,10 @@ class Project extends Model
         'manual_status_label',
         'project_health_index',
         'is_locked',
-        'plan_lock_recipients'
+        'plan_lock_recipients',
+        'estimated_hours',
+        'original_estimated_hours',
+        'original_planned_deadline'
     ];
 
     protected $casts = [
@@ -38,7 +41,11 @@ class Project extends Model
         'deadline' => 'date',
         'gamification_settings' => 'array',
         'manual_progress_percentage' => 'integer',
-        'project_health_index' => 'integer'
+        'project_health_index' => 'integer',
+        'original_estimated_hours' => 'float',
+        'original_planned_deadline' => 'date',
+        'is_locked' => 'boolean',
+        'plan_lock_recipients' => 'array'
     ];
 
     protected $appends = ['brd_signed'];
@@ -97,6 +104,11 @@ class Project extends Model
     public function assignments()
     {
         return $this->hasMany(WorkAssignment::class);
+    }
+
+    public function extensions()
+    {
+        return $this->hasMany(ProjectExtension::class);
     }
 
     public function members()

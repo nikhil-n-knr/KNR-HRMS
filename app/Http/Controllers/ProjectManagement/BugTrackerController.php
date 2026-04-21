@@ -15,8 +15,17 @@ use Illuminate\Support\Facades\DB;
 use App\Models\BugTicketTransition;
 use Carbon\Carbon;
 
+use App\Services\Project\BugWorkflowService;
+
 class BugTrackerController extends Controller
 {
+    protected $workflowService;
+
+    public function __construct(BugWorkflowService $workflowService)
+    {
+        $this->workflowService = $workflowService;
+    }
+
     /**
      * Display a listing of the resource.
      */
@@ -490,77 +499,10 @@ class BugTrackerController extends Controller
         $fromStageName = $bug->stage->name ?? 'Blank';
         $toStageName = $stage->name;
         
-        $updateData = [
-            'workflow_stage_id' => $stage->id,
-            'is_client_visible' => $stage->is_client_visible ?? $bug->is_client_visible
-        ];
-
-        // Metrics: Set Timestamps
-        if (!$bug->started_at && stripos($toStageName, 'Progress') !== false) {
-            $updateData['started_at'] = now();
-        }
-        if ($stage->is_final && !$bug->resolved_at) {
-             $updateData['resolved_at'] = now();
-        }
-
-        $fromStageId = $bug->workflow_stage_id;
-        $bug->update($updateData);
-
-        // Lifecycle Hook: Stage Transition (Pizza Tracker)
-        BugTicketTransition::create([
-            'bug_ticket_id' => $bug->id,
-            'from_stage_id' => $fromStageId,
-            'to_stage_id' => $stage->id,
-            'actor_id' => Auth::id(),
-            'actor_type' => User::class
+        // Use Centralized Workflow Service
+        $this->workflowService->transition($bug, $stage, $request->resolution_note, [
+            'assignee_id' => $request->assignee_id
         ]);
-        
-        $this->logActivity($bug, 'p_change', "Changed stage from $fromStageName to {$toStageName}");
-        
-        // Phase 11: Clear notifications for previous stage participants
-        $this->clearStageNotifications($bug, $fromStageId);
-
-        // Notify Reporter and Assignee
-        $recipients = collect([$bug->reporter, $bug->assignee])->filter();
-        
-        $currentUser = Auth::user();
-        $recipients = $recipients->filter(function($u) {
-            return $u !== null;
-        });
-
-        foreach ($recipients as $recipient) {
-            $recipient->notify(new \App\Notifications\BugStageChangedNotification($bug, $fromStageName, $toStageName));
-        }
-
-        // Exclude current user and deduplicate
-        $notifiedIds = $recipients->map(fn($r) => get_class($r) . ':' . $r->id)
-            ->push(get_class($currentUser) . ':' . $currentUser->id)
-            ->toArray();
-
-        // 6. Notify Assigned Team (High-Control Blueprint)
-        if ($stage->assigned_team_id) {
-            $team = \App\Models\Team::with('members')->find($stage->assigned_team_id);
-            if ($team) {
-                foreach ($team->members as $member) {
-                    $key = get_class($member) . ':' . $member->id;
-                    if (!in_array($key, $notifiedIds)) {
-                        $member->notify(new \App\Notifications\BugStageChangedNotification($bug, $fromStageName, $toStageName));
-                        $notifiedIds[] = $key;
-                    }
-                }
-            }
-        }
-        
-        // Notify responsible people for NEW stage
-        $this->notifyStageParticipants($bug, $stage);
-        
-        if ($request->filled('resolution_note')) {
-            $bug->comments()->create([
-                'user_id' => Auth::id(),
-                'body' => "<strong>Resolution Note:</strong> " . $request->resolution_note,
-                'is_public' => true // Resolution notes are usually public for clients
-            ]);
-        }
 
         return response()->json(['status' => 'ok']);
     }
@@ -570,8 +512,12 @@ class BugTrackerController extends Controller
         $bug = BugTicket::findOrFail($id);
         $this->authorize('update', $bug);
         
+        $fromStageId = $bug->workflow_stage_id;
+        $fromStageName = $bug->stage->name ?? 'Initial';
+
         $stageId = $request->input('stage');
         $stage = WorkflowStage::findOrFail($stageId);
+        $toStageName = $stage->name;
         
         // 1. Transition Rule Check
         if ($bug->stage && !empty($bug->stage->transition_rules)) {
@@ -598,26 +544,10 @@ class BugTrackerController extends Controller
             }
         }
         
-        $fromStageName = $bug->stage->name ?? 'Blank';
-        $toStageName = $stage->name;
-        
-        $updateData = [
-            'workflow_stage_id' => $stage->id,
-            'is_client_visible' => $stage->is_client_visible ?? $bug->is_client_visible
-        ];
-        
-        if (!$bug->started_at && stripos($toStageName, 'Progress') !== false) {
-            $updateData['started_at'] = now();
-        }
-        if ($stage->is_final && !$bug->resolved_at) {
-             $updateData['resolved_at'] = now();
-             if ($request->filled('note')) {
-                 $updateData['resolution_summary'] = $request->note;
-             }
-        }
-        
-        $fromStageId = $bug->workflow_stage_id;
-        $bug->update($updateData);
+        // Use Centralized Workflow Service for core transition
+        $this->workflowService->transition($bug, $stage, $request->note, [
+            'assignee_ids' => $request->assignee_ids // Note: transition method might need to be aware of multi-assignees if we want
+        ]);
 
         if ($request->has('assignee_ids') && is_array($request->assignee_ids)) {
             $bug->assignees()->delete(); 
@@ -654,22 +584,6 @@ class BugTrackerController extends Controller
                 ]);
             }
         }
-
-        if ($request->filled('note')) {
-            $bug->comments()->create([
-                'user_id' => Auth::id(),
-                'body' => "<strong>Transition Note:</strong> " . $request->note,
-                'is_public' => false
-            ]);
-        }
-
-        BugTicketTransition::create([
-            'bug_ticket_id' => $bug->id,
-            'from_stage_id' => $fromStageId,
-            'to_stage_id' => $stage->id,
-            'actor_id' => Auth::id(),
-            'actor_type' => User::class
-        ]);
 
         // 3. Mentor Notification/Logic
         if ($stage->mentor_id) {

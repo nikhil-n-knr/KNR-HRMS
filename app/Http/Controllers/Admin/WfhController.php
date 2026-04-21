@@ -143,13 +143,26 @@ class WfhController extends Controller
             // Check for existing request
             $exists = WfhRequest::where('employee_id', $employeeId)->where('date', $dateStr)->exists();
             if (!$exists) {
-                WfhRequest::create([
+                $wfh = WfhRequest::create([
                     'employee_id' => $employeeId,
                     'date' => $dateStr, 
                     'reason' => $validated['reason'],
                     'status' => 'Pending'
                 ]);
                 $createdCount++;
+
+                // Trigger Workflow
+                try {
+                    $workflowService = app(\App\Services\WorkflowService::class);
+                    $instance = $workflowService->initializeWorkflow('wfh', $wfh->id, auth()->user());
+
+                    if (!$instance) {
+                        // Auto-approve if no workflow configured
+                        $wfh->update(['status' => 'Approved']);
+                    }
+                } catch (\Exception $e) {
+                    \Log::error('WFH Workflow Error: ' . $e->getMessage());
+                }
             }
             
             $start->addDay();

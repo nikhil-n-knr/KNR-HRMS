@@ -67,12 +67,58 @@ class ClientController extends Controller
     public function show(Client $client)
     {
         $client->load(['projects' => function($q) {
-            $q->select('id', 'client_id', 'code', 'name', 'status', 'deadline');
+            $q->withCount(['tasks', 'sprints']);
         }, 'clientUsers']);
         
+        $unassignedProjects = \App\Models\Project::where(function($q) use ($client) {
+                $q->whereNull('client_id')
+                  ->orWhere('client_id', '!=', $client->id);
+            })
+            ->select('id', 'name', 'code')
+            ->get();
+
         return Inertia::render('Project/Client/Show', [
-            'client' => $client
+            'client' => $client,
+            'unassignedProjects' => $unassignedProjects
         ]);
+    }
+
+    public function assignProject(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'project_id' => 'required|exists:projects,id'
+        ]);
+
+        $project = \App\Models\Project::findOrFail($validated['project_id']);
+        $project->update(['client_id' => $client->id]);
+
+        // Also ensure client users get access to this new project if they are supposed to
+        foreach ($client->clientUsers as $user) {
+            $user->projects()->syncWithoutDetaching([$project->id]);
+        }
+
+        return redirect()->back()->with('success', 'Project assigned to client successfully.')->setStatusCode(303);
+    }
+
+    public function unassignProject(Request $request, Client $client)
+    {
+        $validated = $request->validate([
+            'project_id' => 'required|exists:projects,id'
+        ]);
+
+        $project = \App\Models\Project::findOrFail($validated['project_id']);
+        
+        if ($project->client_id === $client->id) {
+            $project->update(['client_id' => null]);
+            
+            foreach ($client->clientUsers as $user) {
+                $user->projects()->detach([$project->id]);
+            }
+            
+            return redirect()->back()->with('success', 'Project unmapped successfully.')->setStatusCode(303);
+        }
+        
+        return redirect()->back()->with('error', 'Verification failed.')->setStatusCode(303);
     }
 
     public function destroy(Client $client)

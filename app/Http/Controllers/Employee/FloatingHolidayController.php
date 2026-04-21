@@ -124,13 +124,26 @@ class FloatingHolidayController extends Controller
         }
 
         // 4. Create Request
-        // Note: For now, Auto-Approve? Or Manager Approval?
-        // Let's set to 'Requested' (Pending).
         $fhRequest = FloatingHolidayRequest::create([
             'user_id' => $user->id,
             'holiday_id' => $holiday->id,
             'status' => 'Requested' 
         ]);
+
+        // Trigger Workflow
+        try {
+            $workflowService = app(\App\Services\WorkflowService::class);
+            $instance = $workflowService->initializeWorkflow('floating_holiday', $fhRequest->id, auth()->user());
+
+            if (!$instance) {
+                // Auto-approve if no workflow configured
+                $fhRequest->update(['status' => 'Approved']);
+                $this->logger->log('attendance', 'floating_holiday_auto_approve', "Holiday #{$fhRequest->id} auto-approved (No workflow)", $user->id);
+                return back()->with('success', 'Restricted Holiday approved automatically (No workflow configured).');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Floating Holiday Workflow Error: ' . $e->getMessage());
+        }
 
         // 5. Log
         $this->logger->log('attendance', 'create', "Applied for Restricted Holiday: {$holiday->name}", $user->id);

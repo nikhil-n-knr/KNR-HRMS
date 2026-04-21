@@ -209,72 +209,80 @@
                     </div>
                 </div>
 
-                <!-- Governance Control (Management Only) -->
+                <!-- Governance Control (Data-Driven Hub) -->
                 <div v-can="'project-manage'" class="bg-gradient-to-br from-slate-900 to-indigo-950 rounded-xl border border-indigo-900 shadow-2xl p-6 text-white relative overflow-hidden group">
                     <div class="absolute -right-8 -top-8 w-24 h-24 bg-emerald-500/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-1000"></div>
                     
                     <div class="relative z-10 space-y-6">
                         <div class="flex justify-between items-center">
                             <h3 class="text-xs font-black uppercase tracking-[0.2em] text-indigo-300">Governance & Stakeholder Integrity</h3>
-                            <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <div class="flex items-center gap-2">
+                                <span class="text-[10px] font-black uppercase text-indigo-400">Live Pulse</span>
+                                <div class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                            </div>
                         </div>
 
-                        <!-- Pending Sign-offs Indicator -->
-                        <div v-if="project.documents?.filter(d => d.category === 'requirement' && !d.is_signed).length > 0" class="p-4 bg-emerald-950/50 border border-emerald-500/20 rounded-2xl">
-                             <h4 class="text-[9px] font-black uppercase tracking-widest text-emerald-400 mb-3 flex items-center gap-2">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                Pending Governance Vault ({{ project.documents?.filter(d => d.category === 'requirement' && !d.is_signed).length }})
-                             </h4>
-                             <div class="space-y-2">
-                                <div v-for="doc in project.documents?.filter(d => d.category === 'requirement' && !d.is_signed)" :key="doc.id" class="flex justify-between items-center p-2 bg-white/5 rounded-lg border border-white/5">
-                                    <span class="text-[10px] font-bold text-slate-300 truncate max-w-[150px]">{{ doc.name }}</span>
-                                    <span class="text-[8px] font-black text-rose-400 uppercase tracking-tighter">Awaiting Sign-off</span>
+                        <!-- Integrity Pulse (Dynamic Stats) -->
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="p-3 bg-white/5 border border-white/10 rounded-xl">
+                                <p class="text-[9px] font-black uppercase text-slate-500 mb-1">Schedule Integrity</p>
+                                <div class="flex items-end gap-1">
+                                    <span class="text-xl font-black" :class="integrityPulse >= 90 ? 'text-emerald-400' : 'text-amber-400'">{{ integrityPulse }}%</span>
+                                    <span class="text-[9px] text-slate-500 mb-1.5 uppercase font-black">Stable</span>
                                 </div>
-                             </div>
+                            </div>
+                            <div class="p-3 bg-white/5 border border-white/10 rounded-xl">
+                                <p class="text-[9px] font-black uppercase text-slate-500 mb-1">Total Drift</p>
+                                <div class="flex items-end gap-1">
+                                    <span class="text-xl font-black text-rose-400">+{{ driftHours }}h</span>
+                                    <span class="text-[9px] text-slate-500 mb-1.5 uppercase font-black">Logged</span>
+                                </div>
+                            </div>
                         </div>
 
-                        <div class="space-y-4">
-                            <div>
-                                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Health Index Override</label>
-                                <input v-model="govForm.project_health_index" type="range" class="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-emerald-500">
-                                <div class="flex justify-between text-[10px] font-bold mt-2">
-                                    <span :class="getHealthColorClass(govForm.project_health_index)">{{ govForm.project_health_index }}% Satisfaction</span>
-                                    <span class="text-slate-500">Node Logic: {{ project.project_health_index || 100 }}%</span>
+                        <!-- Audited Governance Logs -->
+                        <div class="space-y-3">
+                            <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Recent Audited Actions</h4>
+                            <div v-if="project.extensions?.length > 0" class="space-y-2 max-h-[160px] overflow-y-auto custom-scrollbar pr-2">
+                                <div v-for="ext in project.extensions.slice(0, 5)" :key="ext.id" class="p-3 bg-white/5 border border-white/5 rounded-xl hover:bg-white/10 transition-colors">
+                                    <div class="flex justify-between items-start mb-1">
+                                        <span class="text-[10px] font-black text-indigo-300 uppercase truncate max-w-[120px]">
+                                            {{ ext.task ? ext.task.title : 'Project Scope' }}
+                                        </span>
+                                        <span class="text-[9px] font-bold text-slate-500">{{ new Date(ext.created_at).toLocaleDateString() }}</span>
+                                    </div>
+                                    <p class="text-[10px] font-bold text-slate-300 mb-1 truncate">{{ ext.reason }}</p>
+                                    <div class="flex items-center gap-3 text-[9px] font-black uppercase tracking-tighter">
+                                        <span class="text-rose-400" v-if="ext.hours_added > 0">+{{ ext.hours_added }}h Effort</span>
+                                        <span class="text-amber-400" v-if="ext.days_added > 0">+{{ ext.days_added }}d Time</span>
+                                        <span class="text-slate-500 ml-auto">By {{ ext.creator?.name }}</span>
+                                    </div>
                                 </div>
                             </div>
-
-                            <div>
-                                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Manual Progress</label>
-                                <div class="flex items-center gap-4">
-                                    <input v-model="govForm.manual_progress_percentage" type="number" min="0" max="100" class="w-20 bg-white/5 border-white/10 rounded-lg text-sm font-black focus:ring-1 focus:ring-emerald-500">
-                                    <span class="text-[10px] text-slate-500 uppercase font-black">Force Percent</span>
-                                </div>
+                            <div v-else class="py-6 text-center border border-dashed border-white/10 rounded-xl">
+                                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest">No Governance Deviations Logged</p>
                             </div>
+                        </div>
 
-                            <div>
-                                <label class="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2">Status Overdrive</label>
-                                <select v-model="govForm.manual_status_label" class="w-full bg-white/5 border-white/10 rounded-lg text-xs font-bold focus:ring-1 focus:ring-emerald-500 py-2">
-                                    <option value="Initialising" class="bg-slate-900">Initialising</option>
-                                    <option value="In Development" class="bg-slate-900">In Development</option>
-                                    <option value="UAT Phase" class="bg-slate-900">UAT Phase</option>
-                                    <option value="Nearing Launch" class="bg-slate-900">Nearing Launch</option>
-                                    <option value="Stabilization" class="bg-slate-900">Stabilization</option>
-                                    <option value="Delayed (Internal)" class="bg-slate-900">Delayed (Critical Fix)</option>
-                                </select>
+                        <!-- Lock Status with Toggle -->
+                        <div class="flex items-center justify-between p-3 bg-emerald-950/30 border border-emerald-500/20 rounded-xl">
+                            <div class="flex items-center gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-emerald-400" :class="{'text-rose-400': !project.is_locked}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path v-if="project.is_locked" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                                    <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+                                </svg>
+                                <span class="text-[10px] font-black text-emerald-100 uppercase tracking-widest">{{ project.is_locked ? 'Governance Locked' : 'Governance Flexible' }}</span>
                             </div>
-
-                            <textarea v-model="govForm.reason" placeholder="Oversight Reason (Internal Log)..." rows="2" class="w-full bg-white/5 border-white/10 rounded-lg text-[10px] font-bold placeholder:text-slate-600 focus:ring-1 focus:ring-emerald-500"></textarea>
-
-                            <button @click="submitGovernance" :disabled="govForm.processing" class="w-full py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all shadow-lg active:scale-95 disabled:opacity-50">
-                                Commit Governance Artifact
+                            <button 
+                                @click="toggleProjectLock"
+                                class="px-2 py-1 bg-white/10 hover:bg-white/20 rounded text-[9px] font-black uppercase tracking-tighter transition-colors"
+                            >
+                                {{ project.is_locked ? 'Unlock' : 'Lock Now' }}
                             </button>
                         </div>
-                        
-                        <div class="pt-4 border-t border-white/5">
-                             <button @click="showHistory = !showHistory" class="text-[9px] font-black uppercase tracking-widest text-indigo-400 hover:text-white transition-colors flex items-center gap-2">
-                                <i class="fas fa-history"></i>
-                                View Dealing Audit Log
-                             </button>
+
+                        <div class="pt-4 border-t border-white/5 text-center px-6">
+                             <p class="text-[9px] font-black uppercase text-slate-500 tracking-widest opacity-50">Audited Governance Stream</p>
                         </div>
                     </div>
                 </div>
@@ -380,7 +388,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import { Link, useForm } from '@inertiajs/vue3';
 import ProjectLayout from '@/Layouts/ProjectLayout.vue';
 import Modal from '@/Components/Modal.vue';
@@ -394,9 +402,20 @@ const props = defineProps({
     project: Object,
     stats: Object,
     members: Array,
-    contributors: Array, // New Prop
+    contributors: Array, 
     activity: Array,
     activeSprint: Object
+});
+
+const driftHours = computed(() => {
+    return props.project.extensions?.reduce((sum, ext) => sum + Number(ext.hours_added || 0), 0) || 0;
+});
+
+const integrityPulse = computed(() => {
+    const totalEst = Number(props.stats?.total_scope_hours || props.project.estimated_hours) || 1;
+    const drift = driftHours.value;
+    if (drift === 0) return 100;
+    return Math.max(0, Math.min(100, Math.round(100 - (drift / totalEst) * 100)));
 });
 
 const showEditModal = ref(false);
@@ -474,11 +493,27 @@ const formatDetails = (act) => {
     return JSON.stringify(act.details); 
 };
 
+
+
 const formatCurrency = (amount, currency = 'USD') => {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',
         currency: currency,
         minimumFractionDigits: 0
     }).format(amount || 0);
+};
+
+const toggleProjectLock = () => {
+    if (!confirm(`Are you sure you want to ${props.project.is_locked ? 'unlock' : 'lock'} this project?`)) return;
+    
+    // Use the dedicated toggle-lock endpoint to avoid strict update validation issues
+    axios.post(route('projects.toggle-lock', props.project.id), {
+        is_locked: !props.project.is_locked
+    }).then(res => {
+        if (res.data.success) {
+            // Force reload to update lock state across components
+            window.location.reload();
+        }
+    });
 };
 </script>

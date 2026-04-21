@@ -120,9 +120,24 @@ class OvertimeController extends Controller
             'task_id' => $validated['task_id'] ?? null,
         ]);
 
+        // Trigger Workflow
+        try {
+            $workflowService = app(\App\Services\WorkflowService::class);
+            $instance = $workflowService->initializeWorkflow('overtime', $ot->id, auth()->user());
+
+            if (!$instance) {
+                // Auto-approve if no workflow configured
+                $ot->update(['status' => 'Approved']);
+                $this->logger->log('attendance', 'overtime_auto_approve', "Overtime #{$ot->id} auto-approved (No workflow)", ['id' => $ot->id]);
+                return back()->with('success', 'Overtime request submitted and auto-approved.');
+            }
+        } catch (\Exception $e) {
+            \Log::error('Overtime Workflow Error: ' . $e->getMessage());
+        }
+
         $this->logger->log('attendance', 'overtime_create', "Overtime requested for Emp #{$employeeId}", ['id' => $ot->id]);
 
-        return back()->with('success', 'Overtime request submitted successfully.');
+        return back()->with('success', 'Overtime request submitted for approval.');
     }
 
     /**

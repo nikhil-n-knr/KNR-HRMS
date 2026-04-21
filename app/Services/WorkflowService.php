@@ -12,9 +12,9 @@ class WorkflowService
     /**
      * Initialize a new workflow instance for an entity
      */
-    public function initializeWorkflow(string $entityType, int $entityId, User $initiator): ?WorkflowInstance
-{
-        $workflow = Workflow::getActiveForEntity($entityType);
+    public function initializeWorkflow(string $entityType, int $entityId, User $initiator, ?int $workflowId = null): ?WorkflowInstance
+    {
+        $workflow = $workflowId ? Workflow::find($workflowId) : Workflow::getActiveForEntity($entityType);
         
         if (!$workflow || $workflow->stages()->count() === 0) {
             return null;

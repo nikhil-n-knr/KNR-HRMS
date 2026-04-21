@@ -63,14 +63,20 @@
                         v-for="day in matrixDays" 
                         :key="day.dateStr" 
                         :id="'header-' + day.dateStr"
-                        class="flex-shrink-0 flex flex-col items-center justify-center text-xs w-24 transition-colors duration-300"
+                        class="flex-shrink-0 flex flex-col items-center justify-center text-xs w-24 transition-colors duration-300 relative group/header"
                         :class="[
-                            day.isWeekend ? 'bg-gray-50/50 text-gray-400' : 'text-gray-700 font-medium',
+                            day.isWeekend ? 'bg-red-50/50 text-red-300' : 'text-gray-700 font-medium',
+                            day.isHoliday ? 'bg-amber-50 text-amber-600' : '',
                             day.isToday ? 'bg-blue-50 ring-inset ring-2 ring-blue-500 text-blue-700 z-10' : ''
                         ]"
                      >
                         <span class="text-sm opacity-70">{{ day.dateStr.split('-')[2] }}</span> <!-- Day Num -->
                         <span>{{ day.label.split(' ')[2] }} {{ day.label.split(' ')[1] }}</span> <!-- Day Name -->
+                        
+                        <!-- Tooltip for Holiday -->
+                        <div v-if="day.isHoliday" class="absolute bottom-full left-0 bg-black text-white text-[10px] px-2 py-1 rounded shadow-lg opacity-0 group-hover/header:opacity-100 z-50 whitespace-nowrap mb-1">
+                           {{ isGlobalHoliday(day.dateStr)?.name }}
+                        </div>
                      </div>
                  </div>
              </div>
@@ -82,8 +88,14 @@
                      <!-- Sticky Name Column -->
                      <div class="w-[140px] md:w-[280px] flex-shrink-0 bg-white border-r border-gray-100 flex items-center px-2 md:px-4 sticky left-0 z-20 group-hover:bg-gray-50/30 transition-all">
                          <div class="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold text-xs ring-2 ring-white shadow-sm overflow-hidden flex-shrink-0">
-                            <img v-if="res.avatar" :src="res.avatar" class="w-full h-full object-cover">
-                            <span v-else>{{ res.name.substring(0, 2).toUpperCase() }}</span>
+                            <img 
+                                v-if="res.avatar" 
+                                :src="res.avatar" 
+                                class="w-full h-full object-cover"
+                                @error="$event.target.style.display='none'"
+                                loading="lazy"
+                            >
+                            <span class="text-xs font-bold">{{ res.name.substring(0, 2).toUpperCase() }}</span>
                          </div>
                          <div class="ml-3 min-w-0">
                              <p class="text-sm font-bold text-gray-800 truncate select-none">{{ res.name }}</p>
@@ -295,15 +307,17 @@ const viewDuration = ref(7); // Default 7 days
 const matrixDays = computed(() => {
     let days = [];
     const start = dayjs(viewStart.value);
-    const count = Math.min(Math.max(parseInt(viewDuration.value) || 7, 1), 30); // Clamp 1-30
+    const count = Math.min(Math.max(parseInt(viewDuration.value) || 7, 1), 60); // Clamp 1-60
     
     for (let i = 0; i < count; i++) { 
         const d = start.add(i, 'day');
+        const dateStr = d.format('YYYY-MM-DD');
         days.push({
-            dateStr: d.format('YYYY-MM-DD'),
+            dateStr: dateStr,
             label: d.format('DD MMM ddd'),
-            isWeekend: [0, 6].includes(d.day()),
-            isToday: d.isSame(dayjs(), 'day')
+            isWeekend: isNonWorkDay(dateStr),
+            isToday: d.isSame(dayjs(), 'day'),
+            isHoliday: !!isGlobalHoliday(dateStr)
         });
     }
     return days;
@@ -391,11 +405,21 @@ const selectedDateRange = computed(() => {
 });
 // Helper for Work Days
 const isNonWorkDay = (dateStr) => {
-    // If props.workDays is present, use it. Format: ["Mon", "Tue"...]
     const d = dayjs(dateStr);
-    if (props.workDays && props.workDays.length > 0) {
+    const dayName = d.format('ddd').toLowerCase();
+    
+    // If props.workDays is an object {mon: true, ...}
+    if (props.workDays && typeof props.workDays === 'object' && !Array.isArray(props.workDays)) {
+        if (props.workDays[dayName] !== undefined) {
+            return props.workDays[dayName] === false;
+        }
+    }
+    
+    // Fallback if it's an array ["Mon", "Tue"...]
+    if (props.workDays && Array.isArray(props.workDays) && props.workDays.length > 0) {
         return !props.workDays.includes(d.format('ddd'));
     }
+
     // Default Sat/Sun
     return [0, 6].includes(d.day());
 };

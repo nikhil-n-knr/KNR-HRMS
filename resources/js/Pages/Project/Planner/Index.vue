@@ -174,6 +174,8 @@
                 :workDays="workDays"
                 :searchQuery="searchQuery"
                 :projects="projects"
+                                :initial-project-id="projectFilter || props.initialProjectId"
+                                :initial-report-view="initialReportView"
                 @task-update="handleTaskUpdate"
                 @task-click="openTaskModal"
                 class="h-full w-full"
@@ -259,7 +261,11 @@ const props = defineProps({
 });
 
 const toast = useToastStore();
-const currentView = ref('Gantt'); // Default to Gantt
+const reportTabFromUrl = new URLSearchParams(window.location.search).get('tab');
+const initialReportView = ['extensions', 'performance', 'operations', 'standard'].includes(String(reportTabFromUrl || '').toLowerCase())
+    ? String(reportTabFromUrl).toLowerCase()
+    : 'standard';
+const currentView = ref(initialReportView !== 'standard' ? 'Reports' : 'Gantt');
 const showSidebar = ref(true);
 const loading = ref(true);
 const showHelpModal = ref(false); 

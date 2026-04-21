@@ -42,88 +42,109 @@
             </div>
         </div>
 
-        <!-- KPI Cards -->
-        <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
-             <div class="col-span-2 md:col-span-1 bg-white/90 backdrop-blur-xl p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                  <p class="text-xs font-bold text-gray-400 uppercase">Portfolio Scope (Hours)</p>
-                  <h3 class="text-2xl font-black text-indigo-900 mt-1">{{ stats.total_scope }}h</h3>
-                  <p class="text-xs text-gray-500 mt-2 flex justify-between">
-                     <span>Invested: {{ stats.total_actual }}h</span>
-                     <span :class="stats.remaining_hours < 0 ? 'text-red-500' : 'text-emerald-500'">{{ stats.remaining_hours }}h left</span>
-                  </p>
-                 <div class="absolute right-0 top-0 p-3 opacity-10 group-hover:opacity-20 transition-opacity">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+        <!-- View Toggle -->
+        <div class="flex items-center gap-1 bg-gray-100 p-1 rounded-xl w-fit">
+            <button 
+                @click="activeReportView = 'standard'"
+                class="px-4 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all"
+                :class="activeReportView === 'standard' ? 'bg-white shadow text-indigo-600' : 'text-gray-400 hover:text-gray-600'"
+            >
+                Operations
+            </button>
+            <button 
+                @click="activeReportView = 'extensions'"
+                class="px-4 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all"
+                :class="activeReportView === 'extensions' ? 'bg-white shadow text-indigo-600' : 'text-gray-400 hover:text-gray-600'"
+            >
+                Extensions
+            </button>
+            <button 
+                @click="activeReportView = 'performance'"
+                class="px-4 py-1.5 text-xs font-black uppercase tracking-widest rounded-lg transition-all"
+                :class="activeReportView === 'performance' ? 'bg-white shadow text-indigo-600' : 'text-gray-400 hover:text-gray-600'"
+            >
+                Performance
+            </button>
+        </div>
+
+        <template v-if="activeReportView === 'standard'">
+            <!-- KPI Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
+                 <div class="col-span-2 md:col-span-1 bg-white/90 backdrop-blur-xl p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                      <p class="text-xs font-bold text-gray-400 uppercase">Portfolio Scope (Hours)</p>
+                      <h3 class="text-2xl font-black text-indigo-900 mt-1">{{ stats.total_scope }}h</h3>
+                      <p class="text-xs text-gray-500 mt-2 flex justify-between">
+                         <span>Invested: {{ stats.total_actual }}h</span>
+                         <span :class="stats.remaining_hours < 0 ? 'text-red-500' : 'text-emerald-500'">{{ stats.remaining_hours }}h left</span>
+                      </p>
                  </div>
-             </div>
-
-             <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden group hover:scale-[1.02] transition-transform">
-                 <p class="text-xs font-bold text-amber-600 uppercase">Project Value</p>
-                 <h3 class="text-xl md:text-2xl font-black text-amber-800 mt-1">{{ stats.total_points }} 🍪</h3>
-                 <p class="hidden md:block text-xs text-amber-600/80 mt-2">"Brownie Points" Available</p>
-                 <div class="absolute right-0 top-0 p-3 opacity-10 text-amber-600">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 110-4h14a2 2 0 110 4M5 12v7a2 2 0 002 2h10a2 2 0 002-2v-7" /></svg>
+                 <div class="bg-gradient-to-br from-amber-50 to-orange-50 p-4 rounded-xl border border-amber-100 shadow-sm relative overflow-hidden group hover:scale-[1.02] transition-transform">
+                     <p class="text-xs font-bold text-amber-600 uppercase">Project Value</p>
+                     <h3 class="text-xl md:text-2xl font-black text-amber-800 mt-1">{{ stats.total_points }} 🍪</h3>
                  </div>
-             </div>
-
-             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-                 <p class="text-xs font-bold text-gray-400 uppercase">Holiday Override</p>
-                 <h3 class="text-xl md:text-2xl font-black text-rose-600 mt-1">{{ stats.holiday_hours }}h</h3>
-             </div>
-
-             <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-                 <p class="text-xs font-bold text-gray-400 uppercase">Resources</p>
-                 <h3 class="text-xl md:text-2xl font-black text-emerald-700 mt-1">{{ stats.resource_count }}</h3>
-             </div>
-             
-              <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
-                  <p class="text-xs font-bold text-gray-400 uppercase">Avg. Burn</p>
-                  <h3 class="text-xl md:text-2xl font-black text-blue-600 mt-1">{{ stats.avg_daily }}h</h3>
-              </div>
-
-              <!-- AI Health & Forecast -->
-              <div class="col-span-2 md:col-span-1 bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
-                  <p class="text-xs font-bold text-gray-400 uppercase">AI Health Status</p>
-                  <div class="flex items-center gap-2 mt-1">
-                      <div class="w-2 h-2 rounded-full animate-pulse" :class="getHealthDotColor(stats.health_score)"></div>
-                      <h3 class="text-sm font-black uppercase tracking-tight" :class="getHealthTextColor(stats.health_score)">{{ stats.health_score }}</h3>
+                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+                     <p class="text-xs font-bold text-gray-400 uppercase">Holiday Override</p>
+                     <h3 class="text-xl md:text-2xl font-black text-rose-600 mt-1">{{ stats.holiday_hours }}h</h3>
+                 </div>
+                 <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+                     <p class="text-xs font-bold text-gray-400 uppercase">Resources</p>
+                     <h3 class="text-xl md:text-2xl font-black text-emerald-700 mt-1">{{ stats.resource_count }}</h3>
+                 </div>
+                  <div class="bg-white p-4 rounded-xl border border-gray-200 shadow-sm relative overflow-hidden">
+                      <p class="text-xs font-bold text-gray-400 uppercase">Avg. Burn</p>
+                      <h3 class="text-xl md:text-2xl font-black text-blue-600 mt-1">{{ stats.avg_daily }}h</h3>
                   </div>
-                  <p class="text-[10px] font-bold text-gray-500 mt-2 uppercase">Est. Finish: <span class="text-indigo-600">{{ stats.forecast_finish }}</span></p>
-              </div>
-        </div>
-
-        <!-- Charts -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6" v-if="chartData.projects && chartData.points">
-            <!-- Charts always stack on mobile -->
-            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm min-h-[300px]">
-                 <h4 class="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
-                    <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 8v8m-4-5v5m-4-2v2m-2 4h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
-                    Hours by Project
-                 </h4>
-                 <div class="h-64 sm:h-72 relative">
-                    <Bar :data="projectChartData" :options="chartOptions" />
-                 </div>
-            </div>
-            
-             <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm min-h-[300px]">
-                 <h4 class="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">
-                    <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                    Hours by Employee
-                 </h4>
-                 <div class="h-64 sm:h-72 relative">
-                     <Pie :data="employeeChartData" :options="chartOptions" />
-                 </div>
             </div>
 
-            <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm min-h-[300px]">
-                 <h4 class="text-sm font-bold text-amber-600 mb-4 flex items-center gap-2">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z"></path></svg>
-                    Points Leaderboard 🏆
-                 </h4>
-                 <div class="h-64 sm:h-72 relative">
-                     <Bar :data="pointsChartData" :options="chartOptions" />
-                 </div>
+            <!-- Charts -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" v-if="chartData.projects && chartData.points">
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm min-h-[300px]">
+                     <h4 class="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">Hours by Project</h4>
+                     <div class="h-64 sm:h-72 relative"><Bar :data="projectChartData" :options="chartOptions" /></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm min-h-[300px]">
+                     <h4 class="text-sm font-bold text-gray-600 mb-4 flex items-center gap-2">Hours by Employee</h4>
+                     <div class="h-64 sm:h-72 relative"><Pie :data="employeeChartData" :options="chartOptions" /></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border border-gray-200 shadow-sm min-h-[300px]">
+                     <h4 class="text-sm font-bold text-amber-600 mb-4 flex items-center gap-2">Points Leaderboard 🏆</h4>
+                     <div class="h-64 sm:h-72 relative"><Bar :data="pointsChartData" :options="chartOptions" /></div>
+                </div>
             </div>
-        </div>
+        </template>
+
+        <template v-else-if="activeReportView === 'extensions'">
+            <ProjectExtensionAnalytics 
+                v-if="extensionData.project"
+                :project="extensionData.project"
+                :extensions="extensionData.extensions"
+                :stats="extensionData.stats"
+                :person-performance="extensionData.person_performance || { delayed: [], fast: [], all: [] }"
+                @record="showExtensionModal = true"
+                @export="exportExtensions"
+            />
+            <div v-else class="py-20 text-center bg-white rounded-xl border border-gray-100 shadow-inner">
+                <p class="text-sm font-black text-gray-400 uppercase tracking-widest">Select a project to view detailed extension analytics</p>
+            </div>
+        </template>
+
+        <template v-else-if="activeReportView === 'performance'">
+            <ProjectPerformanceDeepDive 
+                v-if="performanceData && filters.project_id"
+                :metrics="performanceData"
+                @task-click="$emit('task-click', $event)"
+            />
+            <div v-else class="py-20 text-center bg-white rounded-xl border border-gray-100 shadow-inner">
+                <p class="text-sm font-black text-gray-400 uppercase tracking-widest">Select a project to analyze performance velocity</p>
+            </div>
+        </template>
+
+        <ProjectExtensionModal 
+            :show="showExtensionModal"
+            :project-id="filters.project_id"
+            @close="showExtensionModal = false"
+            @success="fetchExtensionData"
+        />
 
         <!-- Detail Table -->
         <div class="flex-1 min-h-[400px]">
@@ -172,6 +193,37 @@
                 <template #cell-points="{ item }">
                     <span class="font-bold text-amber-600">{{ item.points }}</span>
                 </template>
+
+                <!-- NEW PERFORMANCE CELLS -->
+                <template #cell-baseline_hours="{ value }">
+                    <span class="text-xs font-bold text-gray-400">{{ value }}h</span>
+                </template>
+                <template #cell-allocated_hours="{ value }">
+                    <span class="text-xs font-bold text-indigo-600">{{ value }}h</span>
+                </template>
+                <template #cell-actual_hours="{ item }">
+                    <span class="text-xs font-bold" :class="item.actual_hours > item.allocated_hours ? 'text-rose-600' : 'text-emerald-600'">
+                        {{ item.actual_hours }}h
+                    </span>
+                </template>
+                <template #cell-extended_hours="{ value }">
+                    <span class="text-xs font-bold text-amber-600" v-if="value > 0">+{{ value }}h</span>
+                    <span class="text-gray-300" v-else>-</span>
+                </template>
+                <template #cell-delay_status="{ value }">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-tighter" :class="{
+                        'bg-emerald-100 text-emerald-700': value === 'On Track',
+                        'bg-amber-100 text-amber-700': value === 'Timeline Deviation' || value === 'Slow Progress',
+                        'bg-rose-100 text-rose-700': value === 'Delayed & Slow' || value === 'Overdue'
+                    }">{{ value }}</span>
+                </template>
+                <template #cell-delay_metrics="{ item }">
+                    <div class="flex flex-col gap-1">
+                        <span v-if="item.timeline_delay > 0" class="text-[10px] font-bold text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded border border-amber-100 italic">📅 {{ item.timeline_delay }}d Timeline Delay</span>
+                        <span v-if="item.productivity_variance > 0" class="text-[10px] font-bold text-rose-800 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100 italic">⚡ {{ item.productivity_variance }}h Productivity Variance</span>
+                        <span v-if="!item.timeline_delay && !item.productivity_variance" class="text-[10px] text-gray-400 font-medium">Perfect Alignment</span>
+                    </div>
+                </template>
             </BaseDataTable>
         </div>
     </div>
@@ -182,19 +234,38 @@ import { ref, onMounted, computed, watch } from 'vue';
 import dayjs from 'dayjs';
 import axios from 'axios';
 import BaseDataTable from '@/Components/BaseDataTable.vue';
+import ProjectExtensionAnalytics from './ProjectExtensionAnalytics.vue';
+import ProjectPerformanceDeepDive from './ProjectPerformanceDeepDive.vue';
+import ProjectExtensionModal from '@/Components/Project/ProjectExtensionModal.vue';
 import { Bar, Pie } from 'vue-chartjs';
 import { Chart as ChartJS, Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement } from 'chart.js';
 
 // Register ChartJS
 ChartJS.register(Title, Tooltip, Legend, BarElement, CategoryScale, LinearScale, ArcElement);
 
+const emit = defineEmits(['task-click']);
+
+const normalizeReportView = (value) => {
+    const normalized = String(value || '').toLowerCase();
+    if (normalized === 'extensions') return 'extensions';
+    if (normalized === 'performance') return 'performance';
+    if (normalized === 'operations') return 'standard';
+    if (normalized === 'standard') return 'standard';
+    return 'standard';
+};
+
 const props = defineProps({
     projects: { type: Array, default: () => [] },
-    initialProjectId: { type: [Number, String], default: null } 
+    initialProjectId: { type: [Number, String], default: null },
+    initialReportView: { type: String, default: 'standard' }
 });
 
 const loading = ref(false);
+const activeReportView = ref(normalizeReportView(props.initialReportView || new URLSearchParams(window.location.search).get('tab')));
+const showExtensionModal = ref(false);
 const tableData = ref([]);
+const extensionData = ref({ project: null, extensions: [], stats: {} });
+const performanceData = ref(null);
 const filters = ref({
     start_date: dayjs().startOf('month').format('YYYY-MM-DD'),
     end_date: dayjs().endOf('month').format('YYYY-MM-DD'),
@@ -216,21 +287,49 @@ const stats = ref({
 
 const chartData = ref({ projects: {}, employees: {}, points: {} });
 
-const columns = {
-    project: { label: 'Project', sortable: true },
-    task: { label: 'Task / Status', sortable: true },
-    employee: { label: 'Employee', sortable: true },
-    start_date: { label: 'Period Start', sortable: true },
-    end_date: { label: 'Period End', sortable: true },
-    hours: { label: 'Hours', sortable: true, align: 'right' },
-    points: { label: 'Points', sortable: true, align: 'right' },
+const syncReportQuery = (view = activeReportView.value) => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (filters.value.project_id) {
+        params.set('project', filters.value.project_id);
+    }
+
+    params.set('tab', view === 'standard' ? 'operations' : view);
+    window.history.replaceState({}, '', `${window.location.pathname}?${params.toString()}`);
 };
+
+const columns = computed(() => {
+    if (activeReportView.value === 'performance') {
+        return {
+            task: { label: 'Task Analysis' },
+            baseline_hours: { label: 'Baseline (B)' },
+            allocated_hours: { label: 'Allocated (A)' },
+            actual_hours: { label: 'Actual (Ac)' },
+            extended_hours: { label: 'Ext. (E)' },
+            delay_status: { label: 'Integrity' },
+            delay_metrics: { label: 'Deviation Analysis' }
+        };
+    }
+    return {
+        project: { label: 'Project', sortable: true },
+        task: { label: 'Task / Status', sortable: true },
+        employee: { label: 'Employee', sortable: true },
+        start_date: { label: 'Period Start', sortable: true },
+        end_date: { label: 'Period End', sortable: true },
+        hours: { label: 'Hours', sortable: true, align: 'right' },
+        points: { label: 'Points', sortable: true, align: 'right' },
+    };
+});
 const fetchData = async () => {
     loading.value = true;
     try {
         const res = await axios.get(route('planner.reports'), { params: filters.value });
         if (res.data.success) {
-            tableData.value = res.data.data;
+            allTimesheetData.value = res.data.data;
+            allPerformanceData.value = res.data.performanceData || [];
+            
+            updateDisplayData();
+            
             stats.value = res.data.stats;
             chartData.value = res.data.charts;
         }
@@ -239,6 +338,55 @@ const fetchData = async () => {
     } finally {
         loading.value = false;
     }
+};
+
+const allTimesheetData = ref([]);
+const allPerformanceData = ref([]);
+
+const updateDisplayData = () => {
+    if (activeReportView.value === 'performance') {
+        tableData.value = allPerformanceData.value;
+    } else {
+        tableData.value = allTimesheetData.value;
+    }
+};
+
+watch(activeReportView, () => {
+    updateDisplayData();
+});
+
+const fetchExtensionData = async () => {
+    if (!filters.value.project_id) {
+        extensionData.value = { project: null, extensions: [], stats: {} };
+        return;
+    }
+    loading.value = true;
+    try {
+        const res = await axios.get(route('projects.extensions.analytics', filters.value.project_id));
+        extensionData.value = res.data;
+    } catch (e) {
+        console.error(e);
+    } finally {
+        loading.value = false;
+    }
+};
+
+const fetchPerformanceData = async () => {
+    if (!filters.value.project_id) return;
+    loading.value = true;
+    try {
+        const res = await axios.get(route('projects.performance.metrics', filters.value.project_id));
+        performanceData.value = res.data;
+    } catch (e) {
+        console.error(e);
+    } finally {
+        loading.value = false;
+    }
+};
+
+const exportExtensions = () => {
+    if (!filters.value.project_id) return;
+    window.location.href = route('projects.extensions.export', filters.value.project_id);
 };
 
 const handleSearch = (q) => {
@@ -338,7 +486,18 @@ const chartOptions = {
     }
 };
 
-watch(filters, () => fetchData(), { deep: true });
+watch(() => activeReportView.value, (view) => {
+    syncReportQuery(view);
+    if (view === 'extensions') fetchExtensionData();
+    if (view === 'performance') fetchPerformanceData();
+}, { immediate: true });
+
+watch(filters, () => {
+    fetchData();
+    if (activeReportView.value === 'extensions') fetchExtensionData();
+    if (activeReportView.value === 'performance') fetchPerformanceData();
+    syncReportQuery(activeReportView.value);
+}, { deep: true });
 onMounted(() => fetchData());
 
 </script>

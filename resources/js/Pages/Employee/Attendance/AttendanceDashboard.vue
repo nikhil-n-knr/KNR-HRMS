@@ -62,7 +62,7 @@ const workDuration = computed(() => {
 
 const isClockedIn = computed(() => {
     if (!props.todayLog) return false;
-    const sessions = props.todayLog.sessions || [];
+    const sessions = [...(props.todayLog.sessions || [])].sort((a, b) => new Date(a.in_time) - new Date(b.in_time));
     if (sessions.length === 0) return false;
     const lastSession = sessions[sessions.length - 1];
     return lastSession.out_time === null;
@@ -78,13 +78,26 @@ const columns = {
 
 const historyData = computed(() => {
     if (!props.history) return [];
-    return props.history.map(log => ({
-        ...log,
-        date_formatted: new Date(log.date).toLocaleDateString(),
-        punch_in: log.sessions?.[0]?.in_time ? new Date(log.sessions[0].in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
-        punch_out: log.sessions?.[log.sessions.length - 1]?.out_time ? new Date(log.sessions[log.sessions.length - 1].out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
-        total_work: `${log.total_work_minutes} min`
-    }));
+    return props.history.map(log => {
+        const sessions = [...(log.sessions || [])].sort((a, b) => new Date(a.in_time) - new Date(b.in_time));
+        const first = sessions[0] || null;
+        const last = sessions[sessions.length - 1] || null;
+        const totalMinutes = Number(log.total_work_minutes || 0);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+
+        return {
+            ...log,
+            date_formatted: new Date(log.date).toLocaleDateString(),
+            punch_in: first?.in_time ? new Date(first.in_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
+            punch_out: last?.out_time ? new Date(last.out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : '-',
+            total_work: `${hours}h ${minutes}m`
+        };
+    });
+});
+
+const todaySessions = computed(() => {
+    return [...(props.todayLog?.sessions || [])].sort((a, b) => new Date(a.in_time) - new Date(b.in_time));
 });
 
 const punch = () => {
@@ -98,9 +111,19 @@ const punch = () => {
     router.post(url, {}, {
         preserveScroll: true,
         onFinish: () => processing.value = false,
-        onSuccess: () => toast.success(isClockedIn.value ? "Clocked In" : "Clocked Out"), // State hasn't updated yet in isClockedIn here effectively, rely on flash
+        onSuccess: () => toast.success(isClockedIn.value ? "Clocked Out" : "Clocked In"),
         onError: (err) => toast.error(err.message || 'Failed')
     });
+};
+
+const getSessionDuration = (session) => {
+    if (!session?.in_time || !session?.out_time) return 'Open Session';
+    const start = new Date(session.in_time);
+    const end = new Date(session.out_time);
+    const totalMinutes = Math.max(0, Math.floor((end - start) / 60000));
+    const h = Math.floor(totalMinutes / 60);
+    const m = totalMinutes % 60;
+    return `${h}h ${m}m`;
 };
 
 const openRegularizeModal = (log) => {
@@ -222,9 +245,9 @@ const submitRegularization = () => {
             <div class="p-6 border-b border-gray-100">
                 <h3 class="text-lg font-medium text-gray-800">Today's Timeline</h3>
             </div>
-            <div class="p-6" v-if="todayLog && todayLog.sessions && todayLog.sessions.length > 0">
+            <div class="p-6" v-if="todaySessions.length > 0">
                 <div class="relative pl-4 border-l-2 border-gray-200 space-y-8">
-                    <div v-for="session in todayLog.sessions" :key="session.id" class="relative">
+                    <div v-for="session in todaySessions" :key="session.id" class="relative">
                         <!-- In Punch -->
                         <div class="mb-4">
                             <span class="absolute -left-[21px] flex h-4 w-4 items-center justify-center rounded-full bg-green-500 ring-4 ring-white"></span>
@@ -251,6 +274,10 @@ const submitRegularization = () => {
                                     {{ new Date(session.out_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) }}
                                 </p>
                             </div>
+                        </div>
+
+                        <div class="mt-2 ml-1 text-xs text-slate-500 font-semibold uppercase tracking-wide">
+                            Session Duration: {{ getSessionDuration(session) }}
                         </div>
                     </div>
                 </div>

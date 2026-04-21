@@ -117,4 +117,33 @@ class WorkflowArchitectController extends Controller
         $stage->delete();
         return back()->with('success', 'Stage deleted');
     }
+
+    public function updatePeopleConfig(Request $request, WorkflowStage $stage)
+    {
+        $request->validate([
+            'approver_type' => 'required|string',
+            'user_id' => 'nullable|exists:users,id',
+            'role_id' => 'nullable|exists:roles,id',
+            'team_id' => 'nullable|exists:teams,id',
+            'stage_personnel' => 'nullable|array',
+            'notify_client' => 'boolean',
+            'auto_close_days' => 'nullable|integer|min:0',
+            'requires_verification' => 'boolean',
+            'mentor_id' => 'nullable|exists:users,id'
+        ]);
+
+        $stage->update([
+            'approver_type' => $request->approver_type,
+            'user_id' => $request->user_id,
+            'role_id' => $request->role_id,
+            'team_id' => $request->team_id,
+            'stage_personnel' => $request->stage_personnel,
+            'notify_client' => (bool)$request->notify_client,
+            'auto_close_days' => $request->auto_close_days,
+            'requires_verification' => (bool)$request->requires_verification,
+            'mentor_id' => $request->mentor_id,
+        ]);
+
+        return response()->json(['message' => 'Personnel configuration updated']);
+    }
 }

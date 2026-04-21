@@ -187,6 +187,7 @@
           <!-- Top Actions (Synced with Identity) -->
           <div class="flex items-center gap-2 lg:gap-4 ml-2 lg:ml-6">
             <div id="header-context"></div>
+            <CheckInButton v-if="!isGuestRoute" />
             <slot name="header" />
             
 
@@ -250,6 +251,9 @@
                             </Link>
                             <Link :href="route('employee.my-approvals.index')" @click="showMobileProfileMenu = false" class="flex items-center w-full text-left px-4 py-2.5 text-[10px] font-black text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors uppercase tracking-widest">
                                 <i class="fas fa-check-double w-6 opacity-75"></i> My Approvals
+                            </Link>
+                            <Link :href="safeRoute('employee.work.index', '#')" @click="showMobileProfileMenu = false" class="flex items-center w-full text-left px-4 py-2.5 text-[10px] font-black text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors uppercase tracking-widest">
+                                <i class="fas fa-list-check w-6 opacity-75"></i> My Work
                             </Link>
                             <Link :href="route('employee.referrals.index')" @click="showMobileProfileMenu = false" class="flex items-center w-full text-left px-4 py-2.5 text-[10px] font-black text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-xl transition-colors uppercase tracking-widest">
                                 <i class="fas fa-users-viewfinder w-6 opacity-75"></i> My Referrals
@@ -348,6 +352,7 @@ import ToastNotification from '@/Components/ToastNotification.vue';
 import GlobalLoader from '@/Components/GlobalLoader.vue';
 import SlideOver from '@/Components/SlideOver.vue'; // Imported
 import BottomNav from '@/Components/Mobile/BottomNav.vue';
+import CheckInButton from '@/Components/CheckInButton.vue';
 import axios from 'axios';
 import { 
     CubeIcon, 
@@ -394,6 +399,19 @@ const page = usePage();
 const authStore = useAuthStore();
 const toastStore = useToastStore();
 const analyticsStore = useAnalyticsStore(); // Init logic
+
+const hasRoute = (name) => {
+    try {
+        return route().has(name);
+    } catch (error) {
+        return false;
+    }
+};
+
+const safeRoute = (name, fallback = '#', params = {}) => {
+    return hasRoute(name) ? route(name, params) : fallback;
+};
+
 const profileUrl = computed(() => {
     // 1. Priority: Server-Side Shared Link (Most Accurate)
     if (page.props.auth?.profileUrl) {

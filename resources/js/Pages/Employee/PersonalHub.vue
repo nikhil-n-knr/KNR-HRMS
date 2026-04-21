@@ -87,6 +87,23 @@
           </div>
         </Link>
 
+        <!-- My Work Card -->
+        <Link v-if="route().has('employee.work.index')" :href="route('employee.work.index')" class="group relative bg-white rounded-3xl p-6 shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300 overflow-hidden">
+          <div class="absolute top-0 right-0 w-32 h-32 bg-teal-50 rounded-full -mr-16 -mt-16 group-hover:bg-teal-100 transition-colors"></div>
+          <div class="relative">
+            <div class="w-12 h-12 rounded-2xl bg-teal-50 text-teal-600 flex items-center justify-center mb-6 group-hover:bg-teal-600 group-hover:text-white transition-all shadow-sm">
+                <i class="fas fa-list-check text-xl"></i>
+            </div>
+            <h3 class="text-lg font-black text-slate-900 uppercase tracking-tight mb-1">Execution Desk</h3>
+            <p class="text-xs text-slate-500 font-bold uppercase tracking-widest leading-none mb-4">My Tasks & Bugs</p>
+            <p class="text-sm text-slate-400 leading-relaxed">Review assigned work, progress checklists, and track current delivery status.</p>
+
+            <div class="mt-8 flex items-center gap-2 text-teal-600 font-black text-sm uppercase tracking-wider">
+                Open <i class="fas fa-arrow-right transition-transform group-hover:translate-x-1"></i>
+            </div>
+          </div>
+        </Link>
+
       </div>
 
       <!-- Secondary Links Section -->

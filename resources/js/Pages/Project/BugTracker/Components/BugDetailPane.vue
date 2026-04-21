@@ -116,7 +116,7 @@
                                 <dt class="text-sm text-gray-400 uppercase font-black tracking-widest mb-1.5">Target Module</dt>
                                 <dd class="font-bold text-emerald-700 flex items-center gap-2">
                                     <div class="h-2 w-2 rounded-full bg-emerald-500"></div>
-                                    {{ bug.project.name }} 
+                                    {{ bug.project?.name }} 
                                     <span v-if="bug.module" class="text-gray-300">/</span> 
                                     {{ bug.module?.name }}
                                 </dd>

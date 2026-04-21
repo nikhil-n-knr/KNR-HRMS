@@ -1,240 +1,192 @@
 <template>
-  <div class="min-h-screen pb-24">
-    <div class="space-y-8">
-      <header class="rounded-3xl border border-white/60 bg-gradient-to-r from-indigo-50 via-white to-sky-50 p-6 shadow-sm">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p class="text-[11px] font-black uppercase tracking-[0.4em] text-indigo-600">Employee Mission Hub</p>
-            <h1 class="mt-2 text-3xl font-black text-slate-900 tracking-tight">Welcome, {{ firstName }}</h1>
-            <p class="mt-2 text-sm text-slate-500">Your personal command center for attendance, tasks, and growth.</p>
-          </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="rounded-full bg-indigo-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-indigo-600">{{ user.designation || 'Employee' }}</span>
-            <span class="rounded-full bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Modules {{ dashboardModules.length }}</span>
-          </div>
-        </div>
-      </header>
+    <div class="min-h-screen pb-24 relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-50/50 via-white to-sky-50/50">
+        <!-- Dashboard Header: Operative HUD -->
+        <header class="mb-14 px-8 pt-6 flex flex-col md:flex-row md:items-center justify-between gap-10">
+            <div class="space-y-4">
+                <div class="flex items-center gap-3 animate-fade-in">
+                    <div class="h-10 w-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-600/30">
+                        <ActivityIcon class="w-6 h-6 text-white animate-pulse-slow" />
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 text-xs font-black rounded-full uppercase tracking-[0.2em] border border-indigo-500/20">Operational_Pulse</span>
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-widest pl-2 border-l border-slate-200">{{ currentTime }} SYNC</span>
+                        </div>
+                        <h1 class="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
+                            Hi, {{ user.name.split(' ')[0] }}! 
+                            <span class="text-indigo-600 font-mono text-sm tracking-tighter bg-indigo-500/10 px-3 py-1 rounded-xl border border-indigo-500/20 shadow-sm">OPERATIVE</span>
+                        </h1>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <!-- Advanced Performance Hub -->
+                <div class="p-4 bg-white/60 border border-white/80 rounded-[2rem] flex items-center gap-12 shadow-2xl shadow-black/5 backdrop-blur-3xl group transition-all hover:bg-white/80">
+                    <div class="flex flex-col border-r border-slate-200/60 pr-12">
+                        <span class="text-sm font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-indigo-600 transition">Mission Capacity</span>
+                        <div class="flex items-baseline gap-2">
+                             <span class="text-3xl font-black text-slate-900 tracking-tighter leading-none">88%</span>
+                             <span class="text-sm font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded shadow-sm">HIGH_IMPACT</span>
+                        </div>
+                    </div>
+                    <div class="flex flex-col">
+                        <span class="text-sm font-black text-slate-400 tracking-widest uppercase mb-1">Growth Index</span>
+                        <div class="flex items-center gap-3">
+                             <span class="text-3xl font-black text-indigo-600 tracking-tighter leading-none">+14%</span>
+                             <span class="text-sm font-black text-slate-400 opacity-50 uppercase tracking-widest">A+ GRADE</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
 
-      <section class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-        <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
-          <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Leave Balance</p>
-          <p class="mt-3 text-3xl font-black text-slate-900">{{ quickStats.leave_balance }}</p>
-          <p class="mt-2 text-xs font-semibold uppercase tracking-widest text-emerald-500">Days Available</p>
-        </div>
-        <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
-          <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Attendance Streak</p>
-          <p class="mt-3 text-3xl font-black text-slate-900">{{ quickStats.attendance_streak }}</p>
-          <p class="mt-2 text-xs font-semibold uppercase tracking-widest text-indigo-500">Days Active</p>
-        </div>
-        <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
-          <p class="text-[11px] font-black uppercase tracking-widest text-slate-400">Pending Tasks</p>
-          <p class="mt-3 text-3xl font-black text-slate-900">{{ quickStats.pending_tasks }}</p>
-          <p class="mt-2 text-xs font-semibold uppercase tracking-widest text-slate-500">Open Items</p>
-        </div>
-      </section>
-
-      <section class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
-        <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-          <div>
-            <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">HRMS</h2>
-          </div>
-          <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Live sync</p>
-        </div>
-
-        <div v-if="modulesLoading" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-white/70 p-6 text-sm text-slate-400">
-          Loading modules...
-        </div>
-
-        <div v-else-if="dashboardModules.length === 0" class="mt-6 rounded-2xl border border-dashed border-slate-200 bg-white/70 p-6 text-sm text-slate-400">
-          No modules available for this account.
+        <!-- Smart Insights Row -->
+        <div class="px-8 mb-10 animate-fade-in-up">
+             <SmartInsights />
         </div>
 
-        <div v-else class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <template v-for="module in dashboardModules" :key="module.id">
-            <Link
-              v-if="!module.sub_modules.length"
-              :href="module.href"
-              class="group rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg"
+        <!-- Draggable Dashboard Grid -->
+        <div class="px-8 dashboard-grid">
+            <grid-layout
+                v-model:layout="layout"
+                :col-num="12"
+                :row-height="30"
+                :is-draggable="true"
+                :is-resizable="true"
+                :vertical-compact="true"
+                :use-css-transforms="true"
+                @layout-updated="handleLayoutUpdate"
             >
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex items-center gap-3">
-                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-500 text-sm font-black uppercase tracking-widest text-white shadow-md">
-                    {{ module.shortName }}
-                  </div>
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">{{ module.group }}</p>
-                    <h3 class="mt-1 text-lg font-black text-slate-900">{{ module.name }}</h3>
-                  </div>
-                </div>
-              </div>
-            </Link>
-
-            <div
-              v-else
-              class="group rounded-3xl border border-slate-200/70 bg-white p-5 shadow-sm transition-all duration-200 hover:-translate-y-1 hover:border-indigo-200 hover:shadow-lg"
-            >
-              <div class="flex items-start justify-between gap-4">
-                <div class="flex items-center gap-3">
-                  <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-sky-500 text-sm font-black uppercase tracking-widest text-white shadow-md">
-                    {{ module.shortName }}
-                  </div>
-                  <div>
-                    <p class="text-xs font-black uppercase tracking-widest text-slate-400">{{ module.group }}</p>
-                    <h3 class="mt-1 text-lg font-black text-slate-900">{{ module.name }}</h3>
-                  </div>
-                </div>
-
-                <div class="flex flex-col items-end gap-2">
-                  <button
-                    type="button"
-                    @click.prevent="toggleSubmodules(module.id)"
-                    class="rounded-full border border-slate-200 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600 transition hover:border-indigo-200 hover:text-indigo-700"
-                  >
-                    {{ expandedModuleId === module.id ? 'Hide submodules' : 'submodules' }}
-                  </button>
-                </div>
-              </div>
-
-              <div v-if="expandedModuleId === module.id" class="mt-4 space-y-3">
-                <Link
-                  v-for="subModule in module.sub_modules"
-                  :key="subModule.id"
-                  :href="getSubmoduleHref(subModule)"
-                  class="block rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold text-slate-700 transition hover:border-indigo-200 hover:bg-white"
+                <grid-item
+                    v-for="item in layout"
+                    :key="item.i"
+                    :x="item.x"
+                    :y="item.y"
+                    :w="item.w"
+                    :h="item.h"
+                    :i="item.i"
+                    class="grid-item-container"
                 >
-                  {{ subModule.name }}
-                </Link>
-              </div>
-            </div>
-          </template>
-        </div>
-      </section>
-
-      <section class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm lg:col-span-2">
-          <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Strategic Intelligence</h2>
-          <p class="mt-2 text-lg font-black text-slate-900">Your Focus Areas</p>
-          <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div class="rounded-2xl border border-slate-100 bg-white p-4">
-              <p class="text-xs font-black uppercase tracking-widest text-slate-400">Priorities</p>
-              <p class="mt-2 text-sm text-slate-600">Stay consistent on attendance, close tasks on time, and plan your leaves for balance.</p>
-            </div>
-            <div class="rounded-2xl border border-slate-100 bg-white p-4">
-              <p class="text-xs font-black uppercase tracking-widest text-slate-400">Next Actions</p>
-              <ul class="mt-2 space-y-2 text-sm text-slate-600">
-                <li>Review your pending tasks and deadlines.</li>
-                <li>Check attendance logs for the week.</li>
-                <li>Apply for leave if balance is high.</li>
-              </ul>
-            </div>
-          </div>
+                    <div class="h-full relative group">
+                        <!-- Advanced Glass Decoration -->
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-[2.5rem] -z-10 bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl"></div>
+                        
+                        <component 
+                            :is="getWidgetComponent(item.i)" 
+                            v-bind="getWidgetProps(item.i)"
+                            v-if="isModuleEnabled(item.i)"
+                            class="h-full"
+                        />
+                    </div>
+                </grid-item>
+            </grid-layout>
         </div>
 
-        <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
-          <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Module Snapshot</h2>
-          <p class="mt-2 text-lg font-black text-slate-900">Your Toolkit</p>
-          <div class="mt-4 flex flex-wrap gap-2">
-            <span v-for="mod in enabledModules" :key="mod" class="rounded-full bg-slate-100 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-slate-600">
-              {{ formatModule(mod) }}
-            </span>
-            <span v-if="enabledModules.length === 0" class="text-sm text-slate-400">No modules assigned yet.</span>
-          </div>
-        </div>
-      </section>
-
-      <section class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
-        <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">Quick Actions</h2>
-        <p class="mt-2 text-lg font-black text-slate-900">Move fast</p>
-        <div class="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
-          <div class="rounded-2xl border border-slate-100 bg-white p-4">
-            <p class="text-xs font-black uppercase tracking-widest text-slate-400">Attendance</p>
-            <p class="mt-2 text-sm text-slate-600">Check in, review shifts, and track logs.</p>
-          </div>
-          <div class="rounded-2xl border border-slate-100 bg-white p-4">
-            <p class="text-xs font-black uppercase tracking-widest text-slate-400">Leaves</p>
-            <p class="mt-2 text-sm text-slate-600">Plan your time off and review balances.</p>
-          </div>
-          <div class="rounded-2xl border border-slate-100 bg-white p-4">
-            <p class="text-xs font-black uppercase tracking-widest text-slate-400">Tasks</p>
-            <p class="mt-2 text-sm text-slate-600">Focus on priority items and deadlines.</p>
-          </div>
-        </div>
-      </section>
+        <!-- Floating UI Elements -->
+        <DashboardDock class="z-50" />
+        <CommandPalette class="z-50" />
     </div>
-  </div>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { ref, onMounted, onUnmounted } from 'vue';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import { GridLayout, GridItem } from 'grid-layout-plus';
 import axios from 'axios';
+import { ActivityIcon } from 'lucide-vue-next';
+
+// Widgets
+import SmartInsights from '@/Components/Dashboard/Widgets/SmartInsights.vue';
+import ActivityPulse3D from '@/Components/Dashboard/Widgets/ActivityPulse3D.vue';
+import AttendanceWidget from '@/Components/Dashboard/Widgets/AttendanceWidget.vue';
+import LeaveWidget from '@/Components/Dashboard/Widgets/LeaveWidget.vue';
+import CompensationHub from '@/Components/Dashboard/Widgets/CompensationHub.vue';
+import CheckInCard from '@/Components/Dashboard/Widgets/CheckInCard.vue';
+import CareerCatalyst from '@/Components/Dashboard/Widgets/CareerCatalyst.vue';
+import DashboardDock from '@/Components/Dashboard/DashboardDock.vue';
+import CommandPalette from '@/Components/Dashboard/CommandPalette.vue';
 
 defineOptions({ layout: MainLayout });
 
 const props = defineProps({
-  user: Object,
-  enabledModules: Array,
-  quickStats: Object
+    user: Object,
+    enabledModules: Array,
+    quickStats: Object
 });
 
-const modulesLoading = ref(true);
-const sidebarModules = ref([]);
-const expandedModuleId = ref(null);
+const layout = ref(props.user.preferences?.dashboard_layout || [
+    { x: 0, y: 0, w: 8, h: 14, i: 'pulse' },
+    { x: 8, y: 0, w: 4, h: 14, i: 'catalyst' },
+    { x: 0, y: 14, w: 4, h: 10, i: 'checkin' },
+    { x: 4, y: 14, w: 4, h: 10, i: 'attendance' },
+    { x: 8, y: 14, w: 4, h: 10, i: 'leave' },
+    { x: 0, y: 24, w: 4, h: 10, i: 'compensation' },
+]);
 
-const firstName = computed(() => (props.user?.name || 'User').split(' ')[0]);
+const currentTime = ref('');
+const timer = ref(null);
 
-const dashboardModules = computed(() =>
-  sidebarModules.value.map((module) => ({
-    ...module,
-    group: module.sidebar_group || 'Main Menu',
-    href: normalizeHref(module.route),
-    shortName: getShortName(module.name),
-  }))
-);
-
-const toggleSubmodules = (moduleId) => {
-  expandedModuleId.value = expandedModuleId.value === moduleId ? null : moduleId;
+const updateClock = () => {
+    currentTime.value = new Date().toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: true 
+    });
 };
 
-const getSubmoduleHref = (subModule) => {
-  return normalizeHref(subModule.route || subModule.href || '#');
+const getWidgetComponent = (id) => {
+    const map = {
+        'pulse': ActivityPulse3D,
+        'attendance': AttendanceWidget,
+        'leave': LeaveWidget,
+        'compensation': CompensationHub,
+        'catalyst': CareerCatalyst,
+        'checkin': CheckInCard
+    };
+    return map[id];
 };
 
-const formatModule = (key) => {
-  return key.replace(/_/g, ' ');
+const getWidgetProps = (id) => {
+    if (id === 'pulse') return { stats: props.quickStats };
+    return {};
 };
 
-const getShortName = (name = '') => {
-  return name
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0])
-    .join('')
-    .toUpperCase() || 'MD';
+const isModuleEnabled = (id) => {
+    const map = {
+        'pulse': 'performance', 
+        'attendance': 'attendance',
+        'leave': 'leave_management',
+        'compensation': 'payroll',
+        'catalyst': 'all',
+        'checkin': 'attendance'
+    };
+    if (map[id] === 'all') return true;
+    return props.enabledModules.includes(map[id]) || id === 'pulse'; 
 };
 
-const normalizeHref = (href) => {
-  if (!href || href === '#') return '#';
-
-  try {
-    const url = new URL(href, window.location.origin);
-    return `${url.pathname}${url.search}${url.hash}`;
-  } catch (error) {
-    return href;
-  }
+const handleLayoutUpdate = async (newLayout) => {
+    try {
+        await axios.post('/api/employee/dashboard/layout', { layout: newLayout });
+    } catch (e) {
+        console.error('Failed to save layout preferences');
+    }
 };
 
-onMounted(async () => {
-  try {
-    const response = await axios.get('/api/navigation');
-    sidebarModules.value = response.data?.data?.menu || response.data?.menu || [];
-  } catch (error) {
-    console.error('Failed to load dashboard modules', error);
-    sidebarModules.value = [];
-  } finally {
-    modulesLoading.value = false;
-  }
+onMounted(() => {
+    updateClock();
+    timer.value = setInterval(updateClock, 1000);
+});
+
+onUnmounted(() => {
+    if (timer.value) clearInterval(timer.value);
 });
 </script>
+
+<style scoped>
+.animate-fade-in { animation: fadeIn 0.8s ease-out forwards; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+.animate-fade-in-up { animation: fadeInUp 1s ease-out forwards; }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+.animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+</style>

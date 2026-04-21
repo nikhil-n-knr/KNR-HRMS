@@ -330,14 +330,60 @@ class AttendanceController extends Controller
                 ],
                 [
                     'status' => $entry['status'],
-                    'shift_id' => 1, // Default General Shift for now
-                    // Note: If 'Present', we might want to default entries? 
-                    // For now, just setting status is enough for "Marking Attendance".
+                    'shift_id' => $entry['shift_id'] ?? 1, 
                 ]
             );
+
+            // If times provided, create a manual session
+            if (isset($entry['in_time']) && isset($entry['out_time']) && $entry['in_time'] && $entry['out_time']) {
+                $in = Carbon::parse($date . ' ' . $entry['in_time']);
+                $out = Carbon::parse($date . ' ' . $entry['out_time']);
+                
+                $log->sessions()->where('is_manual_entry', true)->delete();
+
+                $log->sessions()->create([
+                    'in_time' => $in,
+                    'out_time' => $out,
+                    'is_manual_entry' => true,
+                    'source' => 'BULK_MANUAL',
+                ]);
+
+                // Recalc totals
+                $totalMinutes = $log->sessions->sum(function($session) {
+                    if ($session->out_time && $session->in_time) {
+                         return $session->in_time->diffInMinutes($session->out_time);
+                    }
+                    return 0;
+                });
+                
+                $log->update(['total_work_minutes' => $totalMinutes]);
+            }
             $count++;
         }
 
         return back()->with('success', "Marked attendance for $count employees.");
+    }
+
+    /**
+     * Get Shift Info for Frontend Auto-fill.
+     */
+    public function getShiftInfo(Request $request)
+    {
+        $employeeId = $request->employee_id;
+        $date = Carbon::parse($request->date);
+        $employee = \App\Models\Employee::find($employeeId);
+
+        if (!$employee) return response()->json(['error' => 'Employee not found'], 404);
+
+        $registry = app(\App\Services\Attendance\AttendanceRegistryService::class);
+        $shift = $registry->getShiftForDate($employee, $date);
+
+        return response()->json([
+            'id' => $shift->id,
+            'name' => $shift->name,
+            'start_time' => substr($shift->start_time, 0, 5),
+            'end_time' => substr($shift->end_time, 0, 5),
+            'is_non_working' => $registry->isNonWorkingDay($employee, $date)
+        ]);
     }
 }

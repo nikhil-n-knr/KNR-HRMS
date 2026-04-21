@@ -37,6 +37,7 @@ class NavigationController extends Controller
             'project_management.bug_intelligence' => ['Super Admin', 'Admin', 'Manager'],
             'project_management.pulse' => ['Super Admin', 'Admin', 'Manager'],
             'project_management.pending_approvals' => ['Super Admin', 'Admin', 'Manager'],
+            'project_management.project_progress' => ['Super Admin', 'Admin', 'Manager'],
             
             // System Admin
             'system_admin' => ['Super Admin', 'Admin', 'Manager'],

@@ -129,15 +129,26 @@ class ApprovalController extends Controller
                 $instance = $approval->workflowInstance;
                 $entity = $this->resolveEntity($instance->entity_type, $instance->entity_id);
                 
+                $requester = 'System';
+                if ($entity) {
+                    if (isset($entity->employee) && $entity->employee) {
+                        $requester = $entity->employee->full_name ?? $entity->employee->name ?? 'User';
+                    } elseif (isset($entity->user) && $entity->user) {
+                        $requester = $entity->user->name ?? 'User';
+                    } elseif (isset($entity->requester) && $entity->requester) {
+                        $requester = $entity->requester->name ?? 'User';
+                    }
+                }
+
                 return [
                     'id' => $approval->id,
-                    'type' => $instance->entity_type,
-                    'entity_id' => $instance->entity_id,
-                    'workflow' => $instance->workflow->name,
-                    'stage' => $approval->stage->name,
-                    'requester' => ($entity?->employee?->full_name) ?: ($entity?->user?->name ?: 'System'),
-                    'summary' => $this->getEntitySummary($instance->entity_type, $entity),
-                    'requested_at' => $approval->created_at->diffForHumans(),
+                    'type' => $instance?->entity_type,
+                    'entity_id' => $instance?->entity_id,
+                    'workflow' => $instance?->workflow?->name ?? 'Unknown Workflow',
+                    'stage' => $approval->stage?->name ?? 'Unknown Stage',
+                    'requester' => $requester,
+                    'summary' => $this->getEntitySummary($instance?->entity_type, $entity),
+                    'requested_at' => $approval->created_at?->diffForHumans() ?? 'N/A',
                 ];
             });
 

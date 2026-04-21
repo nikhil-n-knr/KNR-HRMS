@@ -113,6 +113,42 @@
                          <span class="text-amber-800">{{ data.metrics.quality.sla_breaches }} Breaches</span>
                       </div>
                   </div>
+
+                  <!-- Total Planned KPI (New) -->
+                  <div class="bg-indigo-600 p-5 rounded-2xl shadow-lg relative overflow-hidden group hover:-translate-y-1 transition-transform">
+                      <div class="absolute right-0 bottom-0 opacity-10">
+                          <i class="fas fa-calendar-check text-5xl"></i>
+                      </div>
+                      <p class="text-xs font-bold text-indigo-200 uppercase">Total Period Planning</p>
+                      <h3 class="text-3xl font-black text-white mt-2">{{ data.metrics.deviation.estimated }} <span class="text-sm font-medium text-indigo-300">Total Hrs</span></h3>
+                      <p class="text-[10px] text-indigo-100 mt-2 font-bold uppercase">Allocated for Period</p>
+                  </div>
+             </div>
+
+             <!-- Weekly Velocity Graph (New) -->
+             <div class="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm">
+                 <div class="flex items-center justify-between mb-8">
+                     <div>
+                         <h4 class="font-black text-sm uppercase tracking-widest text-gray-500">Weekly Operational Velocity</h4>
+                         <p class="text-xs text-gray-400 mt-1">Interpreted comparison of planned effort vs timesheet compliance</p>
+                     </div>
+                     <div class="flex gap-4">
+                         <div class="flex items-center gap-2">
+                             <div class="w-2 h-2 rounded-full bg-indigo-500"></div>
+                             <span class="text-[10px] font-bold text-gray-500 uppercase">Planned</span>
+                         </div>
+                         <div class="flex items-center gap-2">
+                             <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+                             <span class="text-[10px] font-bold text-gray-500 uppercase">Actual</span>
+                         </div>
+                     </div>
+                 </div>
+                 <div class="h-64">
+                     <BarChart 
+                        :labels="data.metrics.weekly_velocity.labels"
+                        :datasets="data.metrics.weekly_velocity.datasets"
+                     />
+                 </div>
              </div>
 
              <!-- Performance Deviation & Request Hub -->
@@ -192,6 +228,59 @@
                  </div>
              </div>
 
+             <!-- Project Allocation & Progress Grid -->
+             <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                 <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
+                     <h4 class="font-black text-sm uppercase tracking-widest text-gray-500">Project Allocation & Progress</h4>
+                     <span class="text-[10px] font-bold text-indigo-400 bg-indigo-50 px-2 py-1 rounded-md">ESTIMATED VS ACTUAL</span>
+                 </div>
+                 <div class="overflow-x-auto">
+                     <table class="w-full text-left text-sm">
+                         <thead>
+                             <tr class="bg-gray-50 text-[10px] font-black uppercase text-gray-400 tracking-wider">
+                                 <th class="px-6 py-4">Project</th>
+                                 <th class="px-6 py-4 text-center">Est. Days</th>
+                                 <th class="px-6 py-4 text-center">Planned Hrs</th>
+                                 <th class="px-6 py-4 text-center">Actual Hrs</th>
+                                 <th class="px-6 py-4">Progress</th>
+                                 <th class="px-6 py-4 text-right">Status</th>
+                             </tr>
+                         </thead>
+                         <tbody class="divide-y divide-gray-50">
+                             <tr v-for="proj in data.metrics.project_details" :key="proj.id" class="hover:bg-gray-50 transition-colors">
+                                 <td class="px-6 py-4">
+                                     <div class="font-bold text-gray-700">{{ proj.name }}</div>
+                                     <div class="text-[10px] text-gray-400 uppercase font-medium">ID: #{{ proj.id }}</div>
+                                 </td>
+                                 <td class="px-6 py-4 text-center font-medium text-gray-500">{{ proj.estimated_days }}d</td>
+                                 <td class="px-6 py-4 text-center font-bold text-indigo-600">{{ proj.estimated_hours }}h</td>
+                                 <td class="px-6 py-4 text-center font-bold" :class="proj.actual_hours > proj.estimated_hours ? 'text-rose-600' : 'text-emerald-600'">
+                                     {{ proj.actual_hours }}h
+                                 </td>
+                                 <td class="px-6 py-4">
+                                     <div class="flex items-center gap-2">
+                                         <div class="w-20 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                             <div class="bg-indigo-500 h-full rounded-full" :style="{ width: proj.progress + '%' }"></div>
+                                         </div>
+                                         <span class="text-[10px] font-bold text-gray-400">{{ proj.progress }}%</span>
+                                     </div>
+                                 </td>
+                                 <td class="px-6 py-4 text-right">
+                                     <span class="px-2 py-1 rounded-md text-[9px] font-black bg-slate-100 text-slate-600 uppercase border border-slate-200">
+                                         {{ proj.status }}
+                                     </span>
+                                 </td>
+                             </tr>
+                             <tr v-if="data.metrics.project_details.length === 0">
+                                 <td colspan="6" class="px-6 py-10 text-center text-gray-400 font-medium italic">
+                                     No project assignments found for this period.
+                                 </td>
+                             </tr>
+                         </tbody>
+                     </table>
+                 </div>
+             </div>
+
              <!-- Attendance Detailed Log -->
              <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                  <div class="px-6 py-4 border-b border-gray-50 flex items-center justify-between">
@@ -261,6 +350,7 @@
 import { ref } from 'vue';
 import axios from 'axios';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import BarChart from '@/Components/Charts/BarChart.vue';
 
 defineOptions({ layout: MainLayout });
 

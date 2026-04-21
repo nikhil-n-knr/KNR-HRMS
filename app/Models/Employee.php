@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Schema;
 use App\Traits\FilterableByAccess;
 use App\Traits\LogsActivity;
 
@@ -12,7 +13,7 @@ class Employee extends Model
 {
     use HasFactory, SoftDeletes, FilterableByAccess, LogsActivity;
     
-    protected $appends = ['name'];
+    protected $appends = ['name', 'avatar_url'];
 
     protected $fillable = [
         'uuid',
@@ -192,7 +193,17 @@ class Employee extends Model
 
     public function getTotalPointsAttribute()
     {
-        return $this->points()->sum('points');
+        $table = (new EmployeePoint())->getTable();
+        if (!Schema::hasTable($table)) {
+            return 0;
+        }
+
+        $pointsColumn = Schema::hasColumn($table, 'points') ? 'points' : (Schema::hasColumn($table, 'points_awarded') ? 'points_awarded' : null);
+        if (!$pointsColumn) {
+            return 0;
+        }
+
+        return (int) $this->points()->sum($pointsColumn);
     }
 
     /**
@@ -214,5 +225,22 @@ class Employee extends Model
     public function getNameAttribute()
     {
         return trim(($this->first_name ?? '') . ' ' . ($this->last_name ?? ''));
+    }
+
+    public function getAvatarUrlAttribute()
+    {
+        if (!$this->avatar) {
+            return null;
+        }
+
+        if (!empty($this->uuid)) {
+            return route('employee.avatar', ['uuid' => $this->uuid]);
+        }
+
+        if (str_starts_with($this->avatar, 'http://') || str_starts_with($this->avatar, 'https://')) {
+            return $this->avatar;
+        }
+
+        return asset('storage/' . ltrim((string) $this->avatar, '/'));
     }
 }

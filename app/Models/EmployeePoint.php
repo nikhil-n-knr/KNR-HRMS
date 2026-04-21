@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Schema;
 
 class EmployeePoint extends Model
 {
@@ -12,8 +13,11 @@ class EmployeePoint extends Model
     protected $fillable = [
         'employee_id',
         'rule_id',
+        'point_rule_id',
         'points',
+        'points_awarded',
         'event_key',
+        'event_reference',
         'metadata'
     ];
 
@@ -28,6 +32,7 @@ class EmployeePoint extends Model
 
     public function rule()
     {
-        return $this->belongsTo(PointRule::class, 'rule_id');
+        $foreignKey = Schema::hasColumn($this->getTable(), 'rule_id') ? 'rule_id' : 'point_rule_id';
+        return $this->belongsTo(PointRule::class, $foreignKey);
     }
 }

@@ -25,7 +25,7 @@
             </div>
 
             <!-- Board Canvas -->
-            <div v-else class="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 no-scrollbar h-full scroll-smooth snap-x">
+            <div v-else class="flex-1 overflow-x-auto overflow-y-hidden p-4 md:p-6 custom-scrollbar h-full">
                 <div class="flex h-full gap-4 md:gap-6 min-w-max pb-2">
                     <!-- Dynamic Columns -->
                     <BoardColumn 
@@ -37,7 +37,6 @@
                         :is-drag-over="draggingOverColumn === stage.id"
                         :priorities="priorities"
                         :selected-task-ids="selectedTaskIds"
-                        class="snap-center sm:snap-align-none"
                         @dragover="onDragOver"
                         @drop="onDrop"
                         @dragstart="onDragStart"
@@ -46,7 +45,7 @@
                     />
                     
                     <!-- Empty State / Add Stage Guide -->
-                    <div class="flex flex-col items-center justify-center min-w-[280px] md:min-w-[200px] border-2 border-dashed border-gray-200 rounded-2xl bg-white/30 backdrop-blur-sm snap-center">
+                    <div class="flex flex-col items-center justify-center min-w-[280px] md:min-w-[200px] border-2 border-dashed border-gray-200 rounded-2xl bg-white/30 backdrop-blur-sm">
                         <button @click="showStageManager = true" class="text-gray-400 hover:text-indigo-500 text-sm font-bold flex flex-col items-center gap-2 transition-colors group">
                             <span class="p-3 rounded-full bg-gray-50 group-hover:bg-indigo-50 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>

@@ -28,9 +28,11 @@ class WorkflowStage extends Model
         'reminder_hours',
         'is_final',
         'notify_incharge',
+        'notify_client',
         'mentor_id',
         'color',
         'transition_rules',
+        'stage_personnel',
     ];
 
     protected $casts = [
@@ -41,6 +43,8 @@ class WorkflowStage extends Model
         'is_parallel' => 'boolean',
         'additional_approvers' => 'array',
         'transition_rules' => 'array',
+        'stage_personnel' => 'array',
+        'notify_client' => 'boolean',
     ];
 
     /**

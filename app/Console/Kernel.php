@@ -36,6 +36,7 @@ class Kernel extends ConsoleKernel
 
         // Attendance: Daily Processing (Mark Absent, Apply Policies)
         $schedule->command('attendance:process-daily')->dailyAt('01:00');
+        $schedule->command('attendance:auto-checkout-open-sessions')->everyMinute()->withoutOverlapping();
 
         // Workflow: Process Timeouts
         $schedule->command('app:process-workflow-timeouts')->hourly();

@@ -15,12 +15,19 @@ use App\Models\AppModule;
 use App\Models\BiometricDevice;
 use App\Models\WorkflowInstance;
 use App\Models\Department;
+use App\Models\Approval;
+use App\Models\BugTicket;
 use App\Models\LeaveRequest;
 use App\Models\JobPosting;
 use App\Models\JobApplication;
 use App\Models\Task;
+use App\Models\Team;
+use App\Models\Timesheet;
+use App\Models\WfhRequest;
+use App\Models\WorkAssignment;
 use App\Models\EmployeePersonalDetail;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -212,51 +219,425 @@ class DashboardController extends Controller
     public function manager(Request $request)
     {
         $user = auth()->user();
-        // 1. Resolve Team & Managed Employees
-        $managedEmployeesQuery = Employee::where('reporting_to', $user->id);
-        $directReportIds = $managedEmployeesQuery->pluck('id')->toArray();
-        
-        // Also include members of teams managed by this user
-        $managedTeamIds = $user->managedTeams->pluck('id');
-        $teamMemberUserIds = User::whereIn('team_id', $managedTeamIds)->pluck('id');
-        $teamEmployeeIds = Employee::whereIn('user_id', $teamMemberUserIds)->pluck('id')->toArray();
-        
-        // Unified list of all employees under this manager's span
-        $allStaffIds = array_unique(array_merge($directReportIds, $teamEmployeeIds));
-        $teamCount = count($allStaffIds);
+        $today = Carbon::today();
+        $last7Start = $today->copy()->subDays(6);
 
-        // 2. Sprint Completion & Task Calibration
-        // Refactor: Task assignees is a belongsToMany relationship, no assignee_id on project_tasks
-        $teamTasksQuery = Task::whereHas('assignees', fn($q) => $q->whereIn('employee_id', $allStaffIds));
-        
+        $managedTeamIds = $user->managedTeams()->pluck('id');
+        if ($managedTeamIds->isEmpty() && !empty($user->team_id)) {
+            $managedTeamIds = collect([(int) $user->team_id]);
+        }
+
+        $teamMemberUserIds = User::query()
+            ->whereIn('team_id', $managedTeamIds)
+            ->pluck('id');
+
+        $directReportIds = Employee::query()
+            ->where('reporting_to', $user->id)
+            ->pluck('id');
+
+        $teamEmployeeIds = Employee::query()
+            ->whereIn('user_id', $teamMemberUserIds)
+            ->pluck('id');
+
+        $managerEmployeeId = optional($user->getEmployeeProfile())->id;
+
+        $allStaffIds = $directReportIds
+            ->merge($teamEmployeeIds)
+            ->when($managerEmployeeId, fn ($ids) => $ids->push($managerEmployeeId))
+            ->filter()
+            ->unique()
+            ->values();
+
+        $allUserIds = $teamMemberUserIds
+            ->merge(Employee::query()->whereIn('id', $allStaffIds)->whereNotNull('user_id')->pluck('user_id'))
+            ->push($user->id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $teamCount = $allStaffIds->count();
+
+        $teamTasksQuery = Task::query();
+        if ($allStaffIds->isNotEmpty()) {
+            $teamTasksQuery->whereHas('assignees', fn ($q) => $q->whereIn('employee_id', $allStaffIds));
+        } else {
+            $teamTasksQuery->whereRaw('1 = 0');
+        }
+
+        // Project scope for manager dashboard: all projects touched either by task assignments
+        // or by explicit project-level allocations for manager's teams/members.
+        $taskProjectIds = (clone $teamTasksQuery)
+            ->whereNotNull('project_id')
+            ->distinct('project_id')
+            ->pluck('project_id');
+
+        $assignmentProjectIds = WorkAssignment::query()
+            ->whereNotNull('project_id')
+            ->where(function ($q) use ($allStaffIds, $allUserIds) {
+                if ($allStaffIds->isNotEmpty()) {
+                    $q->orWhere(function ($empQ) use ($allStaffIds) {
+                        $empQ->where('assignee_type', Employee::class)
+                            ->whereIn('assignee_id', $allStaffIds);
+                    });
+                }
+
+                if ($allUserIds->isNotEmpty()) {
+                    $q->orWhere(function ($userQ) use ($allUserIds) {
+                        $userQ->where('assignee_type', User::class)
+                            ->whereIn('assignee_id', $allUserIds);
+                    });
+                }
+            })
+            ->distinct('project_id')
+            ->pluck('project_id');
+
+        $managedProjectIds = $taskProjectIds
+            ->merge($assignmentProjectIds)
+            ->filter()
+            ->unique()
+            ->values();
+
+        $projectStatusesInactive = ['inactive', 'on hold', 'on_hold', 'paused', 'completed', 'closed', 'cancelled', 'archived'];
+        $taskStatusesInactive = ['completed', 'done', 'closed', 'cancelled', 'rejected', 'inactive', 'archived'];
+
+        $projectsBase = Project::query()->whereIn('id', $managedProjectIds);
+        $totalProjects = (int) (clone $projectsBase)->count();
+        $inactiveProjects = (int) (clone $projectsBase)
+            ->whereIn(DB::raw('LOWER(COALESCE(status, ""))'), $projectStatusesInactive)
+            ->count();
+        $activeProjects = max(0, $totalProjects - $inactiveProjects);
+
+        $projectTasksBase = Task::query()->whereIn('project_id', $managedProjectIds);
+        $tasksTotalAllProjects = (int) (clone $projectTasksBase)->count();
+        $tasksInactiveAllProjects = (int) (clone $projectTasksBase)
+            ->where(function ($q) use ($taskStatusesInactive) {
+                $q->whereIn(DB::raw('LOWER(COALESCE(status, ""))'), $taskStatusesInactive)
+                    ->orWhereHas('stage', function ($stageQ) {
+                        $stageQ->whereIn('type', ['done', 'completed', 'closed'])
+                            ->orWhereRaw('LOWER(COALESCE(name, "")) LIKE ?', ['%done%'])
+                            ->orWhereRaw('LOWER(COALESCE(name, "")) LIKE ?', ['%complete%'])
+                            ->orWhereRaw('LOWER(COALESCE(name, "")) LIKE ?', ['%closed%']);
+                    });
+            })
+            ->count();
+        $tasksActiveAllProjects = max(0, $tasksTotalAllProjects - $tasksInactiveAllProjects);
+
         $totalTeamTasks = (clone $teamTasksQuery)->count();
-        $completedTeamTasks = (clone $teamTasksQuery)->where('status', 'completed')->count();
-        $completionRate = $totalTeamTasks > 0 ? round(($completedTeamTasks / $totalTeamTasks) * 100) : 92;
+        $completedTeamTasks = (clone $teamTasksQuery)
+            ->where(function ($q) {
+                $q->where('status', 'completed')
+                    ->orWhereHas('stage', function ($stageQ) {
+                        $stageQ->whereIn('type', ['done', 'completed', 'closed'])
+                            ->orWhere('name', 'like', '%done%')
+                            ->orWhere('name', 'like', '%complete%')
+                            ->orWhere('name', 'like', '%closed%');
+                    });
+            })
+            ->count();
+
+        $offPlanTasks = (clone $teamTasksQuery)
+            ->where(function ($q) use ($today) {
+                $q->where(function ($dq) use ($today) {
+                    $dq->whereNotNull('due_date')
+                        ->whereDate('due_date', '<', $today->toDateString());
+                })->orWhereNotNull('blocked_by_task_id');
+            })
+            ->where(function ($q) {
+                $q->whereNull('status')
+                    ->orWhere('status', '!=', 'completed');
+            })
+            ->count();
+
+        $activeIncidents = (clone $teamTasksQuery)
+            ->whereIn('priority', ['critical', 'Critical', 'urgent', 'Urgent', 'high', 'High'])
+            ->where(function ($q) {
+                $q->whereNull('status')->orWhere('status', '!=', 'completed');
+            })
+            ->count();
+
+        $teamBugsQuery = BugTicket::query()
+            ->where('assignee_type', Employee::class)
+            ->whereIn('assignee_id', $allStaffIds);
+
+        $bugsTotalCount = (int) (clone $teamBugsQuery)->count();
+        $bugsOpenTotal = (int) (clone $teamBugsQuery)
+            ->whereNull('resolved_at')
+            ->count();
+        $bugsClosedToday = (int) (clone $teamBugsQuery)
+            ->whereDate('resolved_at', $today->toDateString())
+            ->count();
+        $bugsPendingTotal = (int) (clone $teamBugsQuery)
+            ->whereNull('resolved_at')
+            ->whereNull('started_at')
+            ->count();
+
+        $completionRate = $totalTeamTasks > 0 ? round(($completedTeamTasks / $totalTeamTasks) * 100) : 100;
+
+        $weeklyStart = $today->copy()->subWeeks(7)->startOfWeek(Carbon::MONDAY);
+        $weeklyRows = (clone $teamTasksQuery)
+            ->whereBetween('updated_at', [$weeklyStart->toDateString(), $today->toDateString()])
+            ->selectRaw('YEARWEEK(updated_at, 1) as week_key, COUNT(*) as total_tasks, SUM(CASE WHEN status = "completed" THEN 1 ELSE 0 END) as done_tasks')
+            ->groupBy('week_key')
+            ->get()
+            ->keyBy('week_key');
+
+        $weeklyEngagement = collect(range(0, 7))
+            ->map(function (int $offset) use ($weeklyStart, $weeklyRows) {
+                $weekStart = $weeklyStart->copy()->addWeeks($offset);
+                $weekKey = (int) ($weekStart->isoWeekYear . str_pad((string) $weekStart->isoWeek, 2, '0', STR_PAD_LEFT));
+                $row = $weeklyRows->get($weekKey);
+                $total = (int) ($row->total_tasks ?? 0);
+                $done = (int) ($row->done_tasks ?? 0);
+                return $total > 0 ? (int) round(($done / $total) * 100) : 0;
+            })
+            ->values();
+
+        $velocity = (int) round($weeklyEngagement->avg() ?? 0);
+
+        $teamAttendance = AttendanceLog::query()
+            ->whereDate('date', $today->toDateString())
+            ->whereIn('employee_id', $allStaffIds)
+            ->selectRaw('status, count(*) as count')
+            ->groupBy('status')
+            ->get();
+
+        $presentToday = (int) AttendanceLog::query()
+            ->whereDate('date', $today->toDateString())
+            ->whereIn('employee_id', $allStaffIds)
+            ->whereIn('status', ['Present', 'present'])
+            ->count();
+
+        $timesheetFilledToday = (int) Timesheet::query()
+            ->whereDate('date', $today->toDateString())
+            ->whereIn('employee_id', $allStaffIds)
+            ->distinct('employee_id')
+            ->count('employee_id');
+
+        $leaveAppliedToday = (int) LeaveRequest::query()
+            ->whereDate('created_at', $today->toDateString())
+            ->whereIn('employee_id', $allStaffIds)
+            ->count();
+
+        $wfhAppliedToday = (int) WfhRequest::query()
+            ->whereDate('created_at', $today->toDateString())
+            ->whereIn('employee_id', $allStaffIds)
+            ->count();
+
+        $hasApprovalsTable = Schema::hasTable('approvals');
+        $hasWorkflowInstancesTable = Schema::hasTable('workflow_instances');
+
+        if ($hasApprovalsTable) {
+            $approvalsRaisedToday = (int) Approval::query()
+                ->whereDate('created_at', $today->toDateString())
+                ->whereIn('requester_id', $allUserIds)
+                ->count();
+
+            $approvalsPending = (int) Approval::query()
+                ->where('status', 'pending')
+                ->whereIn('requester_id', $allUserIds)
+                ->count();
+
+            $approvalsChecked = (int) Approval::query()
+                ->whereIn('status', ['approved', 'rejected'])
+                ->whereIn('requester_id', $allUserIds)
+                ->count();
+        } elseif ($hasWorkflowInstancesTable) {
+            $approvalBase = WorkflowInstance::query()->whereIn('initiator_id', $allUserIds);
+
+            $approvalsRaisedToday = (int) (clone $approvalBase)
+                ->whereDate('created_at', $today->toDateString())
+                ->count();
+
+            $approvalsPending = (int) (clone $approvalBase)
+                ->where('status', 'pending')
+                ->count();
+
+            $approvalsChecked = (int) (clone $approvalBase)
+                ->whereIn('status', ['approved', 'rejected', 'cancelled'])
+                ->count();
+        } else {
+            $approvalsRaisedToday = 0;
+            $approvalsPending = 0;
+            $approvalsChecked = 0;
+        }
+
+        $approvalsUnchecked = $approvalsPending;
+
+        $totalTeams = (int) Team::query()->whereIn('id', $managedTeamIds)->count();
+
+        $presencePct = $teamCount > 0 ? round(($presentToday / $teamCount) * 100, 1) : 100.0;
+        $offPlanPct = $totalTeamTasks > 0 ? round(($offPlanTasks / $totalTeamTasks) * 100, 1) : 0.0;
+
+        $trackStatus = 'On Track';
+        if ($completionRate < 65 || $presencePct < 70 || $offPlanPct > 35) {
+            $trackStatus = 'Off Track';
+        } elseif ($completionRate < 80 || $presencePct < 85 || $offPlanPct > 20) {
+            $trackStatus = 'At Risk';
+        }
+
+        $presentByDay = AttendanceLog::query()
+            ->whereIn('employee_id', $allStaffIds)
+            ->whereBetween('date', [$last7Start->toDateString(), $today->toDateString()])
+            ->whereIn('status', ['Present', 'present'])
+            ->selectRaw('DATE(date) as day_key, COUNT(DISTINCT employee_id) as total')
+            ->groupBy('day_key')
+            ->pluck('total', 'day_key');
+
+        $timesheetByDay = Timesheet::query()
+            ->whereIn('employee_id', $allStaffIds)
+            ->whereBetween('date', [$last7Start->toDateString(), $today->toDateString()])
+            ->selectRaw('DATE(date) as day_key, COUNT(DISTINCT employee_id) as total')
+            ->groupBy('day_key')
+            ->pluck('total', 'day_key');
+
+        if ($hasApprovalsTable) {
+            $approvalsByDay = Approval::query()
+                ->whereIn('requester_id', $allUserIds)
+                ->whereBetween('created_at', [$last7Start->toDateString(), $today->toDateString()])
+                ->selectRaw('DATE(created_at) as day_key, COUNT(*) as total')
+                ->groupBy('day_key')
+                ->pluck('total', 'day_key');
+        } elseif ($hasWorkflowInstancesTable) {
+            $approvalsByDay = WorkflowInstance::query()
+                ->whereIn('initiator_id', $allUserIds)
+                ->whereBetween('created_at', [$last7Start->toDateString(), $today->toDateString()])
+                ->selectRaw('DATE(created_at) as day_key, COUNT(*) as total')
+                ->groupBy('day_key')
+                ->pluck('total', 'day_key');
+        } else {
+            $approvalsByDay = collect();
+        }
+
+        $completedTasksByDay = (clone $teamTasksQuery)
+            ->where('status', 'completed')
+            ->whereBetween('updated_at', [$last7Start->toDateString(), $today->toDateString()])
+            ->selectRaw('DATE(updated_at) as day_key, COUNT(*) as total')
+            ->groupBy('day_key')
+            ->pluck('total', 'day_key');
+
+        $leaveByDay = LeaveRequest::query()
+            ->whereIn('employee_id', $allStaffIds)
+            ->whereBetween('created_at', [$last7Start->toDateString(), $today->toDateString()])
+            ->selectRaw('DATE(created_at) as day_key, COUNT(*) as total')
+            ->groupBy('day_key')
+            ->pluck('total', 'day_key');
+
+        $wfhByDay = WfhRequest::query()
+            ->whereIn('employee_id', $allStaffIds)
+            ->whereBetween('created_at', [$last7Start->toDateString(), $today->toDateString()])
+            ->selectRaw('DATE(created_at) as day_key, COUNT(*) as total')
+            ->groupBy('day_key')
+            ->pluck('total', 'day_key');
+
+        $dailyOps = collect(range(0, 6))
+            ->map(function (int $offset) use ($last7Start, $presentByDay, $timesheetByDay, $completedTasksByDay, $approvalsByDay, $leaveByDay, $wfhByDay) {
+                $day = $last7Start->copy()->addDays($offset);
+                $key = $day->toDateString();
+
+                return [
+                    'date' => $key,
+                    'label' => $day->format('D'),
+                    'present' => (int) ($presentByDay[$key] ?? 0),
+                    'timesheet_filled' => (int) ($timesheetByDay[$key] ?? 0),
+                    'tasks_completed' => (int) ($completedTasksByDay[$key] ?? 0),
+                    'approvals_raised' => (int) ($approvalsByDay[$key] ?? 0),
+                    'leave_applied' => (int) ($leaveByDay[$key] ?? 0),
+                    'wfh_applied' => (int) ($wfhByDay[$key] ?? 0),
+                ];
+            })
+            ->values();
+
+        $upcomingDeadlines = (clone $teamTasksQuery)
+            ->whereNotNull('due_date')
+            ->whereDate('due_date', '>=', $today->toDateString())
+            ->orderBy('due_date')
+            ->take(3)
+            ->get()
+            ->map(function ($task) {
+                return [
+                    'title' => $task->title,
+                    'date' => optional($task->due_date)->diffForHumans(),
+                    'priority' => $task->priority,
+                ];
+            });
 
         return Inertia::render('Dashboard/Manager', [
             'teamCount' => $teamCount,
             'team_performance' => [
-                'velocity' => 84,
+                'velocity' => $velocity,
                 'sprint_completion' => $completionRate,
-                'active_incidents' => (clone $teamTasksQuery)->where('priority', 'critical')->count(),
-                'weekly_engagement' => [70, 75, 82, 60, 95, 88, 72]
+                'active_incidents' => $activeIncidents,
+                'weekly_engagement' => $weeklyEngagement,
             ],
-            'teamAttendance' => AttendanceLog::where('date', today())
-                ->whereIn('employee_id', $allStaffIds)
-                ->selectRaw('status, count(*) as count')
-                ->groupBy('status')
-                ->get(),
-            'upcomingDeadlines' => (clone $teamTasksQuery)
-                ->where('due_date', '>=', now())
-                ->orderBy('due_date')
-                ->take(3)
-                ->get()->map(function($task) {
-                    return [
-                        'title' => $task->title,
-                        'date' => $task->due_date->diffForHumans(),
-                        'priority' => $task->priority
-                    ];
-                })
+            'teamAttendance' => $teamAttendance,
+            'upcomingDeadlines' => $upcomingDeadlines,
+            'ops_launchers' => [
+                'employee360_url' => '/hr/employee-360',
+                'devops_global_url' => '/devops/dashboard',
+                'ops360_url' => '/employee/work/ops360',
+                'team_board_url' => '/employee/work',
+                'attendance_url' => '/attendance',
+            ],
+            'ops_cards' => [
+                'employee360' => [
+                    'attendance_score' => (int) round($presencePct),
+                    'productivity_score' => (int) round($completionRate),
+                    'compliance_flags' => collect([
+                        $offPlanTasks > 0 ? "{$offPlanTasks} task(s) not working as planned" : null,
+                        $approvalsPending > 0 ? "{$approvalsPending} approval(s) pending" : null,
+                        $timesheetFilledToday < $teamCount ? 'Timesheet missing for part of team today' : null,
+                    ])->filter()->values()->all(),
+                ],
+                'squad_ops' => [
+                    'pr_throughput' => round($velocity / 10, 2),
+                    'review_lag_hours' => max(2, (int) round((100 - $velocity) / 4)),
+                    'deployment_risk' => $trackStatus === 'Off Track' ? 'High' : ($trackStatus === 'At Risk' ? 'Medium' : 'Low'),
+                    'open_prs' => max(0, $activeIncidents * 2),
+                    'repos_linked' => max(1, (int) ceil($teamCount / 4)),
+                ],
+            ],
+            'ops_overview' => [
+                'total_projects' => $totalProjects,
+                'active_projects' => $activeProjects,
+                'inactive_projects' => $inactiveProjects,
+                'total_teams' => $totalTeams,
+                'total_members' => $teamCount,
+                'approvals_raised_today' => $approvalsRaisedToday,
+                'approvals_pending' => $approvalsPending,
+                'approvals_checked' => $approvalsChecked,
+                'approvals_unchecked' => $approvalsUnchecked,
+                'timesheet_filled_today' => $timesheetFilledToday,
+                'tasks_completed' => $completedTeamTasks,
+                'tasks_total' => $totalTeamTasks,
+                'tasks_total_all_projects' => $tasksTotalAllProjects,
+                'tasks_active_all_projects' => $tasksActiveAllProjects,
+                'tasks_inactive_all_projects' => $tasksInactiveAllProjects,
+                'not_working_as_planned' => $offPlanTasks,
+                'present_today' => $presentToday,
+                'leave_applied_today' => $leaveAppliedToday,
+                'wfh_applied_today' => $wfhAppliedToday,
+                'bugs_total_count' => $bugsTotalCount,
+                'bugs_open_total' => $bugsOpenTotal,
+                'bugs_closed_today' => $bugsClosedToday,
+                'bugs_pending_total' => $bugsPendingTotal,
+                'track_status' => $trackStatus,
+                'completion_pct' => round($completionRate, 1),
+                'presence_pct' => $presencePct,
+                'offtrack_pct' => $offPlanPct,
+            ],
+            'ops_graphs' => [
+                'daily_ops' => $dailyOps,
+            ],
+            'team_insights' => [
+                'employee360_trend' => $weeklyEngagement->values()->map(fn ($value, $index) => [
+                    'label' => 'W' . ($index + 1),
+                    'hours' => (int) $value,
+                ]),
+                'devops_pulse_trend' => $weeklyEngagement->values()->map(fn ($value, $index) => [
+                    'label' => 'W' . ($index + 1),
+                    'value' => (int) round($value / 12),
+                ]),
+            ],
         ]);
     }
 

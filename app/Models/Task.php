@@ -20,6 +20,9 @@ class Task extends Model
             if ($task->isDirty('is_locked') && $task->is_locked && is_null($task->baseline_start_date)) {
                 $task->baseline_start_date = $task->start_date;
                 $task->baseline_due_date = $task->due_date;
+                // If total_efforts is not yet set (drift recording hasn't happened), 
+                // use estimated_hours as the baseline point.
+                $task->baseline_efforts = $task->total_efforts > 0 ? $task->total_efforts : $task->estimated_hours;
             }
         });
     }
@@ -53,7 +56,8 @@ class Task extends Model
         'due_date',
         'scrum_points',
         'is_locked',
-        'total_efforts'
+        'total_efforts',
+        'baseline_efforts'
     ];
 
     public function sprint()
@@ -77,6 +81,7 @@ class Task extends Model
         'baseline_due_date' => 'date',
         'is_locked' => 'boolean',
         'total_efforts' => 'decimal:2',
+        'baseline_efforts' => 'decimal:2',
     ];
 
     public function project()
@@ -160,5 +165,10 @@ class Task extends Model
     public function pullRequests()
     {
         return $this->hasMany(TaskPullRequest::class, 'task_id');
+    }
+
+    public function extensions()
+    {
+        return $this->hasMany(ProjectExtension::class, 'task_id');
     }
 }
