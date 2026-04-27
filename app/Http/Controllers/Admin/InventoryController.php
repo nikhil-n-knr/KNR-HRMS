@@ -80,6 +80,79 @@ class InventoryController extends Controller
          return Inertia::render('Admin/Inventory/Create');
     }
 
+    public function store(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'sku' => 'nullable|string|max:100|unique:inventory_items,sku',
+            'category' => 'nullable|string|max:100',
+            'min_stock_level' => 'required|numeric|min:0',
+            'current_stock' => 'required|numeric|min:0',
+            'unit_cost' => 'required|numeric|min:0',
+            'unit' => 'required|string|max:50'
+        ]);
+
+        $item = InventoryItem::create($validated);
+
+        \App\Services\Infrastructure\LoggerService::info("Inventory item created", [
+            'item_id' => $item->id,
+            'name' => $item->name,
+            'action_by' => auth()->id()
+        ]);
+
+        return to_route('admin.inventory.dashboard', ['view' => 'list'])
+            ->with('success', 'Resource Registered Successfully')
+            ->setStatusCode(303);
+    }
+
+    public function show(InventoryItem $item)
+    {
+        return Inertia::render('Admin/Inventory/Show', [
+            'item' => $item->load('transactions.user')
+        ]);
+    }
+
+    public function update(Request $request, InventoryItem $item)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+            'sku' => 'nullable|string|max:100|unique:inventory_items,sku,' . $item->id,
+            'category' => 'nullable|string|max:100',
+            'min_stock_level' => 'required|numeric|min:0',
+            'current_stock' => 'required|numeric|min:0',
+            'unit_cost' => 'required|numeric|min:0',
+            'unit' => 'required|string|max:50'
+        ]);
+
+        $item->update($validated);
+
+        \App\Services\Infrastructure\LoggerService::info("Inventory item updated", [
+            'item_id' => $item->id,
+            'changes' => $item->getChanges(),
+            'action_by' => auth()->id()
+        ]);
+
+        return back()->with('success', 'Resource Updated Successfully')
+            ->setStatusCode(303);
+    }
+
+    public function destroy(InventoryItem $item)
+    {
+        $itemId = $item->id;
+        $itemName = $item->name;
+        
+        $item->delete();
+
+        \App\Services\Infrastructure\LoggerService::info("Inventory item deleted", [
+            'item_id' => $itemId,
+            'name' => $itemName,
+            'action_by' => auth()->id()
+        ]);
+
+        return back()->with('success', 'Resource purged from registry')
+            ->setStatusCode(303);
+    }
+
     public function addStock(Request $request, InventoryItem $item)
     {
         $request->validate([
@@ -88,6 +161,12 @@ class InventoryController extends Controller
         ]);
 
         $this->service->addStock($item->id, $request->quantity, $request->unit_cost);
+
+        \App\Services\Infrastructure\LoggerService::info("Inventory stock added", [
+            'item_id' => $item->id,
+            'quantity' => $request->quantity,
+            'action_by' => auth()->id()
+        ]);
 
         return back()->with('success', 'Stock Added Successfully');
     }
@@ -101,8 +180,21 @@ class InventoryController extends Controller
 
         try {
             $this->service->consume($item->id, $request->quantity, auth()->id(), $request->reason);
+            
+            \App\Services\Infrastructure\LoggerService::info("Inventory consumed", [
+                'item_id' => $item->id,
+                'quantity' => $request->quantity,
+                'action_by' => auth()->id()
+            ]);
+
             return back()->with('success', 'Consumption Logged');
         } catch (\Exception $e) {
+            \App\Services\Infrastructure\LoggerService::error("Inventory consumption failed", [
+                'item_id' => $item->id,
+                'quantity' => $request->quantity,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
             return back()->with('error', $e->getMessage());
         }
     }
@@ -118,11 +210,19 @@ class InventoryController extends Controller
             'barcode' => 'required|string'
         ]);
         
-        // Check Asset first
+        // Check Inventory first, then Asset
+        $item = InventoryItem::where('sku', $request->barcode)->first();
+        if ($item) {
+            return back()->with([
+                'scan_success' => true,
+                'message' => "Verified Hub Unit: {$item->name}",
+                'item' => $item
+            ]);
+        }
+
         $asset = \App\Models\Asset::where('serial_number', $request->barcode)->first();
 
         if ($asset) {
-             // Mock "Audit" action - just verifying existence for now
             return back()->with([
                 'scan_success' => true,
                 'message' => "Verified Asset: {$asset->name}",
@@ -132,7 +232,7 @@ class InventoryController extends Controller
         
         return back()->with([
             'scan_success' => false,
-            'message' => 'Item not found',
+            'message' => 'Resource not found in registry',
         ]);
     }
 }

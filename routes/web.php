@@ -374,6 +374,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/my-profile/{uuid}/update-avatar', [EmployeeProfileController::class, 'updateAvatar'])->name('employee.profile.update-avatar');
     Route::get('/employee/avatar/{uuid}', [EmployeeProfileController::class, 'streamAvatar'])->name('employee.avatar');
     Route::get('/me', [EmployeeProfileController::class, 'hub'])->name('employee.hub');
+    Route::get('/employee/rewards/{uuid?}', [\App\Http\Controllers\Employee\RewardsController::class, 'index'])->name('employee.rewards.index');
     Route::get('/employee/work', [App\Http\Controllers\Employee\Work\EmployeeWorkController::class, 'index'])->name('employee.work.index');
     Route::prefix('/employee/work')->name('employee.work.')->group(function () {
         Route::post('/defaults', [App\Http\Controllers\Employee\Work\EmployeeWorkController::class, 'saveDefaults'])->name('defaults.save');
@@ -1366,6 +1367,12 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
         
 
 
+        // Maintenance Hub (Gap A)
+        Route::prefix('assets/maintenance')->name('assets.maintenance.')->group(function () {
+            Route::get('/', [App\Http\Controllers\Admin\MaintenanceBoardController::class, 'index'])->name('index');
+            Route::post('/{id}/status', [App\Http\Controllers\Admin\MaintenanceBoardController::class, 'updateStatus'])->name('update-status');
+        });
+
         // --- Assets Management (Smart Group) ---
         Route::prefix('assets')->name('assets.')->group(function () {
              // 1. Command Center (New Hub)
@@ -1417,6 +1424,10 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
              Route::put('/{asset}', [App\Http\Controllers\Admin\AssetController::class, 'update'])->name('update');
              Route::delete('/{asset}', [App\Http\Controllers\Admin\AssetController::class, 'destroy'])->name('destroy');
              
+             // Infrastructure & Classification
+             Route::resource('location-nodes', App\Http\Controllers\Admin\LocationNodeController::class);
+             Route::resource('categories', App\Http\Controllers\Admin\AssetCategoryController::class)->except(['index', 'show']);
+
              // Bulk Actions
              Route::get('/actions/bulk-assign', [App\Http\Controllers\Admin\AssetController::class, 'bulkAssign'])->name('bulk-assign');
              Route::post('/actions/bulk-assign', [App\Http\Controllers\Admin\AssetController::class, 'processBulkAssign'])->name('bulk-assign.process');
@@ -1427,11 +1438,6 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
             return redirect()->route('admin.assets.dashboard', ['view' => 'requests']);
         });
 
-        // Maintenance Hub (Gap A)
-        Route::prefix('assets/maintenance')->name('assets.maintenance.')->group(function () {
-            Route::get('/', [App\Http\Controllers\Admin\MaintenanceBoardController::class, 'index'])->name('index');
-            Route::post('/{id}/status', [App\Http\Controllers\Admin\MaintenanceBoardController::class, 'updateStatus'])->name('update-status');
-        });
 
         // Audit Mode (Gap B + Phase 4 PDF)
         Route::prefix('assets/audit')->name('assets.audit.')->group(function () {

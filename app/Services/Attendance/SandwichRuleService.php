@@ -3,11 +3,18 @@
 namespace App\Services\Attendance;
 
 use App\Models\AttendanceLog;
-use App\Models\Holiday; // Assuming Holiday model exists
+use App\Models\Employee;
 use Carbon\Carbon;
 
 class SandwichRuleService
 {
+    protected WorkingDayResolverService $workingDayResolver;
+
+    public function __construct(WorkingDayResolverService $workingDayResolver)
+    {
+        $this->workingDayResolver = $workingDayResolver;
+    }
+
     /**
      * Detect Sandwich Rule Violations.
      * Rule: If Absent on Friday (or day before holiday) AND Absent on Monday (or day after holiday),
@@ -19,6 +26,7 @@ class SandwichRuleService
     {
         $start = Carbon::parse($startDate);
         $end = Carbon::parse($endDate);
+        $employee = Employee::find($employeeId);
         
         $deductions = [];
 
@@ -33,11 +41,11 @@ class SandwichRuleService
         
         for ($date = $start->copy(); $date <= $end; $date->addDay()) {
             // Check if today is a "Off" day (Weekend or Holiday)
-            if ($this->isOffDay($date)) {
+            if ($this->isOffDay($date, $employee)) {
                 // Look backwards for the last "Working Day"
-                $prevWorkDay = $this->getPreviousWorkingDay($date);
+                $prevWorkDay = $this->getPreviousWorkingDay($date, $employee);
                 // Look forwards for the next "Working Day"
-                $nextWorkDay = $this->getNextWorkingDay($date);
+                $nextWorkDay = $this->getNextWorkingDay($date, $employee);
 
                 if ($prevWorkDay && $nextWorkDay) {
                     $prevLog = $logs->get($prevWorkDay->toDateString());
@@ -59,25 +67,24 @@ class SandwichRuleService
         return $deductions;
     }
 
-    protected function isOffDay(Carbon $date)
+    protected function isOffDay(Carbon $date, ?Employee $employee = null)
     {
-        return $date->isWeekend(); 
-        // In real app, check Holiday::where('date', $date)->exists();
+        return $this->workingDayResolver->isNonWorkingDay($date->copy(), $employee);
     }
 
-    protected function getPreviousWorkingDay(Carbon $date)
+    protected function getPreviousWorkingDay(Carbon $date, ?Employee $employee = null)
     {
         $d = $date->copy()->subDay();
-        while ($this->isOffDay($d) && $startDiff = $d->diffInDays($date) < 10) { // Limit lookback
+        while ($this->isOffDay($d, $employee) && $startDiff = $d->diffInDays($date) < 10) { // Limit lookback
             $d->subDay();
         }
         return $d;
     }
 
-    protected function getNextWorkingDay(Carbon $date)
+    protected function getNextWorkingDay(Carbon $date, ?Employee $employee = null)
     {
         $d = $date->copy()->addDay();
-        while ($this->isOffDay($d) && $startDiff = $d->diffInDays($date) < 10) {
+        while ($this->isOffDay($d, $employee) && $startDiff = $d->diffInDays($date) < 10) {
             $d->addDay();
         }
         return $d;

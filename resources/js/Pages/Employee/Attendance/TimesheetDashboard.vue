@@ -307,14 +307,14 @@ const totalHours = computed(() => {
             </template>
 
                 <template #rowActions="{ item }">
-                <div class="flex space-x-2" v-if="['Draft', 'Rejected'].includes(item.status)">
-                    <button @click="submitForApproval(item)" class="text-emerald-600 hover:text-emerald-900 border border-emerald-200 bg-emerald-50 px-2 py-0.5 rounded text-xs flex items-center" title="Submit for Approval">
+                <div class="flex space-x-2" v-if="item.status !== 'Approved'">
+                    <button v-if="['Draft', 'Rejected'].includes(item.status)" @click="submitForApproval(item)" class="text-emerald-600 hover:text-emerald-900 border border-emerald-200 bg-emerald-50 px-2 py-0.5 rounded text-xs flex items-center" title="Submit for Approval">
                         Submit
                     </button>
-                        <button @click="openEditModal(item)" class="text-indigo-600 hover:text-indigo-900" title="Edit">
+                        <button v-if="['Draft', 'Rejected', 'Submitted'].includes(item.status)" @click="openEditModal(item)" class="text-indigo-600 hover:text-indigo-900" title="Edit">
                         <PencilIcon class="w-4 h-4" />
                     </button>
-                    <button @click="deleteEntry(item)" class="text-red-600 hover:text-red-900" title="Delete">
+                    <button v-if="item.status === 'Draft'" @click="deleteEntry(item)" class="text-red-600 hover:text-red-900" title="Delete">
                         <TrashIcon class="w-4 h-4" />
                     </button>
                 </div>

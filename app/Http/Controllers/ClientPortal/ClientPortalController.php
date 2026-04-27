@@ -26,6 +26,17 @@ use Inertia\Inertia;
 
 class ClientPortalController extends Controller
 {
+    private function canAccessProject($user, int $projectId): bool
+    {
+        return Project::query()
+            ->whereKey($projectId)
+            ->where(function ($q) use ($user) {
+                $q->where('client_id', $user->client_id)
+                    ->orWhereIn('id', $user->projects()->select('projects.id'));
+            })
+            ->exists();
+    }
+
     public function dashboard()
     {
         $user = Auth::guard('client')->user();
@@ -164,21 +175,50 @@ class ClientPortalController extends Controller
     public function createTicket()
     {
         $user = Auth::guard('client')->user();
-        $projects = $user->projects()->with('modules')->get();
+        $projects = Project::where('client_id', $user->client_id)->with('modules')->get();
 
         return Inertia::render('ClientPortal/TicketCreator', [
             'projects' => $projects
         ]);
     }
 
+    /**
+     * Search modules for a project (used by ticket wizard multi-select).
+     * Returns paginated results so it can handle thousands of modules.
+     */
+    public function getProjectModules(Request $request, Project $project)
+    {
+        $user = Auth::guard('client')->user();
+
+        // Only allow querying projects the client belongs to
+        if (!$this->canAccessProject($user, $project->id)) {
+            abort(403, 'Unauthorized');
+        }
+
+        $search  = $request->input('search', '');
+        $perPage = min((int) $request->input('per_page', 50), 200);
+
+        $query = ProjectModule::where('project_id', $project->id)
+            ->select('id', 'name', 'project_id');
+
+        if ($search !== '') {
+            $query->where('name', 'like', '%' . $search . '%');
+        }
+
+        $results = $query->orderBy('name')->paginate($perPage);
+
+        return response()->json($results);
+    }
+
     public function storeTicket(Request $request)
     {
         $request->validate([
-            'project_id' => 'required|exists:projects,id',
-            'module_id' => 'nullable|exists:project_modules,id',
-            'subject' => 'required|string|max:255',
+            'project_id'  => 'required|exists:projects,id',
+            'module_ids'  => 'nullable|array',
+            'module_ids.*'=> 'exists:project_modules,id',
+            'subject'     => 'required|string|max:255',
             'description' => 'required|string',
-            'severity' => 'required|in:critical,high,medium,low',
+            'severity'    => 'required|in:critical,high,medium,low',
             'attachments' => 'nullable|array',
             'environment' => 'nullable|array'
         ]);
@@ -186,8 +226,18 @@ class ClientPortalController extends Controller
         $user = Auth::guard('client')->user();
 
         // Prevent unauthorized project submission
-        if (!$user->projects->contains($request->project_id)) {
+        if (!$this->canAccessProject($user, (int) $request->project_id)) {
             abort(403, 'Unauthorized');
+        }
+
+        if (!empty($request->module_ids)) {
+            $validModuleCount = ProjectModule::where('project_id', $request->project_id)
+                ->whereIn('id', $request->module_ids)
+                ->count();
+
+            if ($validModuleCount !== count($request->module_ids)) {
+                abort(422, 'One or more selected modules are invalid for this project.');
+            }
         }
 
         return DB::transaction(function() use ($request, $user) {
@@ -196,9 +246,12 @@ class ClientPortalController extends Controller
                 $q->where('name', 'Bug Tracking');
             })->orderBy('stage_order')->first();
 
+            // Use first selected module as the primary module_id for backward-compat
+            $primaryModuleId = !empty($request->module_ids) ? $request->module_ids[0] : null;
+
             $bug = BugTicket::create([
                 'project_id' => $request->project_id,
-                'module_id' => $request->module_id,
+                'module_id'  => $primaryModuleId,
                 'subject' => $request->subject,
                 'description' => $request->description,
                 'severity' => $request->severity,
@@ -209,6 +262,11 @@ class ClientPortalController extends Controller
                 'is_client_visible' => true,
                 'environment_metadata' => $request->environment
             ]);
+
+            // Sync selected modules to pivot table
+            if (!empty($request->module_ids)) {
+                $bug->modules()->sync($request->module_ids);
+            }
 
             // Attach Media
             if ($request->has('attachments')) {

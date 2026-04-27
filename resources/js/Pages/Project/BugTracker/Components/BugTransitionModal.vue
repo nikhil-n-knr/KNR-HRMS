@@ -21,14 +21,24 @@
                          </div>
                     </div>
 
-                    <!-- Assignees -->
+            <!-- Assignees -->
                     <div>
-                        <InputLabel value="Assignees (Optional)" class="text-xs font-black uppercase tracking-widest text-slate-500 mb-2" />
-                        <div class="border border-slate-200 rounded-2xl p-4 bg-slate-50">
+                        <div class="flex justify-between items-end mb-2">
+                            <InputLabel value="Assignees (Required or Optional depending on stage)" class="text-xs font-black uppercase tracking-widest text-slate-500 mb-0" />
+                            <label class="flex items-center gap-2 cursor-pointer group">
+                                <input type="checkbox" v-model="showAllUsers" class="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 transition-colors">
+                                <span class="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-600 transition-colors">Show All Employees</span>
+                            </label>
+                        </div>
+                        <div class="border border-slate-200 rounded-2xl p-4 bg-slate-50 relative">
                             <select multiple v-model="form.assignee_ids" class="block w-full border-gray-300 rounded-xl shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm h-32">
-                                <option v-for="(name, id) in users" :key="id" :value="id">{{ name }}</option>
+                                <option v-for="(name, id) in stageUsers" :key="id" :value="id">{{ name }}</option>
                             </select>
-                            <p class="text-sm text-slate-400 mt-2 font-medium">Hold Ctrl (Windows) or Cmd (Mac) to select multiple users.</p>
+                            <p class="text-sm text-slate-400 mt-2 font-medium">Select who will be responsible for this ticket in the new stage. Hold Ctrl/Cmd to pick multiple.</p>
+                            
+                            <div v-if="!showAllUsers && Object.keys(stageUsers).length < Object.keys(users || {}).length" class="absolute bottom-4 right-4 bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded-md">
+                                Filtered to Stage Personnel
+                            </div>
                         </div>
                     </div>
 
@@ -59,7 +69,7 @@
 
 <script setup>
 import { useForm } from '@inertiajs/vue3';
-import { watch } from 'vue';
+import { watch, computed, ref } from 'vue';
 import Modal from '@/Components/Modal.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 
@@ -82,17 +92,59 @@ const handleFileUpload = (e) => {
     form.attachments = Array.from(e.target.files);
 };
 
-// Pre-fill assignees if they already exist on the bug
+const showAllUsers = ref(false);
+
+// Filter users dynamically based on configured stage personnel
+const stageUsers = computed(() => {
+    let allUsers = props.users || {};
+    
+    if (showAllUsers.value) {
+        return allUsers;
+    }
+    
+    if (props.targetStage?.stage_personnel && props.targetStage.stage_personnel.length > 0) {
+        let personnelIds = props.targetStage.stage_personnel
+            .filter(p => p.type === 'user')
+            .map(p => String(p.id));
+            
+        if (personnelIds.length > 0) {
+            let filtered = {};
+            for (const id of personnelIds) {
+                if (allUsers[id]) filtered[id] = allUsers[id];
+            }
+            return Object.keys(filtered).length > 0 ? filtered : allUsers;
+        }
+    }
+    
+    return allUsers; 
+});
+
+// Pre-fill assignees efficiently
 watch(() => props.show, (isVisible) => {
     if (isVisible && props.bug) {
         form.reset();
-        // If we have an assignees relation, use it. Otherwise fallback to the old assignee_id.
-        if (props.bug.assignees && props.bug.assignees.length > 0) {
-            form.assignee_ids = props.bug.assignees.map(a => String(a.assignee_id));
-        } else if (props.bug.assignee_id) {
-            form.assignee_ids = [String(props.bug.assignee_id)];
+        showAllUsers.value = false; // Reset toggle when opened
+        
+        let targetPersonnelIds = [];
+        if (props.targetStage?.stage_personnel && props.targetStage.stage_personnel.length > 0) {
+             targetPersonnelIds = props.targetStage.stage_personnel
+                .filter(p => p.type === 'user')
+                .map(p => String(p.id));
+        }
+
+        if (targetPersonnelIds.length > 0) {
+             // If personnel are mapped to the stage, Auto-assign ALL of them so the user doesn't have to manually click
+             form.assignee_ids = targetPersonnelIds;
+             
         } else {
-            form.assignee_ids = [];
+            // No personnel configured: standard carry over of existing assignees
+            if (props.bug.assignees && props.bug.assignees.length > 0) {
+                form.assignee_ids = props.bug.assignees.map(a => String(a.assignee_id));
+            } else if (props.bug.assignee_id) {
+                form.assignee_ids = [String(props.bug.assignee_id)];
+            } else {
+                form.assignee_ids = [];
+            }
         }
     }
 });

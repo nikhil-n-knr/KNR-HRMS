@@ -82,6 +82,7 @@ class NotificationController extends Controller
             case 'task_moved': return 'Task Update';
             case 'plan_overwritten': return 'Locked Plan Modified';
             case 'bug_stage_changed': return 'Bug Stage Updated';
+            case 'bug_assigned': return 'Bug Assigned';
             case 'task_assigned': return 'New Assignment';
             case 'sprint_status': return 'Sprint Update';
             case 'interview_scheduled': return 'Interview Scheduled';
@@ -120,6 +121,11 @@ class NotificationController extends Controller
                 $from = $data['old_stage'] ?? 'Unknown';
                 $to = $data['new_stage'] ?? 'Unknown';
                 return "{$bug}{$subject} moved from {$from} to {$to}" . ($projectName ? " in {$projectName}." : '.');
+
+            case 'bug_assigned':
+                $bug = !empty($data['bug_id']) ? ('Bug #' . $data['bug_id']) : 'Bug';
+                $subject = !empty($data['subject']) ? (' - ' . $data['subject']) : '';
+                return "{$bug}{$subject} has been assigned" . ($projectName ? " in {$projectName}." : '.');
         }
 
         return 'You have a new update.';

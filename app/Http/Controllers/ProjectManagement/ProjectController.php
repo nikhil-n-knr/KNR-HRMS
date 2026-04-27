@@ -76,7 +76,8 @@ class ProjectController extends Controller
                 'active' => Project::visibleTo($request->user())->where('status', '!=', 'archived')->count(),
                 'archived' => Project::visibleTo($request->user())->where('status', 'archived')->count(),
             ],
-            'filters' => $request->only(['search', 'view'])
+            'filters' => $request->only(['search', 'view']),
+            'managers' => \App\Models\User::whereHas('roles', fn($q) => $q->whereIn('name', ['Manager', 'Admin']))->get(['id', 'name'])
         ]);
     }
     
@@ -631,10 +632,12 @@ class ProjectController extends Controller
     {
         $clients = \App\Models\Client::select('id', 'name')->get();
         $projects = \App\Models\Project::select('id', 'name')->orderBy('created_at', 'desc')->get(); // For cloning
+        $managers = \App\Models\User::whereHas('roles', fn($q) => $q->whereIn('name', ['Manager', 'Admin']))->get(['id', 'name']);
         
         return Inertia::render('Project/Wizard/CreateProjectWizard', [
             'clients' => $clients,
-            'existingProjects' => $projects
+            'existingProjects' => $projects,
+            'managers' => $managers
         ]);
     }
 
@@ -653,6 +656,7 @@ class ProjectController extends Controller
                     'status' => $validated['status'],
                     'start_date' => $validated['dates']['start'] ?? null,
                     'deadline' => $validated['dates']['end'] ?? null,
+                    'owners' => $validated['owners'] ?? [], 
                     'gamification_settings' => ['multiplier' => 1.0] 
                 ]);
 
@@ -687,7 +691,9 @@ class ProjectController extends Controller
             'client_id' => 'required|exists:clients,id',
             'code' => 'required|string|max:50',
             'description' => 'nullable|string',
-            'status' => 'nullable|in:planning,active,on_hold,completed,archived'
+            'status' => 'nullable|in:planning,active,on_hold,completed,archived',
+            'owners' => 'nullable|array',
+            'owners.*' => 'exists:users,id'
         ]);
 
         $project->update($validated);
@@ -839,7 +845,7 @@ class ProjectController extends Controller
         $this->authorizeExtensionReview($request);
 
         $extensions = $project->extensions()
-            ->with(['creator:id,name,avatar', 'task:id,title'])
+            ->with(['creator:id,name', 'creator.employee:id,user_id,avatar', 'task:id,title'])
             ->latest()
             ->limit(300)
             ->get()
@@ -898,7 +904,7 @@ class ProjectController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Extension approved successfully.',
-            'extension' => $extension->fresh(['creator:id,name,avatar', 'task:id,title']),
+            'extension' => $extension->fresh(['creator:id,name', 'creator.employee:id,user_id,avatar', 'task:id,title']),
         ]);
     }
 
@@ -941,7 +947,7 @@ class ProjectController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Extension rejected successfully.',
-            'extension' => $extension->fresh(['creator:id,name,avatar', 'task:id,title']),
+            'extension' => $extension->fresh(['creator:id,name', 'creator.employee:id,user_id,avatar', 'task:id,title']),
         ]);
     }
 
@@ -969,7 +975,8 @@ class ProjectController extends Controller
 
         $extensions = $project->extensions()
             ->with([
-                'creator:id,name,avatar',
+                'creator:id,name',
+                'creator.employee:id,user_id,avatar',
                 'task:id,title,start_date,due_date,total_efforts,estimated_hours,status',
                 'task.assignees:id,first_name,last_name,avatar,department_id',
                 'task.assignees.department:id,name',
@@ -1042,7 +1049,7 @@ class ProjectController extends Controller
                 'task_title' => $extension->task?->title,
                 'display_type' => $extension->task_id ? 'Task Scoped' : 'Project Wide',
                 'user' => $extension->creator?->name ?? 'System',
-                'user_avatar' => $extension->creator?->avatar,
+                'user_avatar' => $extension->creator?->employee?->avatar,
             ];
         });
 

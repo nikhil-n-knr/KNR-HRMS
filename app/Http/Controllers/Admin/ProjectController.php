@@ -54,7 +54,9 @@ class ProjectController extends Controller
             'manager_id' => 'nullable|exists:users,id',
             'is_locked' => 'nullable|boolean',
             'plan_lock_recipients' => 'nullable|array',
-            'plan_lock_recipients.*' => 'exists:users,id'
+            'plan_lock_recipients.*' => 'exists:users,id',
+            'owners' => 'nullable|array',
+            'owners.*' => 'exists:users,id'
         ]);
 
         $project = Project::create($validated);
@@ -77,7 +79,9 @@ class ProjectController extends Controller
             'manager_id' => 'nullable|exists:users,id',
             'is_locked' => 'nullable|boolean',
             'plan_lock_recipients' => 'nullable|array',
-            'plan_lock_recipients.*' => 'exists:users,id'
+            'plan_lock_recipients.*' => 'exists:users,id',
+            'owners' => 'nullable|array',
+            'owners.*' => 'exists:users,id'
         ]);
         
         // Handle is_locked explicitly if coming from axios/toggle

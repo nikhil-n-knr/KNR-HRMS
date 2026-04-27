@@ -76,6 +76,15 @@
                     />
                 </div>
             </div>
+            <!-- Project Owners -->
+            <div class="space-y-2 col-span-1 md:col-span-2">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Project Owners / Managers <span class="text-gray-400 text-xs font-normal ml-1">(Optional, can select multiple)</span></label>
+                <MultiUserSelect 
+                    v-model="form.owners" 
+                    :items="managers" 
+                    placeholder="Search and select project stakeholders..." 
+                />
+            </div>
         </div>
     </div>
 </template>
@@ -83,9 +92,11 @@
 <script setup>
 import BaseInput from '@/Components/BaseInput.vue';
 import BaseSelect from '@/Components/BaseSelect.vue';
+import MultiUserSelect from '@/Components/MultiUserSelect.vue';
 const props = defineProps({
     form: Object,
-    clients: Array
+    clients: Array,
+    managers: Array
 });
 
 const visibilityOptions = [

@@ -239,10 +239,12 @@ class PlannerApiController extends Controller
                 });
 
             $defaultShift = \App\Models\Shift::where('is_default', true)->first();
+            $workingDayResolver = app(\App\Services\Attendance\WorkingDayResolverService::class);
             $workDays = [
                 'mon'=>true, 'tue'=>true, 'wed'=>true, 'thu'=>true, 'fri'=>true, 
                 'sat'=>false, 'sun'=>false
             ];
+            $weekOffRules = [];
 
             if ($defaultShift && is_array($defaultShift->work_days)) {
                 $workDays = [];
@@ -250,6 +252,8 @@ class PlannerApiController extends Controller
                     $workDays[$day] = in_array(ucfirst($day), $defaultShift->work_days);
                 }
             }
+
+            $weekOffRules = $workingDayResolver->getWeekOffRules();
 
             return response()->json([
                 'success' => true,
@@ -260,6 +264,7 @@ class PlannerApiController extends Controller
                 'availability' => $availability,
                 'holidays' => $holidays,
                 'workDays' => $workDays,
+                'weekOffRules' => $weekOffRules,
                 'links' => [] 
             ]);
         } catch (\Exception $e) {
@@ -631,6 +636,7 @@ class PlannerApiController extends Controller
 
         $assignments = $query->get();
         $holidays = \App\Models\Holiday::whereBetween('date', [$start, $end])->get()->keyBy('date');
+        $workDayResolver = app(\App\Services\Attendance\WorkingDayResolverService::class);
         
         // 2. Fetch Scope (Budget & Points) - Separate Query needed for "Total Project Scope" regardless of assignment dates?
         // Usually reports show "Active Scope". I'll use the tasks associated with assignments for granular accuracy, 
@@ -702,13 +708,11 @@ class PlannerApiController extends Controller
             
             $curr = $s->copy();
             while ($curr <= $e) {
-                // Carbon isWeekend() is Saturday/Sunday. 
-                // Need to use workDays config in real app, but defaulting to Sat/Sun here + holidays
-                $isWeekend = $curr->isWeekend(); 
+                $isWeekOff = $workDayResolver->isWeekOff($curr->copy());
                 $dateStr = $curr->format('Y-m-d');
                 $isHoliday = isset($holidays[$dateStr]);
                 
-                if ($isWeekend || $isHoliday) {
+                if ($isWeekOff || $isHoliday) {
                     if ($a->force_allocation) {
                         $holidayHours += $a->allocated_hours;
                     }

@@ -42,7 +42,7 @@ class AssetController extends Controller
         
         // Master List View
         if ($view === 'list') {
-            $query = Asset::with(['category', 'assignments.user']);
+            $query = Asset::with(['category', 'assignments.user', 'currentLocationNode']);
 
             // Filters
             if ($request->filled('search')) {
@@ -62,7 +62,7 @@ class AssetController extends Controller
             }
 
             if ($request->filled('location_id')) {
-                $query->where('location_id', $request->location_id);
+                $query->where('current_location_node_id', $request->location_id);
             }
 
             return Inertia::render('Admin/Assets/SmartIndex', [
@@ -70,7 +70,7 @@ class AssetController extends Controller
                 'assets' => $query->latest()->paginate(10)->withQueryString(),
                 'filters' => $request->only(['search', 'category_id', 'status', 'location_id']),
                 'categories' => \App\Models\AssetCategory::all(),
-                'locations' => \App\Models\Location::all(),
+                'locations' => \App\Models\LocationNode::orderBy('name')->get(),
                 'vendors' => \App\Models\Vendor::all(), // For Vendor Tab
                 'procurement' => \App\Models\PurchaseRequest::with('vendor')->latest()->take(10)->get(), // For Procurement Tab
                 'statuses' => ['Available', 'Assigned', 'In_Service', 'Scrapped', 'Lost']
@@ -141,7 +141,7 @@ class AssetController extends Controller
     {
         return Inertia::render('Admin/Assets/Create', [
             'categories' => \App\Models\AssetCategory::all(),
-            'locations' => \App\Models\Location::all()
+            'locations' => \App\Models\LocationNode::orderBy('name')->get()
         ]);
     }
 
@@ -150,6 +150,7 @@ class AssetController extends Controller
         $data = $request->validate([
             'name' => 'required|string',
             'category_id' => 'required|exists:asset_categories,id',
+            'current_location_node_id' => 'nullable|exists:location_nodes,id',
             'serial_number' => 'nullable|unique:assets,serial_number',
             'purchase_cost' => 'nullable|numeric',
             'purchase_date' => 'nullable|date',
@@ -265,7 +266,7 @@ class AssetController extends Controller
             'service_date' => 'required|date'
         ]);
 
-        \App\Models\MaintenanceLog::create([
+        \App\Models\AssetMaintenanceLog::create([
             'asset_id' => $asset->id,
             'logged_by' => auth()->id(),
             'type' => $request->type,
@@ -360,8 +361,56 @@ class AssetController extends Controller
         return Inertia::render('Admin/Assets/Show', [
             'asset' => $asset,
             'timeline' => $timeline,
-            'qrCode' => $qrCode
+            'qrCode' => $qrCode,
+            'users' => \App\Models\User::select('id', 'name')->orderBy('name')->get(),
+            'categories' => \App\Models\AssetCategory::select('id', 'name')->orderBy('name')->get(),
         ]);
+    }
+
+    public function update(Request $request, Asset $asset)
+    {
+        $data = $request->validate([
+            'name' => 'required|string',
+            'category_id' => 'required|exists:asset_categories,id',
+            'serial_number' => 'nullable|unique:assets,serial_number,' . $asset->id,
+            'purchase_cost' => 'nullable|numeric',
+            'purchase_date' => 'nullable|date',
+            'quantity' => 'nullable|integer|min:1',
+            'is_serialized' => 'boolean',
+            'status' => 'nullable|string',
+            'make' => 'nullable|string',
+            'model' => 'nullable|string'
+        ]);
+
+        if (!array_key_exists('is_serialized', $data)) {
+            $data['is_serialized'] = false;
+        }
+
+        if ($data['is_serialized'] && empty($data['serial_number'])) {
+            return back()->withErrors(['serial_number' => 'Serial Number is required for serialized assets.']);
+        }
+
+        $meta = $asset->meta ?? [];
+        $meta['make'] = $data['make'] ?? ($meta['make'] ?? null);
+        $meta['model'] = $data['model'] ?? ($meta['model'] ?? null);
+        $data['meta'] = $meta;
+
+        unset($data['make'], $data['model']);
+
+        $asset->update($data);
+
+        return back()->with('success', 'Asset Updated Successfully');
+    }
+
+    public function destroy(Asset $asset)
+    {
+        if ($asset->assignments()->whereNull('returned_at')->exists()) {
+            return back()->with('error', 'Cannot delete an asset with active assignment.');
+        }
+
+        $asset->delete();
+
+        return back()->with('success', 'Asset Deleted Successfully');
     }
 
     // --- Employee Self-Service Methods ---

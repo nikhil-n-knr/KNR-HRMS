@@ -59,6 +59,14 @@ class BugTicket extends Model
         return $this->belongsTo(ProjectModule::class);
     }
 
+    /**
+     * Multi-module relationship (many-to-many via bug_ticket_modules pivot).
+     */
+    public function modules()
+    {
+        return $this->belongsToMany(ProjectModule::class, 'bug_ticket_modules');
+    }
+
     public function task()
     {
         return $this->belongsTo(Task::class); // Assuming Task model is App\Models\Task

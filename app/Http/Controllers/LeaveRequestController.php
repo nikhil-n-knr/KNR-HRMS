@@ -69,7 +69,7 @@ class LeaveRequestController extends Controller
         }
 
         // Calculate days (excluding weekends and holidays via LeaveService)
-        $days = $this->leaveService->calculateNetDays($request->start_date, $request->end_date);
+        $days = $this->leaveService->calculateNetDays($request->start_date, $request->end_date, $employee->id);
 
         if ($days <= 0) {
             return redirect()->back()->withErrors(['start_date' => 'The selected range does not contain any working days.']);

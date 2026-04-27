@@ -11,11 +11,20 @@ class InventoryItem extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'is_recurring' => 'boolean'
+        'is_recurring' => 'boolean',
+        'recurring_config' => 'array'
     ];
 
     public function tenant() { return $this->belongsTo(Tenant::class); }
+    public function category() { return $this->belongsTo(InventoryCategory::class, 'category_id'); }
+    public function subcategory() { return $this->belongsTo(InventoryCategory::class, 'subcategory_id'); }
+    public function defaultVendor() { return $this->belongsTo(Vendor::class, 'default_vendor_id'); }
+    public function storageNode() { return $this->belongsTo(LocationNode::class, 'storage_node_id'); }
     public function transactions() { return $this->hasMany(InventoryTransaction::class, 'item_id'); }
+    public function issueLines() { return $this->hasMany(InventoryIssueLine::class, 'item_id'); }
+    public function recurringRules() { return $this->hasMany(RecurringConsumptionRule::class, 'item_id'); }
+    public function clientSupplies() { return $this->hasMany(ClientItemSupply::class, 'item_id'); }
+    public function locationAssignments() { return $this->morphMany(LocationAssignment::class, 'entity'); }
 
     // --- Attributes ---
     protected $appends = ['burn_rate', 'days_remaining'];

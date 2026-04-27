@@ -25,6 +25,8 @@ class StoreProjectRequest extends FormRequest
             'dates.end' => 'nullable|date|after_or_equal:dates.start',
             'modules' => 'nullable|array',
             'modules.*.name' => 'required_with:modules|string',
+            'owners' => 'nullable|array',
+            'owners.*' => 'exists:users,id'
         ];
     }
 

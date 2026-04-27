@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Services\WorkflowService;
 use App\Services\AI\AnomalyDetectionService;
+use Illuminate\Validation\ValidationException;
 
 class TimesheetController extends Controller
 {
@@ -103,8 +104,9 @@ class TimesheetController extends Controller
     {
         $request->validate([
             'date' => 'required|date',
-            'project_id' => 'required|exists:projects,id', // Enforce Project Selection
-            'task_description' => 'required|string',
+            'project_id' => 'required|exists:projects,id',
+            'task_id' => 'nullable|exists:project_tasks,id',
+            'task_description' => 'nullable|string|max:1000|required_without:task_id',
             'hours_spent' => 'required|numeric|min:0.1|max:24',
         ]);
 
@@ -115,10 +117,37 @@ class TimesheetController extends Controller
             return back()->with('error', 'No Employee profile found.');
         }
 
+        if ($this->hasApprovedTimesheetForDate($employee->id, $request->date)) {
+            $message = 'Timesheet is locked for this date because it has already been approved.';
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+            return back()->with('error', $message);
+        }
+
+        // Upsert by employee/date/project/task-slot to avoid duplicates on repeated save/edit.
+        $description = trim((string) $request->input('task_description', ''));
+        if (!$request->filled('task_id') && $description === '') {
+            $description = 'Weekly Log';
+        }
+
+        $matchingEntry = $this->findMatchingEntry(
+            $employee->id,
+            $request->date,
+            (int) $request->project_id,
+            $request->input('task_id'),
+            $description
+        );
+
         // --- Policy Alignment: Max Hours Verification ---
         $existingHours = Timesheet::where('employee_id', $employee->id)
             ->where('date', $request->date)
             ->sum('hours_spent');
+
+        $effectiveExistingHours = $existingHours;
+        if ($matchingEntry) {
+            $effectiveExistingHours = max(0, (float) $existingHours - (float) $matchingEntry->hours_spent);
+        }
 
         // Fetch Employee Policy
         $policy = $employee->effectiveAttendancePolicy; 
@@ -130,32 +159,59 @@ class TimesheetController extends Controller
              // Check min hours? Usually min hours is a warning on submit, not on individual entry creation.
         }
 
-        if (($existingHours + $request->hours_spent) > $maxHours) {
-             return back()->with('error', "Total hours for the day cannot exceed {$maxHours}. You have already logged {$existingHours} hours.");
+        if (($effectiveExistingHours + (float) $request->hours_spent) > $maxHours) {
+            $message = "Total hours for the day cannot exceed {$maxHours}. You have already logged {$existingHours} hours.";
+            if ($request->wantsJson()) {
+                return response()->json(['message' => $message], 422);
+            }
+            return back()->with('error', $message);
         }
         // ---------------------------------------------------
 
         $project = \App\Models\Project::find($request->project_id);
 
-        $timesheet = Timesheet::create([
-            'employee_id' => $employee->id,
+        $payload = [
             'date' => $request->date,
             'project_id' => $request->project_id,
-            'project_name' => $project->name, // Legacy support
-            'task_description' => $request->task_description,
+            'project_name' => $project?->name,
+            'task_id' => $request->input('task_id'),
+            'task_title' => null,
+            'task_description' => $description,
             'hours_spent' => $request->hours_spent,
-            'status' => 'Draft' 
-        ]);
+        ];
+
+        if ($matchingEntry) {
+            if ($this->normalizeStatus($matchingEntry->status) === 'approved') {
+                $message = 'Cannot edit this entry because the date has been approved.';
+                if ($request->wantsJson()) {
+                    return response()->json(['message' => $message], 422);
+                }
+                return back()->with('error', $message);
+            }
+
+            $matchingEntry->update($payload);
+            $timesheet = $matchingEntry->fresh();
+        } else {
+            $timesheet = Timesheet::create(array_merge($payload, [
+                'employee_id' => $employee->id,
+                'status' => 'Draft',
+            ]));
+        }
 
         // Run AI Anomaly Detection immediately
         $detector = app(AnomalyDetectionService::class);
         $detector->analyzeTimesheet($timesheet);
 
         if ($request->wantsJson()) {
-            return response()->json(['message' => 'Timesheet entry added.', 'timesheet' => $timesheet], 201);
+            return response()->json([
+                'message' => $matchingEntry ? 'Timesheet entry updated.' : 'Timesheet entry added.',
+                'timesheet' => $timesheet
+            ], $matchingEntry ? 200 : 201);
         }
 
-        return back()->with('success', 'Timesheet entry added. Please submit it when ready.');
+        return back()->with('success', $matchingEntry
+            ? 'Timesheet entry updated. Please submit it when ready.'
+            : 'Timesheet entry added. Please submit it when ready.');
     }
 
     /**
@@ -206,19 +262,58 @@ class TimesheetController extends Controller
             return back()->with('error', 'Unauthorized');
         }
 
-        // Only allow editing if Draft or Rejected
-        if (!in_array($timesheet->status, ['Draft', 'Rejected'])) {
-             if ($request->wantsJson()) return response()->json(['message' => 'Cannot edit submitted or approved timesheets.'], 403);
-            return back()->with('error', 'Cannot edit submitted or approved timesheets.');
+        // Approved entries are immutable.
+        if ($this->normalizeStatus($timesheet->status) === 'approved') {
+            if ($request->wantsJson()) return response()->json(['message' => 'Cannot edit approved timesheets.'], 403);
+            return back()->with('error', 'Cannot edit approved timesheets.');
         }
 
         $request->validate([
+            'date' => 'nullable|date',
+            'project_id' => 'nullable|exists:projects,id',
+            'task_id' => 'nullable|exists:project_tasks,id',
             'project_name' => 'nullable|string|max:255',
-            'task_description' => 'required|string',
+            'task_description' => 'nullable|string|max:1000|required_without:task_id',
             'hours_spent' => 'required|numeric|min:0.1|max:24',
         ]);
 
-        $timesheet->update($request->only(['project_name', 'task_description', 'hours_spent']));
+        $targetDate = $request->input('date', $timesheet->date?->toDateString() ?? $timesheet->date);
+        if ($this->hasApprovedTimesheetForDate($timesheet->employee_id, $targetDate, $timesheet->id)) {
+            $message = 'Timesheet is locked for this date because it has already been approved.';
+            if ($request->wantsJson()) return response()->json(['message' => $message], 422);
+            return back()->with('error', $message);
+        }
+
+        $policy = Auth::user()->employee?->effectiveAttendancePolicy;
+        $maxHours = 24;
+        if ($policy && !empty($policy->timesheet_policy)) {
+            $maxHours = $policy->timesheet_policy['daily_max_hours'] ?? 24;
+        }
+
+        $existingHours = Timesheet::where('employee_id', $timesheet->employee_id)
+            ->whereDate('date', $targetDate)
+            ->where('id', '!=', $timesheet->id)
+            ->sum('hours_spent');
+
+        if (((float) $existingHours + (float) $request->hours_spent) > $maxHours) {
+            $message = "Total hours for the day cannot exceed {$maxHours}. You already have {$existingHours} hours logged.";
+            if ($request->wantsJson()) return response()->json(['message' => $message], 422);
+            return back()->with('error', $message);
+        }
+
+        $description = trim((string) $request->input('task_description', $timesheet->task_description));
+        if ($request->filled('task_id') && $description === '') {
+            $description = $timesheet->task_description ?: 'Weekly Log';
+        }
+
+        $timesheet->update([
+            'date' => $targetDate,
+            'project_id' => $request->input('project_id', $timesheet->project_id),
+            'project_name' => $request->input('project_name', $timesheet->project_name),
+            'task_id' => $request->input('task_id', $timesheet->task_id),
+            'task_description' => $description,
+            'hours_spent' => $request->hours_spent,
+        ]);
 
         if ($request->wantsJson()) {
             return response()->json(['message' => 'Timesheet updated.', 'timesheet' => $timesheet]);
@@ -383,7 +478,8 @@ class TimesheetController extends Controller
             'entries.*.project_id' => 'required|exists:projects,id',
             'entries.*.hours' => 'required|numeric|min:0.1|max:24',
             'entries.*.task_id' => 'nullable|exists:project_tasks,id',
-            'entries.*.task_title' => 'nullable|string',
+            'entries.*.task_title' => 'nullable|string|max:255',
+            'entries.*.description' => 'nullable|string|max:1000',
         ]);
 
         $employee = Auth::user()->employee;
@@ -411,11 +507,39 @@ class TimesheetController extends Controller
                     );
                 }
 
-                
+                if ($this->hasApprovedTimesheetForDate($employee->id, $entry['date'])) {
+                    throw ValidationException::withMessages([
+                        'entries' => ["Date {$entry['date']} is locked because it already has approved timesheet entries."]
+                    ]);
+                }
+
+                $description = trim((string) ($entry['description'] ?? ''));
+                if (empty($entry['task_id']) && $description === '') {
+                    $description = trim((string) ($entry['task_title'] ?? 'Other Task'));
+                }
+
+                $existingEntry = $this->findMatchingEntry(
+                    $employee->id,
+                    $entry['date'],
+                    (int) $entry['project_id'],
+                    $entry['task_id'] ?? null,
+                    $description
+                );
+
                 // Check Daily Limit (Aggregate per day)
                 $currentDailyTotal = Timesheet::where('employee_id', $employee->id)
                     ->where('date', $entry['date'])
                     ->sum('hours_spent');
+
+                $effectiveDailyTotal = $currentDailyTotal;
+                if ($existingEntry) {
+                    if ($this->normalizeStatus($existingEntry->status) === 'approved') {
+                        throw ValidationException::withMessages([
+                            'entries' => ["Cannot edit approved entry on {$entry['date']}."]
+                        ]);
+                    }
+                    $effectiveDailyTotal = max(0, (float) $currentDailyTotal - (float) $existingEntry->hours_spent);
+                }
                 
                 // Fetch Employee Policy
                 $policy = $employee->effectiveAttendancePolicy; 
@@ -424,32 +548,42 @@ class TimesheetController extends Controller
                         $maxHours = $policy->timesheet_policy['daily_max_hours'] ?? 24;
                 }
 
-                if (($currentDailyTotal + $entry['hours']) > $maxHours) {
+                if (($effectiveDailyTotal + (float) $entry['hours']) > $maxHours) {
                      // Better exception
                      throw new \Illuminate\Validation\ValidationException(\Illuminate\Support\Facades\Validator::make([], []), 
                         \Illuminate\Validation\ValidationException::withMessages(['entries' => ["Daily limit exceeded for $entry[date]. You already have $currentDailyTotal hours logged, and the limit is $maxHours."]])
                     );
                 }
 
-                // Create
                 $project = \App\Models\Project::find($entry['project_id']);
-                
-                $timesheet = Timesheet::create([
-                    'employee_id' => $employee->id,
-                    'date' => $entry['date'],
-                    'project_id' => $project->id,
-                    'project_name' => $project->name,
-                    'task_id' => $entry['task_id'] ?? null,
-                    'task_title' => $entry['task_title'] ?? null,
-                    'task_description' => $entry['description'] ?? 'Weekly Log',
-                    'hours_spent' => $entry['hours'],
-                    'status' => 'Submitted' // Auto-submit for now to appear in Approvals
-                ]);
 
-                $workflow = app(\App\Services\WorkflowService::class);
-                $instance = $workflow->initializeWorkflow('timesheet', $timesheet->id, Auth::user());
-                if (!$instance) {
-                    $timesheet->update(['status' => 'Approved']);
+                if ($existingEntry) {
+                    $existingEntry->update([
+                        'project_id' => $project?->id,
+                        'project_name' => $project?->name,
+                        'task_id' => $entry['task_id'] ?? null,
+                        'task_title' => $entry['task_title'] ?? null,
+                        'task_description' => $description !== '' ? $description : 'Weekly Log',
+                        'hours_spent' => $entry['hours'],
+                    ]);
+                } else {
+                    $timesheet = Timesheet::create([
+                        'employee_id' => $employee->id,
+                        'date' => $entry['date'],
+                        'project_id' => $project?->id,
+                        'project_name' => $project?->name,
+                        'task_id' => $entry['task_id'] ?? null,
+                        'task_title' => $entry['task_title'] ?? null,
+                        'task_description' => $description !== '' ? $description : 'Weekly Log',
+                        'hours_spent' => $entry['hours'],
+                        'status' => 'Submitted'
+                    ]);
+
+                    $workflow = app(\App\Services\WorkflowService::class);
+                    $instance = $workflow->initializeWorkflow('timesheet', $timesheet->id, Auth::user());
+                    if (!$instance) {
+                        $timesheet->update(['status' => 'Approved']);
+                    }
                 }
                 
                 $savedCount++;
@@ -457,5 +591,39 @@ class TimesheetController extends Controller
         });
 
         return response()->json(['message' => "Successfully logged $savedCount entries."]);
+    }
+
+    private function hasApprovedTimesheetForDate(int $employeeId, string $date, ?int $exceptId = null): bool
+    {
+        $query = Timesheet::where('employee_id', $employeeId)
+            ->whereDate('date', $date)
+            ->whereRaw('LOWER(status) = ?', ['approved']);
+
+        if ($exceptId) {
+            $query->where('id', '!=', $exceptId);
+        }
+
+        return $query->exists();
+    }
+
+    private function findMatchingEntry(int $employeeId, string $date, int $projectId, $taskId = null, string $description = ''): ?Timesheet
+    {
+        $query = Timesheet::where('employee_id', $employeeId)
+            ->whereDate('date', $date)
+            ->where('project_id', $projectId);
+
+        if (!empty($taskId)) {
+            $query->where('task_id', $taskId);
+        } else {
+            $query->whereNull('task_id')
+                ->where('task_description', $description !== '' ? $description : 'Weekly Log');
+        }
+
+        return $query->orderByDesc('id')->first();
+    }
+
+    private function normalizeStatus(?string $status): string
+    {
+        return strtolower(trim((string) $status));
     }
 }

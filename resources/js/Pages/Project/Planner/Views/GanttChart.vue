@@ -239,7 +239,7 @@ import { useToastStore } from '@/stores/toast';
 import dayjs from 'dayjs';
 import axios from 'axios';
 
-const props = defineProps(['data', 'resources', 'searchQuery', 'holidays', 'workDays']);
+const props = defineProps(['data', 'resources', 'searchQuery', 'holidays', 'workDays', 'weekOffRules']);
 const emit = defineEmits(['task-update', 'task-click']);
 const toast = useToastStore();
 
@@ -333,6 +333,24 @@ const isHoliday = (dateObj) => {
 
 const isWeeklyOff = (dateObj) => {
     if (!props.workDays) return false;
+
+    if (Array.isArray(props.weekOffRules) && props.weekOffRules.length > 0) {
+        const dayName = dateObj.format('ddd');
+        const weekOfMonth = Math.ceil(dateObj.date() / 7);
+        const isLastOccurrence = dateObj.add(7, 'day').month() !== dateObj.month();
+
+        const matchedNthRule = props.weekOffRules.some(rule => {
+            if (!rule || !rule.weekday || !Array.isArray(rule.weeks)) return false;
+            if (String(rule.weekday).toLowerCase() !== dayName.toLowerCase()) return false;
+
+            const weeks = rule.weeks.map(w => String(w).toLowerCase());
+            return weeks.includes(String(weekOfMonth)) || (isLastOccurrence && weeks.includes('last'));
+        });
+
+        if (matchedNthRule) {
+            return true;
+        }
+    }
     
     // Handle Array of strings (e.g. ["Mon", "Tue"]) - API response format
     if (Array.isArray(props.workDays) && typeof props.workDays[0] === 'string') {

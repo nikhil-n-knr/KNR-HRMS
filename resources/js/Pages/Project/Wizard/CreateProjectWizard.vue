@@ -27,6 +27,7 @@
                         v-model:form="form"
                         :clients="clients"
                         :existingProjects="existingProjects"
+                        :managers="managers"
                     />
                 </Transition>
             </div>
@@ -68,7 +69,8 @@ defineOptions({ layout: MainLayout });
 
 const props = defineProps({
     clients: Array,
-    existingProjects: Array
+    existingProjects: Array,
+    managers: Array
 });
 
 const toast = useToastStore();
@@ -81,6 +83,7 @@ const form = useForm({
     code: '',
     visibility: 'team_locked',
     status: 'planning',
+    owners: [],
     dates: {
         start: '',
         end: ''

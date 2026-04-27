@@ -210,6 +210,14 @@
                         :error="editForm.errors.code"
                      />
                      <div class="space-y-1">
+                        <label class="block text-sm font-medium text-gray-700">Project Owners / Managers <span class="text-gray-400 text-xs font-normal ml-1">(Optional, can select multiple)</span></label>
+                        <MultiUserSelect 
+                            v-model="editForm.owners" 
+                            :items="managers" 
+                            placeholder="Select project stakeholders..." 
+                        />
+                     </div>
+                     <div class="space-y-1">
                         <label class="block text-sm font-medium text-gray-700">Project Status</label>
                         <select v-model="editForm.status" class="w-full rounded-xl shadow-sm border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 text-sm py-2.5 px-4 bg-white/50 backdrop-blur-sm">
                             <option value="planning">Planning (Draft)</option>
@@ -247,6 +255,7 @@ import { router, usePage, Link, useForm } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import BaseInput from '@/Components/BaseInput.vue';
+import MultiUserSelect from '@/Components/MultiUserSelect.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 
@@ -255,7 +264,8 @@ defineOptions({ layout: MainLayout });
 const props = defineProps({
     projects: [Array, Object], // Can be array or Paginated Object
     stats: Object,
-    filters: Object // search, view
+    filters: Object, // search, view
+    managers: Array
 });
 
 // View Toggle Logic
@@ -322,7 +332,8 @@ const editForm = useForm({
     code: '',
     description: '',
     status: '',
-    client_id: ''
+    client_id: '',
+    owners: []
 });
 
 const openEditModal = (project) => {
@@ -332,6 +343,7 @@ const openEditModal = (project) => {
     editForm.description = project.description || '';
     editForm.status = project.status || 'planning';
     editForm.client_id = project.client_id;
+    editForm.owners = project.owners || [];
     editForm.clearErrors();
     showEditModal.value = true;
 };

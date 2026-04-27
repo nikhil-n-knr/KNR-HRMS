@@ -316,49 +316,7 @@ class AttendanceController extends Controller
             return null;
         }
 
-        $log->loadMissing('sessions', 'shift');
-        $openSession = $log->sessions()->whereNull('out_time')->latest('in_time')->first();
-        if (!$openSession) {
-            return $log;
-        }
-
-        $shift = $log->shift ?: $this->registry->getShiftForDate($employee, Carbon::today());
-        if (!$shift || !$shift->start_time || !$shift->end_time) {
-            return $log;
-        }
-
-        $shiftStart = Carbon::parse($log->date->format('Y-m-d') . ' ' . $shift->start_time);
-        $shiftEnd = Carbon::parse($log->date->format('Y-m-d') . ' ' . $shift->end_time);
-
-        // Handle overnight shifts where end time is on the next day.
-        if ($shiftEnd->lessThanOrEqualTo($shiftStart)) {
-            $shiftEnd->addDay();
-        }
-
-        if (Carbon::now()->lt($shiftEnd)) {
-            return $log;
-        }
-
-        $outTime = $shiftEnd->copy();
-        if ($outTime->lt(Carbon::parse($openSession->in_time))) {
-            $outTime = Carbon::parse($openSession->in_time);
-        }
-
-        $openSession->update([
-            'out_time' => $outTime,
-            'out_ip' => 'SYSTEM_AUTO_SHIFT_END',
-        ]);
-
-        $freshLog = AttendanceLog::with('sessions', 'shift')->find($log->id);
-        $this->registry->recalculateDailyTotals($freshLog);
-
-        Log::info('Auto checkout applied at shift end', [
-            'employee_id' => $employee->id,
-            'attendance_log_id' => $log->id,
-            'session_id' => $openSession->id,
-            'out_time' => $outTime->toDateTimeString(),
-        ]);
-
+        $this->registry->autoCheckoutOpenSessions(Carbon::now(), $employee->id);
         return AttendanceLog::with('sessions', 'shift')->find($log->id);
     }
 

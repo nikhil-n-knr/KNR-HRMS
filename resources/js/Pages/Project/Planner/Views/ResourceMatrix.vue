@@ -286,7 +286,7 @@ import SecondaryButton from '@/Components/SecondaryButton.vue';
 
 import { Switch } from '@headlessui/vue';
 
-const props = defineProps(['data', 'resources', 'availability', 'holidays', 'timesheets']);
+const props = defineProps(['data', 'resources', 'availability', 'holidays', 'timesheets', 'workDays', 'weekOffRules']);
 const emit = defineEmits(['task-update']);
 const toast = useToastStore();
 
@@ -407,6 +407,21 @@ const selectedDateRange = computed(() => {
 const isNonWorkDay = (dateStr) => {
     const d = dayjs(dateStr);
     const dayName = d.format('ddd').toLowerCase();
+
+    if (Array.isArray(props.weekOffRules) && props.weekOffRules.length > 0) {
+        const weekOfMonth = Math.ceil(d.date() / 7);
+        const isLastOccurrence = d.add(7, 'day').month() !== d.month();
+        const matchedNthRule = props.weekOffRules.some(rule => {
+            if (!rule || !rule.weekday || !Array.isArray(rule.weeks)) return false;
+            if (String(rule.weekday).toLowerCase() !== d.format('ddd').toLowerCase()) return false;
+            const weeks = rule.weeks.map(w => String(w).toLowerCase());
+            return weeks.includes(String(weekOfMonth)) || (isLastOccurrence && weeks.includes('last'));
+        });
+
+        if (matchedNthRule) {
+            return true;
+        }
+    }
     
     // If props.workDays is an object {mon: true, ...}
     if (props.workDays && typeof props.workDays === 'object' && !Array.isArray(props.workDays)) {

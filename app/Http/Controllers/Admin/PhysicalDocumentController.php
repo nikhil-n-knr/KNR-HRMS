@@ -52,6 +52,66 @@ class PhysicalDocumentController extends Controller
         return back()->with('success', 'Document Checked In');
     }
 
+    public function update(Request $request, PhysicalRecord $record)
+    {
+        $validated = $request->validate([
+            'document_type' => 'required|string|max:255',
+            'user_id' => 'nullable|exists:users,id',
+            'outsider_name' => 'nullable|string|max:255|required_without:user_id',
+            'location_id' => 'required|exists:physical_document_locations,id',
+            'container_ref' => 'required|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        if (!empty($validated['user_id'])) {
+            $validated['outsider_name'] = null;
+        }
+
+        $record->update($validated);
+
+        return back()->with('success', 'Document Updated');
+    }
+
+    public function destroy(PhysicalRecord $record)
+    {
+        $record->delete();
+
+        return back()->with('success', 'Document Deleted');
+    }
+
+    public function checkout(PhysicalRecord $record)
+    {
+        try {
+            $this->service->checkout($record->id, auth()->id());
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Document Checked Out');
+    }
+
+    public function returnToCustody(PhysicalRecord $record)
+    {
+        try {
+            $this->service->returnToCustody($record->id, auth()->id());
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Document Returned to Custody');
+    }
+
+    public function markMissing(PhysicalRecord $record)
+    {
+        try {
+            $this->service->markMissing($record->id);
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', 'Document Marked Missing');
+    }
+
     // --- Storage Builder ---
     
     public function config()

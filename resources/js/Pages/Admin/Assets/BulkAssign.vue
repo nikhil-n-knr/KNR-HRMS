@@ -8,8 +8,25 @@ import {
     MagnifyingGlassIcon,
     ArrowRightIcon,
     CheckCircleIcon,
-    ArrowLeftIcon
-} from '@heroicons/vue/24/outline';
+    ArrowLeftIcon,
+    InformationCircleIcon,
+    TagIcon,
+    UserCircleIcon,
+    ArrowPathIcon,
+    CursorArrowRaysIcon,
+    InboxStackIcon,
+    ExclamationTriangleIcon,
+    SparklesIcon,
+    BoltIcon,
+    ArchiveBoxIcon,
+    CubeIcon,
+    CheckBadgeIcon,
+    UserPlusIcon,
+    UserIcon,
+    CpuChipIcon,
+    ShieldCheckIcon,
+    FingerPrintIcon
+} from '@heroicons/vue/24/solid';
 
 defineOptions({ layout: MainLayout });
 
@@ -43,154 +60,185 @@ const toggleSelectAll = () => {
 };
 
 const submit = () => {
-    if (!form.user_id) return;
+    if (!form.user_id || form.asset_ids.length === 0) return;
     form.post(route('admin.assets.bulk-assign.process'));
 };
+
+const selectedUser = computed(() => {
+    return props.users.find(u => u.id == form.user_id);
+});
 </script>
 
 <template>
-    <Head title="Bulk Fleet Assignment" />
-    <MainLayout>
-        <div class="max-w-[1600px] mx-auto space-y-10 pb-20 font-outfit animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <!-- Strategic Header Terminal -->
-            <div class="bg-slate-900 rounded-[3rem] p-10 md:p-14 border border-slate-800 shadow-2xl shadow-indigo-500/20 relative overflow-hidden group">
-                <div class="absolute -right-32 -top-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] group-hover:bg-indigo-500/20 transition-all duration-1000"></div>
+    <Head title="Box Handover Terminal" />
+    
+    <div class="h-screen flex flex-col bg-slate-50 font-outfit overflow-hidden -m-8 p-12 relative animate-in fade-in duration-1000 text-left">
+        <!-- AI Grid Background -->
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/5 via-transparent to-transparent pointer-events-none"></div>
+
+        <!-- Tactical Command Header -->
+        <header class="flex items-center justify-between mb-10 bg-white rounded-3xl p-8 shadow-sm relative z-20 group border border-slate-200">
+            <div class="flex items-center gap-8">
+                <Link :href="route('admin.assets.dashboard', { view: 'list' })" 
+                    class="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all active:scale-90 shadow-sm shrink-0">
+                    <ArrowLeftIcon class="w-6 h-6" />
+                </Link>
+                <div class="text-left">
+                    <div class="flex items-center gap-4">
+                        <h1 class="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">Handover Terminal</h1>
+                        <div class="px-4 py-1.5 bg-emerald-50 border border-emerald-100 rounded-lg flex items-center gap-2.5">
+                            <div class="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse"></div>
+                            <span class="text-[8px] font-bold text-emerald-600 uppercase tracking-widest">CHANNEL_SECURE</span>
+                        </div>
+                    </div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2.5 leading-none">MASS_PROVISIONING_SYSTEM_v4.0</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-6">
+                <div class="group relative">
+                    <div class="px-8 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-center relative z-10 transition-all group-hover:border-indigo-200">
+                        <p class="text-[8px] font-bold text-slate-400 uppercase tracking-widest mb-1">UNITS_STAGED</p>
+                        <p class="text-2xl font-black text-slate-900 leading-none tabular-nums">{{ form.asset_ids.length }}</p>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <div class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-8 min-h-0 relative z-10 overflow-hidden">
+            
+            <!-- Resource Matrix (Selection) -->
+            <div class="lg:col-span-8 bg-white rounded-3xl border border-slate-200 p-8 flex flex-col min-h-0 overflow-hidden shadow-sm relative group">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-indigo-50/10 via-transparent to-transparent pointer-events-none"></div>
                 
-                <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                    <div class="flex items-center gap-8">
-                        <Link :href="route('admin.assets.dashboard', { view: 'list' })" class="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all shadow-sm active:scale-95 shrink-0">
-                            <ArrowLeftIcon class="w-6 h-6" />
-                        </Link>
-                        <div>
-                            <div class="flex items-center gap-4 mb-3">
-                                <div class="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400 shadow-inner">
-                                    <UsersIcon class="w-5 h-5" />
-                                </div>
-                                <h1 class="text-3xl font-black text-white uppercase tracking-tight">Bulk Fleet Assignment</h1>
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-6 relative z-10 text-left">
+                    <div class="relative flex-1 w-full group/search">
+                        <MagnifyingGlassIcon class="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-400 group-focus-within/search:text-indigo-600 transition-all duration-500" />
+                        <input 
+                            v-model="search" 
+                            type="text" 
+                            placeholder="SEARCH_MATRIX_RESOURCES..." 
+                            class="w-full h-16 bg-slate-50 border border-slate-100 rounded-2xl pl-16 pr-8 text-lg font-black text-slate-900 uppercase tracking-tight focus:bg-white focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-400 shadow-sm transition-all placeholder:text-slate-200"
+                        >
+                    </div>
+                    <button @click="toggleSelectAll" 
+                        class="h-16 px-8 bg-slate-900 text-white rounded-2xl text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-600 transition-all active:scale-95 shadow-lg shrink-0 group/all border border-slate-800">
+                        <div class="flex items-center gap-3">
+                            <SparklesIcon class="w-4 h-4 text-indigo-400 group-hover/all:rotate-90 transition-transform duration-700" />
+                            {{ form.asset_ids.length === filteredAssets.length ? 'PURGE_STAGE' : 'STAGE_ALL_NODES' }}
+                        </div>
+                    </button>
+                </div>
+
+                <!-- Matrix Grid -->
+                <div class="flex-1 overflow-y-auto pr-2 no-scrollbar relative z-10 text-left">
+                    <div class="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-5 pb-8">
+                        <div 
+                            v-for="asset in filteredAssets" 
+                            :key="asset.id" 
+                            @click="form.asset_ids.includes(asset.id) ? form.asset_ids.splice(form.asset_ids.indexOf(asset.id), 1) : form.asset_ids.push(asset.id)"
+                            class="group relative bg-white border border-slate-100 rounded-3xl p-6 cursor-pointer transition-all duration-500 shadow-sm hover:shadow-xl hover:-translate-y-1 overflow-hidden text-left"
+                            :class="form.asset_ids.includes(asset.id) ? 'border-indigo-600 ring-4 ring-indigo-500/5 bg-indigo-50/10' : 'hover:border-indigo-200'"
+                        >
+                            <div v-if="form.asset_ids.includes(asset.id)" class="absolute top-0 right-0 w-16 h-16 bg-indigo-600 rounded-bl-3xl flex items-start justify-end p-3 text-white animate-in slide-in-from-top-right-full duration-500 shadow-lg">
+                                <CheckBadgeIcon class="w-6 h-6" />
                             </div>
-                            <p class="text-sm font-black text-slate-400 uppercase tracking-[0.4em] ml-14">Mass deployment protocol to operative accounts</p>
+
+                            <div class="flex flex-col gap-6 relative z-10">
+                                <div class="w-12 h-12 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-center transition-all duration-700 shadow-sm group-hover:bg-slate-900 group-hover:text-indigo-400 shrink-0"
+                                    :class="form.asset_ids.includes(asset.id) ? 'bg-slate-900 text-indigo-400' : 'text-slate-300'">
+                                    <CpuChipIcon class="w-6 h-6" />
+                                </div>
+                                <div class="text-left">
+                                    <h5 class="text-lg font-black text-slate-900 uppercase tracking-tight leading-tight group-hover:text-indigo-600 transition-colors">{{ asset.name }}</h5>
+                                    <div class="flex items-center gap-2 mt-2">
+                                         <FingerPrintIcon class="w-3 h-3 text-slate-400" />
+                                         <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest font-mono">{{ asset.serial_number || 'BULK_STOCK' }}</p>
+                                    </div>
+                                    <div class="mt-4 flex items-center gap-2">
+                                        <div class="px-3 py-1 bg-slate-100 text-[8px] font-bold text-slate-500 uppercase tracking-widest rounded-lg transition-all group-hover:bg-indigo-600 group-hover:text-white">
+                                            {{ asset.category?.name || 'NODE' }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Operating Matrix -->
-            <form @submit.prevent="submit" class="grid grid-cols-1 lg:grid-cols-12 gap-8 h-[750px] relative">
+            <!-- Recipient Command Panel -->
+            <div class="lg:col-span-4 bg-white rounded-3xl p-10 shadow-sm flex flex-col relative overflow-hidden group/panel border border-slate-200">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-50/30 via-transparent to-transparent pointer-events-none"></div>
                 
-                <!-- Fleet Selection Panel -->
-                <div class="lg:col-span-8 bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40 flex flex-col overflow-hidden group">
-                    <div class="p-8 border-b border-slate-100 bg-slate-50 flex flex-col sm:flex-row justify-between items-center gap-6">
-                        <h3 class="text-base font-black text-slate-900 uppercase tracking-[0.3em] flex items-center gap-3">
-                            <ServerStackIcon class="w-5 h-5 text-indigo-500" /> Waitlist Fleet
-                            <span class="px-2 py-1 bg-white border border-slate-200 rounded-lg text-slate-500 shadow-sm ml-2">{{ form.asset_ids.length }} Selected</span>
-                        </h3>
-                        <div class="relative w-full sm:w-72 group/search">
-                            <MagnifyingGlassIcon class="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within/search:text-indigo-500 transition-colors" />
-                            <input v-model="search" type="text" placeholder="Scan nodes..." class="w-full h-12 bg-white border-2 border-slate-200 rounded-2xl pl-4 pr-10 text-sm font-black text-slate-900 uppercase tracking-widest focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm placeholder:text-slate-400">
-                        </div>
-                    </div>
+                <h3 class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-10 flex items-center gap-4 border-b border-slate-100 pb-6">
+                    <UserPlusIcon class="w-6 h-6 text-indigo-500" />
+                    TARGET_RECIPIENT_NODE
+                </h3>
 
-                    <div class="p-4 border-b border-slate-100 bg-slate-100/50 flex items-center gap-4 px-8 cursor-pointer hover:bg-slate-100 transition-colors group/chk" @click="toggleSelectAll">
-                        <div class="relative flex items-center justify-center">
-                            <input type="checkbox" :checked="form.asset_ids.length > 0 && form.asset_ids.length === filteredAssets.length" class="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-indigo-500/30 transition-all cursor-pointer">
-                        </div>
-                        <span class="text-sm font-black text-slate-500 uppercase tracking-[0.3em] group-hover/chk:text-indigo-600 transition-colors">Select Array Scope ({{ filteredAssets.length }})</span>
-                    </div>
-
-                    <div class="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-3 bg-slate-50/30">
-                        <label v-for="asset in filteredAssets" :key="asset.id" 
-                            class="flex items-center gap-6 p-5 rounded-2xl border-2 transition-all cursor-pointer shadow-sm hover:shadow-md group/item"
-                            :class="form.asset_ids.includes(asset.id) ? 'bg-indigo-50/50 border-indigo-200' : 'bg-white border-slate-100 hover:border-slate-200'"
-                        >
-                            <input type="checkbox" v-model="form.asset_ids" :value="asset.id" class="w-5 h-5 rounded border-2 border-slate-300 text-indigo-600 focus:ring-indigo-500/30 transition-all shrink-0 cursor-pointer">
-                            <div class="flex-1 min-w-0">
-                                <p class="text-base font-black uppercase tracking-tight truncate group-hover/item:text-indigo-700 transition-colors" :class="form.asset_ids.includes(asset.id) ? 'text-indigo-900' : 'text-slate-900'">{{ asset.name }}</p>
-                                <p class="text-sm font-black font-mono tracking-widest mt-1 opacity-70" :class="form.asset_ids.includes(asset.id) ? 'text-indigo-600' : 'text-slate-400'">S/N: {{ asset.serial_number || 'UNKNOWN_LOG' }}</p>
-                            </div>
-                            <div class="shrink-0 text-right">
-                                <span class="px-3 py-1.5 bg-emerald-50 text-emerald-600 text-xs font-black uppercase tracking-[0.2em] rounded border border-emerald-100 shadow-sm inline-block">Available</span>
-                                <p class="text-sm font-black text-slate-400 uppercase tracking-widest mt-2">{{ asset.category?.name || 'GENERIC' }}</p>
-                            </div>
-                        </label>
-
-                        <div v-if="filteredAssets.length === 0" class="h-full flex flex-col items-center justify-center text-center opacity-40 grayscale space-y-4">
-                            <ServerStackIcon class="w-16 h-16 text-slate-400 animate-pulse" />
-                            <span class="text-sm font-black uppercase tracking-[0.4em]">Zero tracking entities match scope</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Assignment Console -->
-                <div class="lg:col-span-4 bg-slate-900 rounded-[3rem] border border-slate-800 shadow-2xl p-10 flex flex-col relative overflow-hidden h-fit sticky top-10">
-                    <div class="absolute -right-20 -top-20 w-80 h-80 bg-indigo-500/10 rounded-full blur-[80px]"></div>
-                    
-                    <div class="relative z-10">
-                        <h3 class="text-base font-black text-white uppercase tracking-[0.3em] mb-8 flex items-center gap-3 border-b border-indigo-500/20 pb-4">
-                            <ArrowRightIcon class="w-5 h-5 text-indigo-400" />
-                            Target Operative
-                        </h3>
-                        
-                        <div class="space-y-4 mb-10">
-                            <label class="block text-sm font-black text-slate-400 uppercase tracking-widest px-2">Select Account ID</label>
-                            <select v-model="form.user_id" class="w-full h-80 bg-white/5 border border-white/10 rounded-[2rem] p-4 text-base font-black text-white uppercase tracking-widest focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-inner custom-scrollbar-dark" size="10">
-                                <option v-for="user in users" :key="user.id" :value="user.id" class="bg-slate-900 border-b border-slate-800 py-3">{{ user.name }}</option>
+                <div class="space-y-10 flex-1 relative z-10 text-left">
+                    <div class="space-y-4 group/select">
+                        <label class="px-6 text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none group-focus-within/select:text-indigo-500 transition-colors text-left block">Select Operational Lead</label>
+                        <div class="relative">
+                            <UserIcon class="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300 group-focus-within/select:text-indigo-500 transition-colors" />
+                            <select v-model="form.user_id" class="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl pl-16 pr-8 text-lg font-black text-slate-900 uppercase tracking-tight focus:bg-white focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all shadow-sm appearance-none cursor-pointer">
+                                <option value="">SELECT_IDENTITY...</option>
+                                <option v-for="user in users" :key="user.id" :value="user.id">{{ user.name.toUpperCase() }}</option>
                             </select>
-                            <div v-if="form.user_id" class="px-5 py-3 bg-white/10 rounded-xl border border-white/10 flex items-center gap-3 backdrop-blur-sm">
-                                <CheckCircleIcon class="w-5 h-5 text-emerald-400" />
-                                <span class="text-sm font-black uppercase tracking-[0.2em] text-emerald-100">Target Validated</span>
-                            </div>
                         </div>
-
-                        <button type="submit" 
-                            :disabled="form.processing || form.asset_ids.length === 0 || !form.user_id"
-                            class="w-full h-16 bg-indigo-600 text-white rounded-2xl text-sm font-black uppercase tracking-[0.3em] hover:bg-emerald-500 transition-all flex items-center justify-center gap-4 shadow-[0_0_30px_rgba(79,70,229,0.3)] active:scale-95 group/submit disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600 disabled:shadow-none"
-                        >
-                            <div v-if="form.processing" class="w-5 h-5 border-2 border-indigo-200 border-t-transparent rounded-full animate-spin"></div>
-                            <span v-else>Assign Matrix ({{ form.asset_ids.length }})</span>
-                        </button>
-                        
-                        <p class="mt-8 text-sm font-black uppercase tracking-[0.2em] text-slate-500 text-center leading-relaxed italic">
-                            Authorization will bind {{ form.asset_ids.length }} nodes to operative ID: {{ form.user_id || 'PENDING' }}.
-                        </p>
                     </div>
+
+                    <Transition name="fade-up-complex">
+                        <div v-if="selectedUser" class="p-8 bg-slate-50 border border-slate-200 rounded-3xl flex flex-col items-center text-center animate-in zoom-in-95 duration-700 group/user shadow-sm scale-[1.01] hover:bg-white transition-all">
+                             <div class="w-24 h-24 bg-white border border-slate-100 rounded-2xl flex items-center justify-center text-3xl font-black text-indigo-600 shadow-md mb-8 group-hover/user:scale-110 transition-transform duration-700 overflow-hidden">
+                                 <img v-if="selectedUser.profile_photo_url" :src="selectedUser.profile_photo_url" class="w-full h-full object-cover">
+                                 <span v-else>{{ selectedUser.name.charAt(0) }}</span>
+                             </div>
+                             <h4 class="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none group-hover/user:text-indigo-600 transition-colors">{{ selectedUser.name }}</h4>
+                             <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-4 bg-white px-4 py-1.5 rounded-full border border-slate-100 shadow-sm">VERIFIED_RECIPIENT_LIAISON</p>
+                        </div>
+                        <div v-else class="h-64 flex flex-col items-center justify-center text-center opacity-30">
+                             <div class="w-20 h-20 border-2 border-slate-200 border-dashed rounded-2xl flex items-center justify-center mb-6">
+                                <UserCircleIcon class="w-10 h-10 text-slate-300 animate-pulse" />
+                             </div>
+                             <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest px-8 leading-loose">Establish a recipient node to initialize the handover protocol.</p>
+                        </div>
+                    </Transition>
                 </div>
-            </form>
+
+                <div class="pt-10 relative z-10">
+                    <button 
+                        @click="submit" 
+                        :disabled="!form.user_id || form.asset_ids.length === 0 || form.processing"
+                        class="w-full h-20 bg-slate-900 text-white rounded-2xl text-[10px] font-bold uppercase tracking-widest shadow-lg hover:bg-indigo-600 transition-all flex items-center justify-center gap-6 active:scale-95 disabled:opacity-20 disabled:grayscale group/submit border border-slate-800"
+                    >
+                        <ArrowPathIcon v-if="form.processing" class="w-6 h-6 animate-spin" />
+                        <ShieldCheckIcon v-else class="w-6 h-6 text-indigo-400 group-hover/submit:scale-125 transition-all" />
+                        <span>{{ form.processing ? 'SYNCING_PROTOCOL...' : 'COMMIT_HANDOVER' }}</span>
+                    </button>
+                    <p v-if="form.asset_ids.length > 0" class="text-center text-[8px] font-bold text-slate-400 uppercase tracking-widest mt-4">PROVISIONING {{ form.asset_ids.length }} STAGED NODES</p>
+                </div>
+            </div>
         </div>
-    </MainLayout>
+    </div>
 </template>
 
 <style scoped>
-.font-mono {
-    font-family: 'JetBrains Mono', monospace;
-}
 .custom-scrollbar::-webkit-scrollbar {
-    width: 8px;
+    width: 0px;
 }
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+.fade-up-complex-enter-active {
+    transition: all 0.7s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 20px;
-    border: 2px solid #f8fafc;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-    background: #cbd5e1;
+.fade-up-complex-enter-from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.9);
 }
 
-.custom-scrollbar-dark::-webkit-scrollbar {
-    width: 8px;
-}
-.custom-scrollbar-dark::-webkit-scrollbar-track {
-    background: transparent;
-}
-.custom-scrollbar-dark::-webkit-scrollbar-thumb {
-    background: rgba(255,255,255,0.1);
-    border-radius: 20px;
-    border: 2px solid transparent;
-    background-clip: padding-box;
-}
-.custom-scrollbar-dark::-webkit-scrollbar-thumb:hover {
-    background: rgba(255,255,255,0.2);
+.shadow-3xl {
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.2);
 }
 </style>

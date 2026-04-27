@@ -3,17 +3,23 @@ import { Head, useForm, Link } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { 
     CubeIcon, 
-    LinkIcon, 
-    MapPinIcon, 
-    IdentificationIcon, 
-    CurrencyDollarIcon,
-    CalendarDaysIcon,
-    ServerStackIcon,
-    DocumentTextIcon,
-    WrenchIcon,
     ArrowLeftIcon,
-    SparklesIcon
-} from '@heroicons/vue/24/outline';
+    IdentificationIcon, 
+    CurrencyRupeeIcon as CashIcon,
+    CalendarDaysIcon,
+    MapPinIcon,
+    CpuChipIcon,
+    InformationCircleIcon,
+    CheckCircleIcon,
+    ArrowPathIcon,
+    ArchiveBoxIcon,
+    DocumentTextIcon,
+    TagIcon,
+    BoltIcon,
+    SparklesIcon,
+    BuildingStorefrontIcon,
+    ArchiveBoxArrowDownIcon
+} from '@heroicons/vue/24/solid';
 
 defineOptions({ layout: MainLayout });
 
@@ -25,13 +31,13 @@ const props = defineProps({
 const form = useForm({
     name: '',
     category_id: '',
-    location_id: '',
+    current_location_node_id: '',
     serial_number: '',
     make: '',
     model: '',
     purchase_cost: '',
     purchase_date: new Date().toISOString().split('T')[0],
-    is_serialized: false
+    is_serialized: true
 });
 
 const submit = () => {
@@ -40,171 +46,143 @@ const submit = () => {
 </script>
 
 <template>
-    <Head title="Initialize New Asset" />
-    <MainLayout>
-        <div class="max-w-5xl mx-auto space-y-10 pb-20 font-outfit animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <!-- Strategic Header Terminal -->
-            <div class="bg-slate-900 rounded-[3rem] p-10 md:p-14 border border-slate-800 shadow-2xl shadow-indigo-500/20 relative overflow-hidden group">
-                <div class="absolute -right-32 -top-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] group-hover:bg-indigo-500/20 transition-all duration-1000"></div>
-                <div class="absolute -left-16 bottom-0 w-64 h-64 bg-emerald-500/10 rounded-full blur-[80px] group-hover:scale-125 transition-transform duration-1000"></div>
+    <Head title="Add New Item" />
+    
+    <div class="h-full flex flex-col font-outfit -m-8 p-12 bg-slate-50 min-h-screen relative overflow-hidden text-left">
+        <div class="absolute -right-32 -top-32 w-128 h-128 bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none"></div>
+        <div class="absolute -left-32 bottom-0 w-128 h-128 bg-emerald-500/5 rounded-full blur-[140px] pointer-events-none"></div>
 
-                <div class="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
-                    <div class="flex items-center gap-8">
-                        <Link :href="route('admin.assets.dashboard', { view: 'list' })" class="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-slate-400 hover:text-white hover:bg-white/10 transition-all shadow-sm active:scale-95">
-                            <ArrowLeftIcon class="w-6 h-6" />
-                        </Link>
-                        <div>
-                            <div class="flex items-center gap-4 mb-3">
-                                <div class="w-10 h-10 bg-indigo-500/20 rounded-xl flex items-center justify-center text-indigo-400 shadow-inner">
-                                    <CubeIcon class="w-5 h-5" />
-                                </div>
-                                <h1 class="text-3xl font-black text-white uppercase tracking-tight">Initialize Asset</h1>
+        <!-- Strategic Header -->
+        <div class="bg-white p-10 flex flex-shrink-0 justify-between items-center z-10 relative overflow-hidden rounded-3xl mb-10 shadow-sm border border-slate-200">
+            <div class="absolute -right-32 -top-32 w-96 h-96 bg-indigo-50 rounded-full blur-[100px]"></div>
+            
+            <div class="relative z-10 flex items-center gap-8">
+                <Link :href="route('admin.assets.dashboard', { view: 'list' })" class="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-100 transition-all shadow-sm active:scale-90 group/back shrink-0">
+                    <ArrowLeftIcon class="h-6 w-6 group-hover/back:-translate-x-1 transition-transform" />
+                </Link>
+                <div class="text-left">
+                    <div class="flex items-center gap-6">
+                        <h1 class="text-3xl font-black text-slate-900 uppercase tracking-tight leading-none">Add New Item</h1>
+                        <div class="group/tooltip relative flex items-center">
+                            <InformationCircleIcon class="w-6 h-6 text-indigo-400 cursor-help opacity-70 hover:opacity-100 transition-opacity" />
+                            <div class="absolute left-full ml-6 top-1/2 -translate-y-1/2 w-80 bg-slate-900 text-white text-[11px] font-bold px-6 py-4 rounded-2xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all shadow-xl z-50 pointer-events-none border border-white/10 leading-relaxed">
+                                Global Resource Initialization Terminal. Use this interface to register individual assets into the primary matrix.
                             </div>
-                            <p class="text-sm font-black text-slate-400 uppercase tracking-[0.4em] ml-14">System physical node registration protocol</p>
                         </div>
                     </div>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-2.5 leading-none">New Resource Entry & Registration Terminal</p>
                 </div>
             </div>
 
-            <!-- Configuration Form Matrix -->
-            <form @submit.prevent="submit" class="bg-white rounded-[3rem] border border-slate-100 shadow-2xl shadow-slate-200/40 p-10 md:p-14 relative overflow-hidden">
-                <div class="space-y-12 relative z-10">
+            <div class="flex items-center gap-6 z-10">
+                 <div class="px-5 py-2 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3 shadow-sm">
+                    <BoltIcon class="w-4 h-4 text-emerald-500" />
+                    <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Swift Entry Active</span>
+                 </div>
+            </div>
+        </div>
+
+        <!-- Registration Portal Terminal -->
+        <form @submit.prevent="submit" class="max-w-[1000px] mx-auto w-full bg-white rounded-3xl shadow-sm p-12 relative overflow-hidden z-10 animate-in zoom-in-95 duration-700 border border-slate-200 text-left">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_right,_var(--tw-gradient-stops))] from-indigo-50/10 via-transparent to-transparent pointer-events-none"></div>
+            
+            <div class="space-y-12 relative z-10">
+                
+                <!-- Section: Facts -->
+                <div class="space-y-10">
+                    <div class="flex items-center gap-6 border-b border-slate-100 pb-8">
+                        <div class="w-14 h-14 bg-slate-50 border border-slate-200 text-slate-400 rounded-2xl flex items-center justify-center shadow-sm group hover:rotate-6 transition-transform shrink-0">
+                            <ArchiveBoxIcon class="w-8 h-8 text-indigo-500" />
+                        </div>
+                        <h3 class="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">Basic Identifier</h3>
+                    </div>
                     
-                    <!-- Section: Primary Identification -->
-                    <div class="space-y-8">
-                        <h3 class="text-base font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3 border-b border-slate-100 pb-4">
-                            <IdentificationIcon class="w-5 h-5 text-indigo-500" />
-                            Primary Node Identification
-                        </h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div class="space-y-3">
-                                <label class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Designation Name</label>
-                                <input v-model="form.name" type="text" class="w-full h-16 bg-slate-50 border-2 border-slate-100 rounded-[2rem] px-6 text-base font-black text-slate-900 uppercase tracking-widest focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" placeholder="e.g. MacBook Pro M3" required>
-                                <p v-if="form.errors.name" class="text-sm font-black text-rose-500 uppercase tracking-widest px-2">{{ form.errors.name }}</p>
-                            </div>
-
-                            <div class="space-y-3">
-                                <label class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Architectural Class (Category)</label>
-                                <select v-model="form.category_id" class="w-full h-16 bg-slate-50 border-2 border-slate-100 rounded-[2rem] px-6 text-base font-black text-slate-900 uppercase tracking-widest focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all appearance-none cursor-pointer shadow-sm" required>
-                                    <option value="" disabled selected>Select Class Node</option>
-                                    <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-                                </select>
-                                <p v-if="form.errors.category_id" class="text-sm font-black text-rose-500 uppercase tracking-widest px-2">{{ form.errors.category_id }}</p>
-                            </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 px-2">
+                        <div class="space-y-3">
+                            <label class="px-6 text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Resource Name</label>
+                            <input v-model="form.name" type="text" class="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-xl font-black text-slate-900 uppercase tracking-tight focus:bg-white focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-400 shadow-sm transition-all placeholder:text-slate-200" placeholder="E.G. MACBOOK PRO M3" required>
                         </div>
 
-                        <div class="grid grid-cols-1 gap-8">
-                            <div class="space-y-3">
-                                <label class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Physical Vector (Location)</label>
-                                <div class="relative">
-                                    <MapPinIcon class="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                    <select v-model="form.location_id" class="w-full h-16 bg-slate-50 border-2 border-slate-100 rounded-[2rem] pl-16 pr-6 text-base font-black text-slate-900 uppercase tracking-widest focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all appearance-none cursor-pointer shadow-sm text-opacity-80">
-                                        <option value="" disabled selected>Select Geographic Vector</option>
-                                        <option v-for="l in locations" :key="l.id" :value="l.id">{{ l.name }}</option>
-                                    </select>
-                                </div>
-                                <p v-if="form.errors.location_id" class="text-sm font-black text-rose-500 uppercase tracking-widest px-2">{{ form.errors.location_id }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Section: Hardware Specifications -->
-                    <div class="space-y-8 pt-8 border-t border-slate-100">
-                        <h3 class="text-base font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3 border-b border-slate-100 pb-4">
-                            <WrenchIcon class="w-5 h-5 text-emerald-500" />
-                            Hardware Specifications
-                        </h3>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div class="space-y-3">
-                                <label class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Manufacturer (Make)</label>
-                                <input v-model="form.make" type="text" class="w-full h-16 bg-slate-50 border-2 border-slate-100 rounded-[2rem] px-6 text-base font-black text-slate-900 uppercase tracking-widest focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" placeholder="e.g. Apple">
-                            </div>
-                            <div class="space-y-3">
-                                <label class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Model Topology</label>
-                                <input v-model="form.model" type="text" class="w-full h-16 bg-slate-50 border-2 border-slate-100 rounded-[2rem] px-6 text-base font-black text-slate-900 uppercase tracking-widest focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" placeholder="e.g. A2991">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Section: Financial Telemetry & Serialization -->
-                    <div class="space-y-8 pt-8 border-t border-slate-100">
-                        <h3 class="text-base font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-3 border-b border-slate-100 pb-4">
-                            <CurrencyDollarIcon class="w-5 h-5 text-amber-500" />
-                            Capital Impact & Tracking Protocol
-                        </h3>
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div class="space-y-3">
-                                <label class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Acquisition Capital (Cost)</label>
-                                <div class="relative">
-                                    <span class="absolute left-6 top-1/2 -translate-y-1/2 text-base font-black text-slate-400">INR</span>
-                                    <input v-model="form.purchase_cost" type="number" step="0.01" class="w-full h-16 bg-slate-50 border-2 border-slate-100 rounded-[2rem] pl-16 pr-6 text-lg font-black font-mono tracking-tighter text-slate-900 uppercase focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm" placeholder="0.00">
-                                </div>
-                            </div>
-                            <div class="space-y-3">
-                                <label class="text-sm font-black text-slate-500 uppercase tracking-widest px-2">Temporal Onboarding (Date)</label>
-                                <div class="relative">
-                                    <CalendarDaysIcon class="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-                                    <input v-model="form.purchase_date" type="date" class="w-full h-16 bg-slate-50 border-2 border-slate-100 rounded-[2rem] pl-16 pr-6 text-base font-black text-slate-900 uppercase tracking-widest focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all shadow-sm cursor-pointer border-opacity-50">
-                                </div>
-                            </div>
+                        <div class="space-y-3">
+                            <label class="px-6 text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Classification (Type)</label>
+                            <select v-model="form.category_id" class="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-sm font-bold text-slate-400 focus:text-slate-900 uppercase tracking-widest focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all appearance-none cursor-pointer shadow-sm">
+                                <option value="" disabled selected>CHOOSE_TYPE...</option>
+                                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name.toUpperCase() }}</option>
+                            </select>
                         </div>
 
-                        <!-- Enhanced Serialization Toggle -->
-                        <div class="p-8 bg-indigo-50/50 rounded-[2.5rem] border border-indigo-100/50 space-y-6">
-                            <label class="flex items-center gap-4 cursor-pointer group w-fit">
-                                <div class="relative">
-                                    <input v-model="form.is_serialized" type="checkbox" class="sr-only peer">
-                                    <div class="w-14 h-8 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[4px] after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600 shadow-inner"></div>
-                                </div>
-                                <div>
-                                    <span class="block text-base font-black text-slate-900 uppercase tracking-widest group-hover:text-indigo-600 transition-colors">Individual Node Tracking (Serialization)</span>
-                                    <span class="text-sm font-black text-slate-500 uppercase tracking-widest mt-1 opacity-80">Requires unique hardware identifier</span>
-                                </div>
-                            </label>
-
-                            <div v-if="form.is_serialized" class="animate-in slide-in-from-top-4 fade-in duration-300">
-                                <label class="text-sm font-black text-indigo-500 uppercase tracking-widest px-2 block mb-3">Unique Hardware Identity Array (S/N)</label>
-                                <div class="relative">
-                                    <ServerStackIcon class="absolute left-6 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" />
-                                    <input v-model="form.serial_number" type="text" placeholder="ENTER EXACT S/N..." class="w-full h-16 bg-white border-2 border-indigo-200 rounded-[2rem] pl-16 pr-6 text-[14px] font-black font-mono tracking-tighter text-indigo-900 uppercase focus:ring-4 focus:ring-indigo-500/20 focus:border-indigo-500 transition-all shadow-lg shadow-indigo-500/10 placeholder:text-indigo-200" required>
-                                </div>
-                                <p v-if="form.errors.serial_number" class="text-sm font-black text-rose-500 uppercase tracking-widest px-2 mt-2">{{ form.errors.serial_number }}</p>
-                            </div>
+                        <div class="space-y-3">
+                            <label class="px-6 text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Deployment Room (Location)</label>
+                            <select v-model="form.current_location_node_id" class="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-sm font-bold text-slate-400 focus:text-slate-900 uppercase tracking-widest focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all appearance-none cursor-pointer shadow-sm">
+                                <option value="" disabled selected>CHOOSE_ROOM...</option>
+                                <option v-for="l in locations" :key="l.id" :value="l.id">{{ l.name.toUpperCase() }}</option>
+                            </select>
                         </div>
-                    </div>
 
-                    <!-- Submission Interface -->
-                    <div class="pt-10 mt-10 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-6">
-                        <div class="text-sm font-black text-slate-400 uppercase tracking-[0.3em] flex items-center gap-2">
-                            <SparklesIcon class="w-4 h-4 text-emerald-400" />
-                            Validation checks active
-                        </div>
-                        <div class="flex gap-4 w-full sm:w-auto">
-                            <Link :href="route('admin.assets.dashboard', { view: 'list' })" class="flex-1 sm:flex-none h-16 px-10 bg-slate-50 hover:bg-slate-100 text-slate-500 rounded-[2rem] text-sm font-black uppercase tracking-[0.3em] transition-all flex items-center justify-center border border-slate-200 active:scale-95 shadow-sm">
-                                Abort
-                            </Link>
-                            <button type="submit" :disabled="form.processing" class="flex-1 sm:flex-none h-16 px-14 bg-slate-900 text-white rounded-[2rem] text-sm font-black uppercase tracking-[0.3em] hover:bg-indigo-600 transition-all flex items-center justify-center gap-4 shadow-2xl shadow-slate-900/30 active:scale-95 group/submit disabled:opacity-50 disabled:cursor-not-allowed">
-                                <div v-if="form.processing" class="w-5 h-5 border-2 border-indigo-400 border-t-transparent rounded-full animate-spin"></div>
-                                <CubeIcon v-else class="w-5 h-5 text-indigo-400 group-hover/submit:scale-110 transition-transform" />
-                                <span>{{ form.processing ? 'Compiling...' : 'Commit Node' }}</span>
-                            </button>
+                         <div class="space-y-3">
+                            <label class="px-6 text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">Serial Matrix / Tag</label>
+                            <input v-model="form.serial_number" type="text" class="w-full h-16 bg-slate-50 border border-slate-200 rounded-2xl px-8 text-xl font-black text-slate-900 uppercase tracking-widest focus:bg-white focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-400 transition-all font-mono shadow-sm placeholder:text-slate-200" placeholder="E.G. S/N: 123-ABC">
                         </div>
                     </div>
                 </div>
-            </form>
-        </div>
-    </MainLayout>
+
+                <!-- Section: Secondary Details -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 px-2">
+                    
+                    <div class="space-y-10 bg-slate-50 p-10 rounded-3xl border border-slate-100 shadow-sm">
+                        <div class="flex items-center gap-6 border-b border-white pb-6">
+                             <TagIcon class="w-8 h-8 text-indigo-400 shadow-indigo-500/10" />
+                             <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">Details</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="space-y-3">
+                                <label class="px-6 text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">Brand Name</label>
+                                <input v-model="form.make" type="text" class="w-full h-14 bg-white border border-slate-200 rounded-xl px-6 text-sm font-bold text-slate-900 focus:border-indigo-400 transition-all shadow-sm" placeholder="SHIPPING BRAND...">
+                            </div>
+                            <div class="space-y-3">
+                                <label class="px-6 text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">Model Code</label>
+                                <input v-model="form.model" type="text" class="w-full h-14 bg-white border border-slate-200 rounded-xl px-6 text-sm font-bold text-slate-900 focus:border-indigo-400 transition-all shadow-sm" placeholder="VERSION X.0...">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="space-y-10 bg-emerald-50/20 p-10 rounded-3xl border border-emerald-50 shadow-sm">
+                        <div class="flex items-center gap-6 border-b border-white pb-6">
+                             <CashIcon class="w-8 h-8 text-emerald-500 shadow-emerald-500/10" />
+                             <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">Financials</h3>
+                        </div>
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="space-y-3">
+                                <label class="px-6 text-[8px] font-bold text-emerald-600 uppercase tracking-widest leading-none">Buy Cost (₹)</label>
+                                <input v-model="form.purchase_cost" type="number" class="w-full h-14 bg-white border border-slate-200 rounded-xl px-4 text-base font-black text-emerald-600 focus:border-emerald-500 transition-all shadow-sm tabular-nums" placeholder="0.00">
+                            </div>
+                            <div class="space-y-3">
+                                <label class="px-6 text-[8px] font-bold text-slate-400 uppercase tracking-widest leading-none">Entry Date</label>
+                                <input v-model="form.purchase_date" type="date" class="w-full h-14 bg-white border border-slate-200 rounded-xl px-4 text-xs font-bold text-slate-900 focus:border-indigo-400 transition-all shadow-sm">
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Footer Execution -->
+                <div class="flex items-center justify-between pt-12 border-t border-slate-100 mt-10 pb-4">
+                    <button type="button" @click="$inertia.back()" class="text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-rose-500 transition-all">Discard Matrix</button>
+                    <button type="submit" :disabled="form.processing" class="h-16 px-12 bg-slate-900 text-white rounded-2xl text-[11px] font-black uppercase tracking-widest shadow-lg hover:bg-indigo-600 transition-all flex items-center gap-6 active:scale-95 disabled:opacity-30 group/save border border-slate-800">
+                        <ArrowPathIcon v-if="form.processing" class="w-6 h-6 animate-spin" />
+                        <CheckCircleIcon v-else class="w-6 h-6 text-indigo-400 group-hover:scale-125 transition-transform" />
+                        <span>{{ form.processing ? 'Syncing...' : 'Confirm Entry' }}</span>
+                    </button>
+                </div>
+
+            </div>
+        </form>
+    </div>
 </template>
 
 <style scoped>
-.font-mono {
-    font-family: 'JetBrains Mono', monospace;
+.shadow-3xl {
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.05);
 }
-input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.6) sepia(1) saturate(5) hue-rotate(200deg);
-    cursor: pointer;
-}
+.no-scrollbar::-webkit-scrollbar { display: none; }
 </style>

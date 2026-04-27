@@ -4,6 +4,7 @@ import MainLayout from '@/Layouts/MainLayout.vue';
 import { ref, onMounted, watch, computed } from 'vue';
 import { Chart } from 'chart.js/auto';
 import { SankeyController, Flow } from 'chartjs-chart-sankey';
+import { InformationCircleIcon } from '@heroicons/vue/24/outline';
 
 Chart.register(SankeyController, Flow);
 
@@ -192,17 +193,25 @@ const renderChart = () => {
 </script>
 
 <template>
-    <Head title="Visual Intelligence" />
+    <Head title="Charts & Analytics" />
 
     <div class="h-screen flex flex-col bg-gray-900 text-white overflow-hidden">
 
         <!-- Header -->
         <div class="p-6 border-b border-gray-800 flex flex-wrap justify-between items-center gap-4">
             <div>
-                <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-blue-500">
-                    Visual Intelligence Hub
-                </h1>
-                <p class="text-sm text-gray-500">Deep dive into Asset Flow &amp; Cost Hierarchies</p>
+                <div class="flex items-center gap-3">
+                    <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-blue-500">
+                        Charts & Analytics
+                    </h1>
+                    <div class="group/tooltip relative flex items-center">
+                        <InformationCircleIcon class="w-5 h-5 text-gray-400 cursor-help opacity-70 hover:opacity-100 transition-opacity" />
+                        <div class="absolute left-full ml-3 top-1/2 -translate-y-1/2 w-72 bg-gray-800 text-white text-sm font-medium px-4 py-3 rounded-xl opacity-0 invisible group-hover/tooltip:opacity-100 group-hover/tooltip:visible transition-all shadow-2xl z-50 pointer-events-none border border-gray-700">
+                            Colorful charts that help you see the bigger picture, like how your equipment loses value over time and where your money is going.
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm text-gray-500 mt-1">Deep dive into Asset Flow &amp; Cost Hierarchies</p>
             </div>
 
             <!-- Chart Toggle -->

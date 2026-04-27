@@ -691,4 +691,42 @@ class DashboardController extends Controller
             'enabledModules' => AppModule::where('status', true)->pluck('key'),
         ]);
     }
+
+    public function getPulseWidget()
+    {
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'activity_score' => 85,
+                'trend' => '+5%',
+                'recent_events' => [
+                     ['id' => 1, 'type' => 'task', 'message' => 'New task assigned', 'time' => '10 min ago'],
+                     ['id' => 2, 'type' => 'system', 'message' => 'System update completed', 'time' => '1 hour ago']
+                ]
+            ]
+        ]);
+    }
+
+    public function getAttendanceWidget()
+    {
+        $user = auth()->user();
+        $employeeId = $user->employee->id ?? null;
+        
+        $todayLog = null;
+        if ($employeeId) {
+            $todayLog = \App\Models\AttendanceLog::where('employee_id', $employeeId)
+                                                ->whereDate('date', today())
+                                                ->first();
+        }
+
+        return response()->json([
+            'status' => 'success',
+            'data' => [
+                'checked_in' => $todayLog && $todayLog->check_in ? true : false,
+                'check_in_time' => $todayLog ? $todayLog->check_in : null,
+                'check_out_time' => $todayLog ? $todayLog->check_out : null,
+                'attendance_status' => $todayLog ? $todayLog->status : 'Pending'
+            ]
+        ]);
+    }
 }

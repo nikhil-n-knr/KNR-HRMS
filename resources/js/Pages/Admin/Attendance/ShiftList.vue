@@ -112,6 +112,10 @@
                                         <div class="w-1 h-1 rounded-full bg-rose-400 shadow-sm shadow-rose-500/50"></div>
                                         <span class="text-xs font-black text-rose-600 uppercase tracking-widest">EXIT: {{ item.grace_early_exit }}M</span>
                                     </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-1 h-1 rounded-full bg-indigo-400 shadow-sm shadow-indigo-500/50"></div>
+                                        <span class="text-xs font-black text-indigo-600 uppercase tracking-widest">AUTO CUT: {{ item.post_shift_auto_checkout_cap_minutes ?? 60 }}M</span>
+                                    </div>
                                 </div>
                             </td>
                             <td class="px-4 py-3">
@@ -181,7 +185,7 @@
                              <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Grace Thresholds</span>
                              <div class="flex items-center gap-1.5">
                                 <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm animate-pulse" v-if="item.grace_late_entry > 0"></div>
-                                <span class="text-xs font-black text-slate-600 uppercase tracking-tighter truncate">L:{{ item.grace_late_entry }}M / E:{{ item.grace_early_exit }}M</span>
+                                          <span class="text-xs font-black text-slate-600 uppercase tracking-tighter truncate">L:{{ item.grace_late_entry }}M / E:{{ item.grace_early_exit }}M / A:{{ item.post_shift_auto_checkout_cap_minutes ?? 60 }}M</span>
                              </div>
                         </div>
                     </div>
@@ -255,6 +259,44 @@
                     </div>
                 </div>
 
+                <div class="space-y-3 border border-slate-200 rounded-xl p-4 bg-slate-50/60">
+                    <div class="flex items-center justify-between gap-2">
+                        <label class="text-sm font-black text-slate-500 uppercase tracking-widest">Nth Week Off Rules</label>
+                        <button type="button" @click="addWeekOffRule" class="h-8 px-3 bg-white border border-slate-200 rounded-lg text-xs font-black uppercase tracking-widest text-slate-500 hover:text-emerald-600 hover:border-emerald-200 transition-all">
+                            + Add Rule
+                        </button>
+                    </div>
+                    <p class="text-xs text-slate-400 font-bold uppercase tracking-widest">Example: Sat + [2,4] for 2nd and 4th Saturday off.</p>
+
+                    <div v-if="form.week_off_rules.length === 0" class="text-xs text-slate-400 uppercase tracking-widest py-2">
+                        No nth-week rules configured.
+                    </div>
+
+                    <div v-for="(rule, index) in form.week_off_rules" :key="index" class="bg-white border border-slate-200 rounded-lg p-3 space-y-3">
+                        <div class="flex items-center justify-between gap-2">
+                            <select v-model="rule.weekday" class="h-9 px-3 bg-slate-50 border border-slate-200 rounded-lg text-xs font-black uppercase tracking-widest text-slate-700">
+                                <option v-for="d in weekDays" :key="`rule-day-${index}-${d}`" :value="d">{{ d }}</option>
+                            </select>
+                            <button type="button" @click="removeWeekOffRule(index)" class="h-8 px-3 bg-rose-50 border border-rose-200 rounded-lg text-xs font-black uppercase tracking-widest text-rose-600 hover:bg-rose-100 transition-all">
+                                Remove
+                            </button>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2">
+                            <button
+                                v-for="week in nthWeekOptions"
+                                :key="`rule-week-${index}-${week}`"
+                                type="button"
+                                @click="toggleRuleWeek(index, week)"
+                                class="h-8 px-3 rounded-lg text-xs font-black uppercase tracking-widest border transition-all"
+                                :class="rule.weeks.includes(week) ? 'bg-slate-900 text-white border-slate-900' : 'bg-white text-slate-500 border-slate-200 hover:text-emerald-600 hover:border-emerald-200'"
+                            >
+                                {{ week === 'last' ? 'Last' : `${week}${week === '1' ? 'st' : week === '2' ? 'nd' : week === '3' ? 'rd' : 'th'}` }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="grid grid-cols-2 gap-4">
                     <div class="space-y-1.5">
                         <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Late Tolerance (Min)</label>
@@ -268,6 +310,14 @@
                             <input type="number" v-model="form.grace_early_exit" class="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-widest">
                         </div>
                     </div>
+                </div>
+
+                <div class="space-y-1.5">
+                    <label class="text-sm font-black text-slate-400 uppercase tracking-widest px-1">Post Shift Auto-Cutoff (Min)</label>
+                    <div class="relative">
+                        <input type="number" min="0" max="720" v-model="form.post_shift_auto_checkout_cap_minutes" class="w-full bg-slate-50 border border-slate-200 rounded-lg h-10 px-3 text-sm font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-emerald-500/10 focus:border-emerald-500 transition-all uppercase tracking-widest">
+                    </div>
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-widest px-1">Auto checkout cap after shift end and for post-shift re-check-ins.</p>
                 </div>
 
                 <div class="bg-emerald-600 p-2.5 rounded-lg border border-emerald-500 flex items-center justify-between group transition-all shadow-sm">
@@ -356,14 +406,17 @@ const form = ref({
     start_time: '09:00',
     end_time: '18:00',
     work_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
+    week_off_rules: [],
     grace_late_entry: 15,
     grace_early_exit: 15,
+    post_shift_auto_checkout_cap_minutes: 60,
     color: '#3b82f6',
     is_default: false
 });
 const errors = ref({});
 
 const weekDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+const nthWeekOptions = ['1', '2', '3', '4', 'last'];
 
 const fetchShifts = async () => {
     loading.value = true;
@@ -405,7 +458,7 @@ const openCreateModal = () => {
     form.value = {
         id: null, name: '', code: '', start_time: '09:00', end_time: '18:00',
         work_days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'], grace_late_entry: 15,
-        grace_early_exit: 15, color: '#3b82f6', is_default: false
+        week_off_rules: [], grace_early_exit: 15, post_shift_auto_checkout_cap_minutes: 60, color: '#3b82f6', is_default: false
     };
     errors.value = {};
     showModal.value = true;
@@ -413,12 +466,35 @@ const openCreateModal = () => {
 
 const openEditModal = (shift) => {
     isEditing.value = true;
+    const parsedRules = Array.isArray(shift.week_off_rules)
+        ? shift.week_off_rules
+        : JSON.parse(shift.week_off_rules || '[]');
+
     form.value = { 
         ...shift, 
-        work_days: Array.isArray(shift.work_days) ? shift.work_days : JSON.parse(shift.work_days || '[]')
+        work_days: Array.isArray(shift.work_days) ? shift.work_days : JSON.parse(shift.work_days || '[]'),
+        week_off_rules: Array.isArray(parsedRules) ? parsedRules : [],
+        post_shift_auto_checkout_cap_minutes: shift.post_shift_auto_checkout_cap_minutes ?? 60
     }; 
     errors.value = {};
     showModal.value = true;
+};
+
+const addWeekOffRule = () => {
+    form.value.week_off_rules.push({ weekday: 'Sat', weeks: ['2', '4'] });
+};
+
+const removeWeekOffRule = (index) => {
+    form.value.week_off_rules.splice(index, 1);
+};
+
+const toggleRuleWeek = (index, week) => {
+    const selected = form.value.week_off_rules[index].weeks || [];
+    if (selected.includes(week)) {
+        form.value.week_off_rules[index].weeks = selected.filter(w => w !== week);
+    } else {
+        form.value.week_off_rules[index].weeks = [...selected, week];
+    }
 };
 
 const submit = () => {

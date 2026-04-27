@@ -35,7 +35,15 @@
                         </span>
                     </div>
 
-                    <p class="text-sm font-medium leading-relaxed whitespace-pre-wrap">{{ comment.body }}</p>
+                    <div
+                        :class="[
+                            'text-sm font-medium leading-relaxed break-words [&_a]:font-semibold [&_a]:underline [&_a]:underline-offset-2 [&_pre]:mt-2 [&_pre]:overflow-x-auto [&_pre]:rounded-lg [&_pre]:p-3 [&_pre]:text-xs [&_pre]:whitespace-pre-wrap [&_strong]:font-black',
+                            comment.user_id === currentUserId
+                                ? '[&_a]:text-white [&_pre]:bg-emerald-700/70 [&_pre]:text-emerald-50'
+                                : '[&_a]:text-emerald-700 [&_pre]:bg-slate-50 [&_pre]:text-slate-700'
+                        ]"
+                        v-html="comment.body"
+                    ></div>
                     
                     <!-- Attachments -->
                     <div v-if="comment.attachments && comment.attachments.length" class="mt-3 flex flex-wrap gap-2">

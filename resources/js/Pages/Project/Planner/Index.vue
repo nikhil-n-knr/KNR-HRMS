@@ -172,6 +172,7 @@
                 :availability="availability"
                 :holidays="holidays"
                 :workDays="workDays"
+                                :weekOffRules="weekOffRules"
                 :searchQuery="searchQuery"
                 :projects="projects"
                                 :initial-project-id="projectFilter || props.initialProjectId"
@@ -282,6 +283,7 @@ const resources = ref([]);
 const availability = ref({});
 const holidays = ref([]);
 const workDays = ref({});
+const weekOffRules = ref([]);
 
 // Validations
 // (Already imported above)
@@ -367,6 +369,7 @@ const loadPlannerData = async () => {
         resources.value = res.data.resources;
         availability.value = res.data.availability || {}; // Store Availability
         holidays.value = res.data.holidays || [];
+        weekOffRules.value = res.data.weekOffRules || [];
         workDays.value = (res.data.workDays && Object.keys(res.data.workDays).length > 0) ? res.data.workDays : {
             'mon': true, 'tue': true, 'wed': true, 'thu': true, 'fri': true, 'sat': false, 'sun': false
         };

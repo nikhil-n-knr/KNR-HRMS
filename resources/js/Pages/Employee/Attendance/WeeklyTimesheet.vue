@@ -24,6 +24,7 @@ const loading = ref(false);
 const processing = ref(false);
 const weekRange = ref(''); 
 const config = ref({ allowed_past_days: 30, allowed_future_days: 30 }); // Defaults
+const lockedDates = ref([]);
 
 // New Row State
 const showAddRow = ref(false);
@@ -126,6 +127,7 @@ const getOrCreateRow = (t, isOther = false, otherTitle = '') => {
 const loadData = async () => {
     loading.value = true;
     rows.value = []; // Clear
+    lockedDates.value = [];
     try {
         // 1. Fetch Assigned Tasks (Default rows)
         const [assignedRes, logRes] = await Promise.all([
@@ -149,6 +151,12 @@ const loadData = async () => {
         // 2. Fill with Log Data
         const logs = Array.isArray(logRes.data) ? logRes.data : [];
         console.log('Weekly Logs:', logs);
+
+        lockedDates.value = [...new Set(
+            logs
+                .filter((entry) => String(entry.status || '').toLowerCase() === 'approved')
+                .map((entry) => String(entry.date).split('T')[0])
+        )];
         
         logs.forEach(entry => {
             // Determine if Other
@@ -212,21 +220,31 @@ const saveWeek = async () => {
     try {
         // Flatten rows to entries
         const entries = [];
+        const skippedLockedDates = new Set();
         rows.value.forEach(row => {
             weekDays.value.forEach(day => {
                 const h = parseFloat(row.cells[day.date]);
                 if (h > 0) {
+                    if (isDateLocked(day.date)) {
+                        skippedLockedDates.add(day.date);
+                        return;
+                    }
+
                    entries.push({
                        date: day.date,
                        project_id: row.project_id,
                        task_id: row.is_other ? null : row.id,
                        task_title: row.is_other ? row.title : null,
-                       description: 'Weekly Log', // Static for now or per-row?
+                       description: row.is_other ? row.title : (row.title || 'Weekly Log'),
                        hours: h
                    });
                 }
             });
         });
+
+        if (skippedLockedDates.size > 0) {
+            toast.warning(`Approved dates are locked: ${Array.from(skippedLockedDates).join(', ')}`);
+        }
 
         if (entries.length === 0) {
             toast.warning("No hours entered to save.");
@@ -312,6 +330,8 @@ const WrapperTitle = (t) => {
     return t.code ? `${t.code} - ${t.title}` : t.title;
 };
 
+const isDateLocked = (date) => lockedDates.value.includes(date);
+
 onMounted(() => {
     initWeek();
 });
@@ -365,10 +385,13 @@ onMounted(() => {
                                 type="number" 
                                 v-model="row.cells[day.date]" 
                                 class="w-full text-center border-gray-200 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500 p-1 h-8"
+                                :class="{ 'bg-gray-100 text-gray-500 cursor-not-allowed': isDateLocked(day.date) }"
                                 placeholder="-"
                                 min="0" 
                                 max="24"
                                 step="0.5"
+                                :disabled="isDateLocked(day.date)"
+                                :title="isDateLocked(day.date) ? 'Approved date is locked' : ''"
                             />
                         </td>
                         <td class="px-2 text-center">

@@ -9,14 +9,36 @@ use Inertia\Inertia;
 
 class MaintenanceBoardController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        // Fetch all maintenance logs with their related asset and performer
-        $logs = AssetMaintenanceLog::with(['asset.category', 'logger'])
-            ->latest('service_date')
-            ->get();
+        $query = AssetMaintenanceLog::with(['asset.category', 'asset.location', 'logger']);
 
-        // Group by Type for Kanban-style columns (type col exists; status does not)
+        // Search Filter (Asset Name or Serial)
+        if ($request->filled('search')) {
+            $search = $request->search;
+            $query->whereHas('asset', function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('serial_number', 'like', "%{$search}%");
+            });
+        }
+
+        // Category Filter
+        if ($request->filled('category_id')) {
+            $query->whereHas('asset', function ($q) use ($request) {
+                $q->where('category_id', $request->category_id);
+            });
+        }
+
+        // Location Filter
+        if ($request->filled('location_id')) {
+            $query->whereHas('asset', function ($q) use ($request) {
+                $q->where('location_id', $request->location_id);
+            });
+        }
+
+        $logs = $query->latest('service_date')->get();
+
+        // Group by Type for Kanban-style columns
         $columns = [
             'Repair'          => $logs->where('type', 'Repair')->values(),
             'Upgrade'         => $logs->where('type', 'Upgrade')->values(),
@@ -28,18 +50,23 @@ class MaintenanceBoardController extends Controller
             'stats' => [
                 'total_active' => $logs->count(),
                 'total_cost'   => $logs->sum('cost')
-            ]
+            ],
+            'filters' => $request->only(['search', 'category_id', 'location_id']),
+            'categories' => \App\Models\AssetCategory::all(['id', 'name']),
+            'locations' => \App\Models\Location::all(['id', 'name'])
         ]);
     }
 
     public function updateStatus(Request $request, $id)
     {
-        $request->validate([
+        $type = $request->input('type', $request->input('status'));
+
+        validator(['type' => $type], [
             'type' => 'required|string|in:Repair,Upgrade,Routine_Service',
-        ]);
+        ])->validate();
 
         $log = AssetMaintenanceLog::findOrFail($id);
-        $log->update(['type' => $request->type]);
+        $log->update(['type' => $type]);
 
         return back()->with('success', 'Maintenance log updated.');
     }

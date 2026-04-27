@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\Employee;
 use App\Models\WfhRequest;
 use App\Traits\FilterableByAccess;
 use Illuminate\Http\Request;
@@ -115,6 +116,8 @@ class WfhController extends Controller
         
         $start = \Carbon\Carbon::parse($validated['start_date']);
         $end = \Carbon\Carbon::parse($validated['end_date']);
+        $employee = Employee::find($employeeId);
+        $workingDayResolver = app(\App\Services\Attendance\WorkingDayResolverService::class);
         
         // Fetch Holidays in Range
         $holidays = \App\Models\Holiday::whereBetween('date', [$start->toDateString(), $end->toDateString()])
@@ -127,9 +130,9 @@ class WfhController extends Controller
         
         while ($start->lte($end)) {
             $dateStr = $start->toDateString();
-            
-            // Skip Sundays
-            if ($start->isSunday()) {
+
+            // Skip non-working days from dynamic shift/holiday rules
+            if ($workingDayResolver->isNonWorkingDay($start->copy(), $employee)) {
                 $start->addDay();
                 continue;
             }

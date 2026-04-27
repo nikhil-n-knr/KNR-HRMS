@@ -248,6 +248,13 @@ const getStatusStyles = (status) => {
                             </button>
                             
                             <div class="flex gap-3">
+                                <Link
+                                    :href="route('employee.rewards.index', { uuid: employee.uuid })"
+                                    class="flex-1 h-14 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:from-teal-600 hover:to-cyan-600 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-teal-500/20"
+                                >
+                                    <SparklesIcon class="w-4 h-4" />
+                                    Rewards
+                                </Link>
                                 <button class="flex-1 h-14 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95">
                                     <SparklesIcon class="w-4 h-4" />
                                     AI Profile Audit

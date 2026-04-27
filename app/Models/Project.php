@@ -33,7 +33,8 @@ class Project extends Model
         'plan_lock_recipients',
         'estimated_hours',
         'original_estimated_hours',
-        'original_planned_deadline'
+        'original_planned_deadline',
+        'owners'
     ];
 
     protected $casts = [
@@ -45,7 +46,8 @@ class Project extends Model
         'original_estimated_hours' => 'float',
         'original_planned_deadline' => 'date',
         'is_locked' => 'boolean',
-        'plan_lock_recipients' => 'array'
+        'plan_lock_recipients' => 'array',
+        'owners' => 'array'
     ];
 
     protected $appends = ['brd_signed'];

@@ -47,8 +47,13 @@ class ShiftController extends Controller
             'end_time' => 'required|date_format:H:i:s,H:i|different:start_time',
             'work_days' => 'required|array|min:1',
             'work_days.*' => 'string|in:Mon,Tue,Wed,Thu,Fri,Sat,Sun',
+            'week_off_rules' => 'nullable|array',
+            'week_off_rules.*.weekday' => 'required_with:week_off_rules|string|in:Mon,Tue,Wed,Thu,Fri,Sat,Sun',
+            'week_off_rules.*.weeks' => 'required_with:week_off_rules|array|min:1',
+            'week_off_rules.*.weeks.*' => 'string|in:1,2,3,4,last',
             'grace_late_entry' => 'nullable|integer|min:0',
             'grace_early_exit' => 'nullable|integer|min:0',
+            'post_shift_auto_checkout_cap_minutes' => 'nullable|integer|min:0|max:720',
             'color' => 'nullable|string|max:7', // Hex code
             'location_ids' => 'nullable|array',
             'location_ids.*' => 'exists:locations,id',
@@ -59,6 +64,8 @@ class ShiftController extends Controller
 
         try {
             DB::beginTransaction();
+
+            $validated['week_off_rules'] = $this->normalizeWeekOffRules($validated['week_off_rules'] ?? []);
 
             if ($request->boolean('is_default') && empty($request->location_ids)) {
                 Shift::whereNull('location_ids')->update(['is_default' => false]);
@@ -98,8 +105,13 @@ class ShiftController extends Controller
             'end_time' => 'required|date_format:H:i:s,H:i|different:start_time',
             'work_days' => 'required|array|min:1',
             'work_days.*' => 'string|in:Mon,Tue,Wed,Thu,Fri,Sat,Sun',
+            'week_off_rules' => 'nullable|array',
+            'week_off_rules.*.weekday' => 'required_with:week_off_rules|string|in:Mon,Tue,Wed,Thu,Fri,Sat,Sun',
+            'week_off_rules.*.weeks' => 'required_with:week_off_rules|array|min:1',
+            'week_off_rules.*.weeks.*' => 'string|in:1,2,3,4,last',
             'grace_late_entry' => 'nullable|integer|min:0',
             'grace_early_exit' => 'nullable|integer|min:0',
+            'post_shift_auto_checkout_cap_minutes' => 'nullable|integer|min:0|max:720',
             'color' => 'nullable|string|max:7',
             'location_ids' => 'nullable|array',
             'location_ids.*' => 'exists:locations,id',
@@ -110,6 +122,8 @@ class ShiftController extends Controller
 
         try {
             DB::beginTransaction();
+
+            $validated['week_off_rules'] = $this->normalizeWeekOffRules($validated['week_off_rules'] ?? []);
 
             if ($request->boolean('is_default') && empty($request->location_ids)) {
                  Shift::whereNull('location_ids')->where('id', '!=', $shift->id)->update(['is_default' => false]);
@@ -158,16 +172,49 @@ class ShiftController extends Controller
     public function export()
     {
         $shifts = Shift::all();
-        $csv = "Name,Code,Start Time,End Time,Work Days,Grace Late,Grace Early,Is Default\n";
+        $csv = "Name,Code,Start Time,End Time,Work Days,Grace Late,Grace Early,Post Shift Auto Checkout Cap,Is Default\n";
         
         foreach ($shifts as $shift) {
             $days = is_array($shift->work_days) ? implode('|', $shift->work_days) : $shift->work_days;
-            $csv .= "\"{$shift->name}\",\"{$shift->code}\",{$shift->start_time},{$shift->end_time},\"{$days}\",{$shift->grace_late_entry},{$shift->grace_early_exit},{$shift->is_default}\n";
+            $csv .= "\"{$shift->name}\",\"{$shift->code}\",{$shift->start_time},{$shift->end_time},\"{$days}\",{$shift->grace_late_entry},{$shift->grace_early_exit},{$shift->post_shift_auto_checkout_cap_minutes},{$shift->is_default}\n";
         }
 
         return response($csv, 200, [
             'Content-Type' => 'text/csv',
             'Content-Disposition' => 'attachment; filename="shifts_export.csv"',
         ]);
+    }
+
+    private function normalizeWeekOffRules(array $rules): ?array
+    {
+        $normalized = collect($rules)
+            ->map(function ($rule) {
+                $weekday = $rule['weekday'] ?? null;
+                $weeks = array_values(array_unique($rule['weeks'] ?? []));
+
+                if (!$weekday || empty($weeks)) {
+                    return null;
+                }
+
+                $validWeeks = collect($weeks)
+                    ->map(fn($w) => strtolower((string) $w))
+                    ->filter(fn($w) => in_array($w, ['1', '2', '3', '4', 'last'], true))
+                    ->values()
+                    ->all();
+
+                if (empty($validWeeks)) {
+                    return null;
+                }
+
+                return [
+                    'weekday' => $weekday,
+                    'weeks' => $validWeeks,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+
+        return empty($normalized) ? null : $normalized;
     }
 }

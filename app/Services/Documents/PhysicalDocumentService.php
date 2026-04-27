@@ -48,6 +48,25 @@ class PhysicalDocumentService
     }
 
     /**
+     * Return document back to custody.
+     */
+    public function returnToCustody(int $recordId, int $authorizedBy): PhysicalRecord
+    {
+        $record = PhysicalRecord::findOrFail($recordId);
+
+        if ($record->status !== 'With_Employee') {
+            throw new Exception("Document cannot be returned from status: {$record->status}");
+        }
+
+        $record->update([
+            'status' => 'In_Custody',
+            'notes' => $record->notes . "\nReturned to custody by AuthID: {$authorizedBy} at " . now()
+        ]);
+
+        return $record;
+    }
+
+    /**
      * Mark as Missing (Audit failure).
      */
     public function markMissing(int $recordId): PhysicalRecord

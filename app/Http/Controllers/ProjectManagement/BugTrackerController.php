@@ -16,6 +16,9 @@ use App\Models\BugTicketTransition;
 use Carbon\Carbon;
 
 use App\Services\Project\BugWorkflowService;
+use App\Services\Communication\NotificationService;
+use App\Notifications\BugManualReminderNotification;
+use App\Notifications\BugAssignedNotification;
 
 class BugTrackerController extends Controller
 {
@@ -403,22 +406,61 @@ class BugTrackerController extends Controller
      */
     public function getAvailableAssignees(Request $request)
     {
-        $request->validate(['project_id' => 'required']);
+        $validated = $request->validate([
+            'project_id' => 'nullable|integer',
+            'project_ids' => 'nullable|array',
+            'project_ids.*' => 'integer',
+        ]);
 
-        // Fetch employees who have ANY work assignment in this project
-        // OR are explicitly part of the project team (if you have that relation)
-        
-        $assigneeIds = WorkAssignment::where('project_id', $request->project_id)
+        $projectIds = collect($validated['project_ids'] ?? [])
+            ->push($validated['project_id'] ?? null)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        // If no project filter is passed, return assignees from all project assignments
+        $assignmentsQuery = WorkAssignment::query();
+        if ($projectIds->isNotEmpty()) {
+            $assignmentsQuery->whereIn('project_id', $projectIds);
+        }
+
+        $employeeAssigneeIds = $assignmentsQuery
             ->where('assignee_type', Employee::class)
             ->distinct() // Optimized
             ->pluck('assignee_id');
+
+        $userAssigneeIds = (clone $assignmentsQuery)
+            ->where('assignee_type', \App\Models\User::class)
+            ->distinct()
+            ->pluck('assignee_id');
+
+        $userMappedEmployeeIds = Employee::query()
+            ->whereIn('user_id', $userAssigneeIds)
+            ->pluck('id');
+
+        $resolvedEmployeeIds = $employeeAssigneeIds
+            ->merge($userMappedEmployeeIds)
+            ->filter()
+            ->unique()
+            ->values();
+
+        // Fallback: if no assignment mapping exists, provide active employee directory
+        // so assignment controls are still usable.
+        if ($resolvedEmployeeIds->isEmpty()) {
+            $resolvedEmployeeIds = Employee::query()
+                ->where('status', 'active')
+                ->orWhereNull('status')
+                ->pluck('id');
+        }
             
-        $employees = Employee::whereIn('id', $assigneeIds)
-            ->select('id', 'first_name', 'last_name', 'avatar')
+        $employees = Employee::whereIn('id', $resolvedEmployeeIds)
+            ->select('id', 'user_id', 'first_name', 'last_name', 'avatar')
             ->get()
             ->map(function($e) {
                 return [
                     'id' => $e->id,
+                    'user_id' => $e->user_id,
                     'name' => $e->first_name . ' ' . $e->last_name,
                     'avatar' => $e->avatar
                 ];
@@ -477,21 +519,17 @@ class BugTrackerController extends Controller
         // Phase 11: Approval Gate Logic
         $currentStage = $bug->stage;
         if ($currentStage && $currentStage->requires_approval) {
-            // Admin/Super Admin override
-            if (!Auth::user()->hasRole(['Admin', 'Super Admin'])) {
+            // Admin/Super Admin override and Mentor Override
+            if (!Auth::user()->hasRole(['Admin', 'Super Admin']) && $currentStage->mentor_id !== Auth::id()) {
                 // Check if user has the required role to execute this transition
                 $approverRoleId = $currentStage->role_id;
                 
                 if ($approverRoleId && !Auth::user()->hasRole($approverRoleId)) {
-                    return response()->json([
-                        'message' => "Transition out of '{$currentStage->name}' requires approval from " . ($currentStage->role->name ?? 'authorized personnel') . "."
-                    ], 403);
+                    return back()->withErrors(['message' => "Transition out of '{$currentStage->name}' requires approval from " . ($currentStage->role->name ?? 'authorized personnel') . "."])->setStatusCode(303);
                 }
             }
         }
 
-        // Target Stage Rule: Only check if target requires specific role to perform work (Optional)
-        // If not, allow it. We primarily care about Approval Gates for CURRENT stage.
         if ($stage->role_id && !Auth::user()->hasAnyRole(['Admin', 'Super Admin', $stage->role_id])) {
             // log warn but let it pass if transition is from Architect
         }
@@ -499,23 +537,29 @@ class BugTrackerController extends Controller
         $fromStageName = $bug->stage->name ?? 'Blank';
         $toStageName = $stage->name;
         
-        // Use Centralized Workflow Service
         $this->workflowService->transition($bug, $stage, $request->resolution_note, [
             'assignee_id' => $request->assignee_id
         ]);
 
-        return response()->json(['status' => 'ok']);
+        return back()->with('success', 'Stage updated successfully.')->setStatusCode(303);
     }
 
-    public function advancedStageUpdate(Request $request, $id)
+    public function advancedStageUpdate(Request $request, $id, NotificationService $notificationService)
     {
         $bug = BugTicket::findOrFail($id);
         $this->authorize('update', $bug);
+
+        $request->validate([
+            'stage' => 'required|integer|exists:workflow_stages,id',
+            'assignee_ids' => 'nullable|array',
+            'assignee_ids.*' => 'nullable',
+            'note' => 'nullable|string',
+        ]);
         
         $fromStageId = $bug->workflow_stage_id;
         $fromStageName = $bug->stage->name ?? 'Initial';
 
-        $stageId = $request->input('stage');
+        $stageId = (int) $request->input('stage');
         $stage = WorkflowStage::findOrFail($stageId);
         $toStageName = $stage->name;
         
@@ -532,14 +576,14 @@ class BugTrackerController extends Controller
                 $q->where('entity_type', BugTicket::class)->where('entity_id', $bug->id);
             })->where('stage_id', $bug->stage->id)->where('status', 'approved')->exists();
 
-            if (!$isApproved && !Auth::user()->hasRole(['Admin', 'Super Admin'])) {
+            if (!$isApproved && !Auth::user()->hasRole(['Admin', 'Super Admin']) && $bug->stage->mentor_id !== Auth::id()) {
                 return back()->withErrors(['message' => "Stage '{$bug->stage->name}' requires verification approval before moving forward."]);
             }
         }
 
         // 2. Role Check (Existing)
         if ($stage->role_id && !Auth::user()->hasRole($stage->role_id)) {
-            if (!Auth::user()->hasRole(['Admin', 'Super Admin'])) {
+            if (!Auth::user()->hasRole(['Admin', 'Super Admin']) && $stage->mentor_id !== Auth::id() && $bug->stage->mentor_id !== Auth::id()) {
                 return back()->withErrors(['message' => 'You do not have the required role for this stage.']);
             }
         }
@@ -549,25 +593,49 @@ class BugTrackerController extends Controller
             'assignee_ids' => $request->assignee_ids // Note: transition method might need to be aware of multi-assignees if we want
         ]);
 
+        $assignedUsers = collect();
+
         if ($request->has('assignee_ids') && is_array($request->assignee_ids)) {
             $bug->assignees()->delete(); 
             $firstEmployeeId = null;
             
-            foreach ($request->assignee_ids as $userId) {
-                $employee = \App\Models\User::find($userId)?->employee;
+            foreach ($request->assignee_ids as $rawAssigneeId) {
+                $assigneeId = (int) $rawAssigneeId;
+                if (!$assigneeId) {
+                    continue;
+                }
+
+                // Accept both employee IDs (from assignee picker) and legacy user IDs.
+                $employee = Employee::find($assigneeId) ?? User::find($assigneeId)?->employee;
                 if ($employee) {
                     $bug->assignees()->create([
                         'assignee_id' => $employee->id,
-                        'assignee_type' => \App\Models\Employee::class
+                        'assignee_type' => Employee::class
                     ]);
                     if (!$firstEmployeeId) $firstEmployeeId = $employee->id;
+
+                    if ($employee->user) {
+                        $assignedUsers->push($employee->user);
+                    }
                 }
             }
             
             if ($firstEmployeeId) {
-                $bug->update(['assignee_id' => $firstEmployeeId, 'assignee_type' => \App\Models\Employee::class]);
+                $bug->update(['assignee_id' => $firstEmployeeId, 'assignee_type' => Employee::class]);
             } else {
                 $bug->update(['assignee_id' => null, 'assignee_type' => null]);
+            }
+
+            // Include the acting user as well so assignment actions are visible in their Notification Center.
+            $assignedUsers->push(Auth::user());
+
+            $assignedUsers = $assignedUsers
+                ->filter(fn ($user) => $user)
+                ->unique('id')
+                ->values();
+
+            if ($assignedUsers->isNotEmpty()) {
+                $notificationService->send($assignedUsers, new BugAssignedNotification($bug->fresh('project')));
             }
         }
 
@@ -652,7 +720,9 @@ class BugTrackerController extends Controller
         $this->clearStageNotifications($bug, $fromStageId);
         $this->notifyStageParticipants($bug, $stage);
 
-        return back()->with('success', 'Ticket stage advanced successfully.');
+        $bug->load(['assignee', 'assignees.assignee']);
+
+        return back()->with('success', 'Ticket stage advanced successfully.')->setStatusCode(303);
     }
 
     public function approveStage(Request $req, $id)
@@ -664,8 +734,8 @@ class BugTrackerController extends Controller
 
         if (!$approval) return back()->withErrors(['message' => "No pending approval found for this stage."]);
 
-        // Security: Check if current user is the approver OR has a role that can approve
-        if ($approval->approver_id && $approval->approver_id !== Auth::id() && !Auth::user()->hasRole(['Admin', 'Super Admin'])) {
+        // Security: Check if current user is the approver OR has a role that can approve OR is Mentor
+        if ($approval->approver_id && $approval->approver_id !== Auth::id() && !Auth::user()->hasRole(['Admin', 'Super Admin']) && $bug->stage?->mentor_id !== Auth::id()) {
             return back()->withErrors(['message' => "You are not authorized to approve this stage."]);
         }
 
@@ -692,6 +762,11 @@ class BugTrackerController extends Controller
         })->where('stage_id', $bug->workflow_stage_id)->where('status', 'pending')->first();
 
         if (!$approval) return back()->withErrors(['message' => "No pending approval found for this stage."]);
+
+        // Security: Mentor or specific approver authorization
+        if ($approval->approver_id && $approval->approver_id !== Auth::id() && !Auth::user()->hasRole(['Admin', 'Super Admin']) && $bug->stage?->mentor_id !== Auth::id()) {
+            return back()->withErrors(['message' => "You are not authorized to reject this stage validation."]);
+        }
 
         $approval->update([
             'status' => 'rejected',
@@ -889,6 +964,7 @@ class BugTrackerController extends Controller
             'module', 
             'reporter', 
             'assignee', 
+            'assignees.assignee',
             'stage', 
             'comments.author', 
             'activities.user',
@@ -896,8 +972,98 @@ class BugTrackerController extends Controller
             'forensics', // Phase 10
             // 'pendingApproval' // Currently breaking due to SQL aliasing in polymorphic through
         ]);
+
+        $lastReminder = $bug->activities()
+            ->where('activity_type', 'manual_reminder_sent')
+            ->latest('created_at')
+            ->first();
+
+        $bug->setAttribute('reminder_sent_today', $bug->activities()
+            ->where('activity_type', 'manual_reminder_sent')
+            ->whereDate('created_at', now()->toDateString())
+            ->exists());
+        $bug->setAttribute('last_reminded_at', $lastReminder?->created_at);
         
         return response()->json($bug);
+    }
+
+    public function sendReminder(Request $request, BugTicket $bug, NotificationService $notificationService)
+    {
+        $this->authorize('update', $bug);
+
+        $alreadySentToday = $bug->activities()
+            ->where('activity_type', 'manual_reminder_sent')
+            ->whereDate('created_at', now()->toDateString())
+            ->exists();
+
+        if ($alreadySentToday) {
+            return response()->json([
+                'message' => 'Reminder already sent today for this bug.',
+            ], 422);
+        }
+
+        $usersToNotify = collect();
+
+        if ($bug->assignee_type === Employee::class && $bug->assignee_id) {
+            $primaryEmployee = Employee::with('user')->find($bug->assignee_id);
+            if ($primaryEmployee?->user) {
+                $usersToNotify->push($primaryEmployee->user);
+            }
+        }
+
+        if ($bug->assignee_type === User::class && $bug->assignee_id) {
+            $primaryUser = User::find($bug->assignee_id);
+            if ($primaryUser) {
+                $usersToNotify->push($primaryUser);
+            }
+        }
+
+        if ($bug->relationLoaded('assignees')) {
+            $extraAssignees = $bug->assignees;
+        } else {
+            $extraAssignees = $bug->assignees()->get();
+        }
+
+        $extraEmployeeIds = $extraAssignees
+            ->where('assignee_type', Employee::class)
+            ->pluck('assignee_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($extraEmployeeIds->isNotEmpty()) {
+            $extraUsers = Employee::with('user')
+                ->whereIn('id', $extraEmployeeIds)
+                ->get()
+                ->pluck('user')
+                ->filter();
+
+            $usersToNotify = $usersToNotify->merge($extraUsers);
+        }
+
+        $usersToNotify = $usersToNotify
+            ->filter()
+            ->unique('id')
+            ->values();
+
+        if ($usersToNotify->isNotEmpty()) {
+            $notificationService->send($usersToNotify, new BugManualReminderNotification($bug, Auth::user()));
+        }
+
+        $this->logActivity(
+            $bug,
+            'manual_reminder_sent',
+            'Manual reminder sent to assigned members.',
+            [
+                'sent_by' => Auth::id(),
+                'recipients' => $usersToNotify->pluck('id')->all(),
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Reminder sent successfully. You can send another reminder tomorrow.',
+            'reminder_sent_today' => true,
+        ]);
     }
 
     public function storeComment(Request $request, BugTicket $bug)

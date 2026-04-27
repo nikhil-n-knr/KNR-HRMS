@@ -12,6 +12,8 @@ use Carbon\Carbon;
 
 class AttendanceRegistryService
 {
+    private const DEFAULT_POST_SHIFT_SESSION_CAP_MINUTES = 60;
+
     protected $rotationCalculator;
     protected $logger;
     protected $gamification;
@@ -86,6 +88,9 @@ class AttendanceRegistryService
     {
         $today = Carbon::today();
         $now = Carbon::now();
+
+        // Ensure any expired open sessions are force-closed before starting a new one.
+        $this->autoCheckoutOpenSessions($now, $employee->id);
 
         // 1. Determine Context (Holiday / Leave)
         $contextStatus = 'Present'; // Default
@@ -167,6 +172,11 @@ class AttendanceRegistryService
         }
 
         // 5. Start New Session
+        $existingOpenSession = $log->sessions()->whereNull('out_time')->latest('in_time')->first();
+        if ($existingOpenSession) {
+            throw new \Exception('You are already checked in. Please check out first.');
+        }
+
         $session = $log->sessions()->create([
             'in_time' => $now,
             'in_ip' => $ip,
@@ -179,6 +189,68 @@ class AttendanceRegistryService
         $this->logger->log('attendance', 'clock_in', "{$employee->first_name} clocked in from {$ip} via {$source}. Status: {$log->status}", ['user_id' => $employee->user_id]);
 
         return $log;
+    }
+
+    /**
+     * Auto-close open sessions based on shift-end and post-shift cap rules.
+     *
+     * Rules:
+     * 1) If session started before/at shift end: close at shift_end + 60 minutes.
+     * 2) If session started after shift end: close at in_time + 60 minutes.
+     */
+    public function autoCheckoutOpenSessions(?Carbon $now = null, ?int $employeeId = null): int
+    {
+        $now = $now ?: Carbon::now();
+
+        $openSessionsQuery = AttendanceSession::query()
+            ->whereNull('out_time')
+            ->with(['log.employee', 'log.shift']);
+
+        if ($employeeId) {
+            $openSessionsQuery->whereHas('log', function ($q) use ($employeeId) {
+                $q->where('employee_id', $employeeId);
+            });
+        }
+
+        $openSessions = $openSessionsQuery->get();
+        $closedCount = 0;
+
+        foreach ($openSessions as $session) {
+            $log = $session->log;
+            $employee = $log?->employee;
+            if (!$log || !$employee) {
+                continue;
+            }
+
+            $shift = $log->shift ?: $this->getShiftForDate($employee, Carbon::parse($log->date));
+            if (!$shift || !$shift->start_time || !$shift->end_time) {
+                continue;
+            }
+
+            $cutoffTime = $this->resolveSessionAutoCheckoutCutoff($session, $log, $shift);
+            if (!$cutoffTime || $now->lt($cutoffTime)) {
+                continue;
+            }
+
+            $outTime = $cutoffTime->copy();
+            if ($outTime->lt(Carbon::parse($session->in_time))) {
+                $outTime = Carbon::parse($session->in_time);
+            }
+
+            $session->update([
+                'out_time' => $outTime,
+                'out_ip' => 'SYSTEM_AUTO_CUTOFF',
+            ]);
+
+            $freshLog = $log->fresh(['sessions', 'shift']);
+            if ($freshLog) {
+                $this->recalculateDailyTotals($freshLog);
+            }
+
+            $closedCount++;
+        }
+
+        return $closedCount;
     }
 
     /**
@@ -228,8 +300,20 @@ class AttendanceRegistryService
 
         // Calculate Shift Duration
         $log->load('shift');
+        if (!$log->shift || !$log->shift->start_time || !$log->shift->end_time) {
+            $log->update([
+                'total_work_minutes' => $totalMinutes,
+                'overtime_minutes' => 0,
+            ]);
+
+            return;
+        }
+
         $shiftStart = Carbon::parse($log->date->format('Y-m-d') . ' ' . $log->shift->start_time);
         $shiftEnd = Carbon::parse($log->date->format('Y-m-d') . ' ' . $log->shift->end_time);
+        if ($shiftEnd->lessThanOrEqualTo($shiftStart)) {
+            $shiftEnd->addDay();
+        }
         $shiftMinutes = $shiftStart->diffInMinutes($shiftEnd);
 
         // Calculate Overtime
@@ -242,6 +326,43 @@ class AttendanceRegistryService
             'total_work_minutes' => $totalMinutes,
             'overtime_minutes' => $overtime
         ]);
+    }
+
+    private function resolveSessionAutoCheckoutCutoff(AttendanceSession $session, AttendanceLog $log, Shift $shift): ?Carbon
+    {
+        if (!$session->in_time || !$shift->start_time || !$shift->end_time) {
+            return null;
+        }
+
+        $logDate = Carbon::parse($log->date);
+        $sessionIn = Carbon::parse($session->in_time);
+        $shiftStart = Carbon::parse($logDate->format('Y-m-d') . ' ' . $shift->start_time);
+        $shiftEnd = Carbon::parse($logDate->format('Y-m-d') . ' ' . $shift->end_time);
+
+        // Overnight shift support.
+        if ($shiftEnd->lessThanOrEqualTo($shiftStart)) {
+            $shiftEnd->addDay();
+        }
+
+        $postShiftCapMinutes = $this->getPostShiftSessionCapMinutes($shift);
+
+        // Before or during shift: allow max 1 hour beyond shift end.
+        if ($sessionIn->lessThanOrEqualTo($shiftEnd)) {
+            return $shiftEnd->copy()->addMinutes($postShiftCapMinutes);
+        }
+
+        // After shift end re-check-ins: each session gets its own 1-hour cap.
+        return $sessionIn->copy()->addMinutes($postShiftCapMinutes);
+    }
+
+    private function getPostShiftSessionCapMinutes(Shift $shift): int
+    {
+        $cap = $shift->post_shift_auto_checkout_cap_minutes;
+        if (!is_numeric($cap)) {
+            return self::DEFAULT_POST_SHIFT_SESSION_CAP_MINUTES;
+        }
+
+        return max(0, (int) $cap);
     }
 
     /**

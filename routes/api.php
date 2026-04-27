@@ -1,6 +1,11 @@
 <?php
 
 use App\Http\Controllers\Admin\DepartmentController;
+use App\Http\Controllers\Admin\ClientItemSupplyController;
+use App\Http\Controllers\Admin\InventoryCategoryController;
+use App\Http\Controllers\Admin\InventoryIssueController;
+use App\Http\Controllers\Admin\InventoryRecurringRuleController;
+use App\Http\Controllers\Admin\LocationNodeController;
 use App\Http\Controllers\Admin\LocationController;
 use App\Http\Controllers\Admin\RegularizationController;
 use App\Http\Controllers\Admin\RoleController;
@@ -78,6 +83,34 @@ Route::middleware(['auth:sanctum'])->prefix('admin')->name('api.admin.')->group(
     // Org Structure
     Route::apiResource('departments', DepartmentController::class);
     Route::apiResource('locations', LocationController::class);
+
+    // Practical asset and store operations
+    Route::get('assets/location-nodes', [LocationNodeController::class, 'index'])->name('assets.location-nodes.index');
+    Route::post('assets/location-nodes', [LocationNodeController::class, 'store'])->name('assets.location-nodes.store');
+    Route::put('assets/location-nodes/{node}', [LocationNodeController::class, 'update'])->name('assets.location-nodes.update');
+    Route::delete('assets/location-nodes/{node}', [LocationNodeController::class, 'destroy'])->name('assets.location-nodes.destroy');
+    Route::post('assets/location-mappings', [LocationNodeController::class, 'assign'])->name('assets.location-mappings.store');
+
+    Route::get('inventory/category-tree', [InventoryCategoryController::class, 'index'])->name('inventory.category-tree.index');
+    Route::post('inventory/category-tree', [InventoryCategoryController::class, 'store'])->name('inventory.category-tree.store');
+    Route::put('inventory/category-tree/{category}', [InventoryCategoryController::class, 'update'])->name('inventory.category-tree.update');
+    Route::delete('inventory/category-tree/{category}', [InventoryCategoryController::class, 'destroy'])->name('inventory.category-tree.destroy');
+
+    Route::get('inventory/recurring-rules', [InventoryRecurringRuleController::class, 'index'])->name('inventory.recurring-rules.index');
+    Route::post('inventory/recurring-rules', [InventoryRecurringRuleController::class, 'store'])->name('inventory.recurring-rules.store');
+    Route::put('inventory/recurring-rules/{rule}', [InventoryRecurringRuleController::class, 'update'])->name('inventory.recurring-rules.update');
+    Route::delete('inventory/recurring-rules/{rule}', [InventoryRecurringRuleController::class, 'destroy'])->name('inventory.recurring-rules.destroy');
+
+    Route::get('inventory/issues', [InventoryIssueController::class, 'index'])->name('inventory.issues.index');
+    Route::get('inventory/issues/export', [InventoryIssueController::class, 'export'])->name('inventory.issues.export');
+    Route::post('inventory/issues', [InventoryIssueController::class, 'store'])->name('inventory.issues.store');
+    Route::post('inventory/issues/{issue}/returns', [InventoryIssueController::class, 'returnIssue'])->name('inventory.issues.returns.store');
+
+    Route::get('inventory/client-supplies', [ClientItemSupplyController::class, 'index'])->name('inventory.client-supplies.index');
+    Route::get('inventory/client-supplies/export', [ClientItemSupplyController::class, 'export'])->name('inventory.client-supplies.export');
+    Route::post('inventory/client-supplies', [ClientItemSupplyController::class, 'store'])->name('inventory.client-supplies.store');
+    Route::put('inventory/client-supplies/{supply}', [ClientItemSupplyController::class, 'update'])->name('inventory.client-supplies.update');
+    Route::delete('inventory/client-supplies/{supply}', [ClientItemSupplyController::class, 'destroy'])->name('inventory.client-supplies.destroy');
 
     // --- LEAVE MANAGEMENT ---
     Route::apiResource('leave-types', \App\Http\Controllers\Admin\LeaveTypeController::class);

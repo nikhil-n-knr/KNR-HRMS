@@ -3,11 +3,18 @@
 namespace App\Services\Leave;
 
 use App\Models\Employee;
-use App\Models\Holiday;
+use App\Services\Attendance\WorkingDayResolverService;
 use Carbon\Carbon;
 
 class LeaveService
 {
+    protected WorkingDayResolverService $workingDayResolver;
+
+    public function __construct(WorkingDayResolverService $workingDayResolver)
+    {
+        $this->workingDayResolver = $workingDayResolver;
+    }
+
     /**
      * Calculate the net number of leave days excluding weekends and holidays.
      * 
@@ -15,10 +22,11 @@ class LeaveService
      * @param string|Carbon $endDate
      * @return float
      */
-    public function calculateNetDays($startDate, $endDate): float
+    public function calculateNetDays($startDate, $endDate, ?int $employeeId = null): float
     {
         $start = Carbon::parse($startDate)->startOfDay();
         $end = Carbon::parse($endDate)->startOfDay();
+        $employee = $employeeId ? Employee::find($employeeId) : null;
 
         if ($start->gt($end)) {
             return 0;
@@ -27,13 +35,8 @@ class LeaveService
         $totalDays = 0;
         $current = $start->copy();
 
-        // Fetch all holidays once
-        $holidays = Holiday::whereBetween('date', [$start->toDateString(), $end->toDateString()])
-            ->pluck('date')
-            ->toArray();
-
         while ($current->lte($end)) {
-            if (!$current->isWeekend() && !in_array($current->toDateString(), $holidays)) {
+            if (!$this->workingDayResolver->isNonWorkingDay($current->copy(), $employee)) {
                 $totalDays += 1;
             }
             $current->addDay();

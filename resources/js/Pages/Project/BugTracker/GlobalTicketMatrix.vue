@@ -640,6 +640,17 @@ const handleTransitionCompleted = () => {
 const groupBy = ref('none');
 const selectedBugs = ref([]);
 
+const selectedBugProjectIds = computed(() => {
+    const data = props.bugs.data || props.bugs || [];
+
+    return [...new Set(
+        data
+            .filter((bug) => selectedBugs.value.includes(bug.id))
+            .map((bug) => Number(bug.project_id || bug.project?.id))
+            .filter((id) => Number.isFinite(id) && id > 0)
+    )];
+});
+
 const groupedBugs = computed(() => {
     let data = props.bugs.data || props.bugs || [];
     
@@ -799,9 +810,18 @@ const exportData = (format) => {
 
 const bulkReassign = async () => {
     if (!selectedBugs.value.length) return;
+
+    const projectIds = selectedBugProjectIds.value;
+    if (!projectIds.length) {
+        console.error('Failed to fetch assignees: selected bugs have no project context');
+        return;
+    }
+
     try {
         const response = await axios.get(route('bugs.assignees'), {
-            params: { project_id: store.selectedProject }
+            params: projectIds.length === 1
+                ? { project_id: projectIds[0] }
+                : { project_ids: projectIds }
         });
         availableAssignees.value = response.data;
         showBulkReassignModal.value = true;

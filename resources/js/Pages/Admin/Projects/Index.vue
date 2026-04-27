@@ -7,7 +7,8 @@ import PrimaryButton from '@/Components/PrimaryButton.vue';
 import SecondaryButton from '@/Components/SecondaryButton.vue';
 import BaseInput from '@/Components/BaseInput.vue';
 import ConfirmationModal from '@/Components/Common/ConfirmationModal.vue';
-import { PlusIcon, PencilSquareIcon, TrashIcon, CalendarIcon, ViewColumnsIcon } from '@heroicons/vue/24/outline';
+import MultiUserSelect from '@/Components/MultiUserSelect.vue';
+import { PlusIcon, PencilSquareIcon, TrashIcon, CalendarIcon, ViewColumnsIcon, UsersIcon } from '@heroicons/vue/24/outline';
 
 defineOptions({ layout: MainLayout });
 
@@ -27,7 +28,8 @@ const form = useForm({
     start_date: '',
     end_date: '',
     status: 'Active',
-    manager_id: ''
+    manager_id: '',
+    owners: []
 });
 
 const openCreate = () => {
@@ -45,6 +47,7 @@ const openEdit = (project) => {
     form.end_date = project.end_date;
     form.status = project.status;
     form.manager_id = project.manager_id;
+    form.owners = project.owners || [];
     showModal.value = true;
 };
 
@@ -121,6 +124,10 @@ const statusColors = {
                         </div>
                         <span>Manager: {{ project.manager.name }}</span>
                     </div>
+                    <div v-if="project.owners && project.owners.length > 0" class="flex items-center gap-2 mt-1">
+                        <UsersIcon class="w-4 h-4 text-emerald-500" />
+                        <span>Owners: {{ project.owners.length }} assigned</span>
+                    </div>
                 </div>
 
                 <div class="flex justify-between items-center pt-4 border-t border-gray-50 mt-4">
@@ -176,12 +183,18 @@ const statusColors = {
                         <BaseInput type="date" label="End Date" v-model="form.end_date" />
                     </div>
 
-                    <div>
-                         <label class="block text-sm font-medium text-gray-700 mb-1">Project Manager</label>
-                         <select v-model="form.manager_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
-                             <option value="">None</option>
-                             <option v-for="mgr in managers" :key="mgr.id" :value="mgr.id">{{ mgr.name }}</option>
-                         </select>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                             <label class="block text-sm font-medium text-gray-700 mb-1">Project Manager (Primary)</label>
+                             <select v-model="form.manager_id" class="w-full rounded-md border-gray-300 shadow-sm focus:border-emerald-500 focus:ring-emerald-500">
+                                 <option value="">None</option>
+                                 <option v-for="mgr in managers" :key="mgr.id" :value="mgr.id">{{ mgr.name }}</option>
+                             </select>
+                        </div>
+                        <div>
+                             <label class="block text-sm font-medium text-gray-700 mb-1">Project Owners (Multiple)</label>
+                             <MultiUserSelect v-model="form.owners" :items="managers" placeholder="Select owners..." />
+                        </div>
                     </div>
 
                     <div class="flex justify-end gap-3 mt-6">

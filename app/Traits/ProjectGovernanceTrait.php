@@ -27,7 +27,9 @@ trait ProjectGovernanceTrait
         // 2. Multi-Level RBAC: Admins/Super-Admins can bypass WITH notification.
         // Others are strictly blocked.
         if (!$user->hasRole(['Admin', 'Super Admin'])) {
-            throw new \Exception("The schedule for this " . ($task ? 'task' : 'project') . " is locked. Only Administrators can overwrite the plan.");
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'message' => "The schedule for this " . ($task ? 'task' : 'project') . " is locked. Only Administrators can overwrite the plan."
+            ]);
         }
 
         // 3. Trigger immediate alert if changes actually occurred

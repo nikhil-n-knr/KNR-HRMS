@@ -43,4 +43,9 @@ class Client extends Model
     {
         return $this->hasMany(\App\Models\ClientUser::class);
     }
+
+    public function itemSupplies()
+    {
+        return $this->hasMany(\App\Models\ClientItemSupply::class);
+    }
 }

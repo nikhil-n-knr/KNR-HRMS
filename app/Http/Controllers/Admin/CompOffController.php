@@ -21,6 +21,7 @@ class CompOffController extends Controller
     // Logic to scan for past weekend work and grant credits
     public function scan(Request $request) 
     {
+        $workingDayResolver = app(\App\Services\Attendance\WorkingDayResolverService::class);
         $startDate = Carbon::parse($request->input('start_date', now()->subMonth()));
         $endDate = Carbon::parse($request->input('end_date', now()));
 
@@ -32,12 +33,9 @@ class CompOffController extends Controller
 
         foreach ($logs as $log) {
             $date = Carbon::parse($log->date);
-            
-            // Check if Weekend (Sat/Sun) - Logic can be refined for specific shifts
-            $isWeekend = $date->isWeekend();
-            
-            // In a real app, also check Holiday Calendar here
-            if (!$isWeekend) continue;
+
+            $isNonWorkingDay = $workingDayResolver->isNonWorkingDay($date, $log->employee);
+            if (!$isNonWorkingDay) continue;
 
             // Check if worked enough (e.g. > 4 hours)
             // Assuming log has 'minutes' or we calculate from sessions. 

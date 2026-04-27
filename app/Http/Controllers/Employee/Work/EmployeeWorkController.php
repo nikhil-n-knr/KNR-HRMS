@@ -485,53 +485,6 @@ class EmployeeWorkController extends Controller
             'attention_tasks' => $todayCommandTasks,
         ];
 
-        $rangeSummary = [
-            'label' => $rangeLabel,
-            'date_from' => $dateFrom,
-            'date_to' => $dateTo,
-            'task_count' => $rangeTaskCount,
-            'project_count' => $projectPlanRows->count(),
-            'task_estimated_hours' => round($totalEstimatedHours, 2),
-            'timesheet_hours' => round($todayTimesheetHours, 2),
-            'timesheet_hours_total' => $rangeTimesheetHours,
-            'checklist_planned_hours' => $rangeChecklistPlannedHours,
-            'checklist_actual_hours' => $rangeChecklistActualHours,
-            'variance_hours' => $todayVarianceHours,
-            'variance_hours_total' => $rangeVarianceHours,
-        ];
-
-        $timesheetInsights = [
-            'timesheet_url' => url('/attendance?tab=timesheets'),
-            'today' => [
-                'date' => $today->toDateString(),
-                'hours' => 0.0,
-                'filled' => false,
-            ],
-            'last_week' => [
-                'start' => null,
-                'end' => null,
-                'hours' => 0.0,
-                'filled_days' => 0,
-                'target_days' => 7,
-                'filled' => false,
-            ],
-            'last_7_days' => [],
-            'project_breakdown' => [],
-            'weekly_overall' => [],
-            'analytics' => [
-                'avg_hours_last_7' => 0.0,
-                'best_day_hours' => 0.0,
-                'best_day_label' => '-',
-                'consistency_pct' => 0,
-                'missing_last_7' => 7,
-            ],
-            'weekly_analytics' => [
-                'avg_hours_last_8_weeks' => 0.0,
-                'best_week_hours' => 0.0,
-                'best_week_label' => '-',
-            ],
-        ];
-
         if ($employeeId) {
             $timesheetBase = Timesheet::query()->where('employee_id', $employeeId);
 
@@ -681,6 +634,24 @@ class EmployeeWorkController extends Controller
                 ],
             ];
         }
+
+        // Use actual timesheet hours from Timesheet table if available, otherwise use task-aggregated hours
+        $actualTodayHours = $employeeId ? (round((float) Timesheet::query()->where('employee_id', $employeeId)->whereDate('date', $today->toDateString())->sum('hours_spent'), 2)) : round($todayTimesheetHours, 2);
+        
+        $rangeSummary = [
+            'label' => $rangeLabel,
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+            'task_count' => $rangeTaskCount,
+            'project_count' => $projectPlanRows->count(),
+            'task_estimated_hours' => round($totalEstimatedHours, 2),
+            'timesheet_hours' => $actualTodayHours,
+            'timesheet_hours_total' => $rangeTimesheetHours,
+            'checklist_planned_hours' => $rangeChecklistPlannedHours,
+            'checklist_actual_hours' => $rangeChecklistActualHours,
+            'variance_hours' => round($actualTodayHours - $totalEstimatedHours, 2),
+            'variance_hours_total' => $rangeVarianceHours,
+        ];
 
         $planCards = [
             [

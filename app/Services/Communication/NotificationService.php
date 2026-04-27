@@ -65,6 +65,7 @@ class NotificationService
 
             case 'bug_assigned':
             case 'bug_stage_changed':
+            case 'bug_manual_reminder':
                 if (!empty($data['bug_id'])) {
                     return "/projects/bugs?tab=tracker&bug={$data['bug_id']}";
                 }

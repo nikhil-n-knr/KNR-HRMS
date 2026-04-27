@@ -1,63 +1,38 @@
 <script setup>
-import { Head, useForm, Link } from '@inertiajs/vue3';
+import { Head, useForm, Link, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { ref } from 'vue';
+import { 
+    CommandLineIcon, 
+    ArrowLeftIcon, 
+    PlusIcon, 
+    TrashIcon, 
+    AdjustmentsHorizontalIcon,
+    SparklesIcon,
+    BoltIcon,
+    CubeIcon,
+    TableCellsIcon,
+    MapPinIcon,
+    ShieldCheckIcon,
+    InformationCircleIcon,
+    CheckCircleIcon,
+    ArrowPathIcon,
+    InboxIcon,
+    HomeIcon,
+    BuildingOfficeIcon,
+    Square3Stack3DIcon
+} from '@heroicons/vue/24/solid';
+import PremiumModal from '@/Components/PremiumModal.vue';
+import TextInput from '@/Components/TextInput.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import BaseSelect from '@/Components/BaseSelect.vue';
+import InputError from '@/Components/InputError.vue';
 
 defineOptions({ layout: MainLayout });
 
 const props = defineProps({
     locations: Array
 });
-
-// Recursive Component for Tree Item
-const TreeItem = {
-    name: 'TreeItem',
-    props: ['node', 'depth'],
-    template: `
-        <div :class="['pl-4 border-l-2 border-gray-200 ml-2', depth === 0 ? 'ml-0 pl-0 border-l-0' : '']">
-            <div class="flex items-center group py-2">
-                <!-- Icon -->
-                <span class="mr-2 text-gray-400">
-                    <svg v-if="node.children && node.children.length" xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                    </svg>
-                    <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4" />
-                    </svg>
-                </span>
-                
-                <!-- Content -->
-                <div class="flex-1 flex justify-between items-center bg-white p-3 rounded-lg border border-gray-100 shadow-sm hover:border-indigo-200 transition-colors">
-                    <div>
-                        <span class="text-xs uppercase font-bold text-indigo-500 tracking-wider">{{ node.type }}</span>
-                        <h4 class="font-medium text-gray-900">{{ node.name }}</h4>
-                    </div>
-                    
-                    <div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                         <button @click="$emit('add-child', node)" class="text-xs bg-indigo-50 text-indigo-600 px-2 py-1 rounded hover:bg-indigo-100">
-                            + Add Child
-                         </button>
-                         <button @click="$emit('delete-node', node)" class="text-xs text-red-500 px-2 py-1 hover:text-red-700">
-                            Delete
-                         </button>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Children -->
-            <div v-if="node.children && node.children.length" class="mt-1">
-                <tree-item 
-                    v-for="child in node.children" 
-                    :key="child.id" 
-                    :node="child" 
-                    :depth="depth + 1"
-                    @add-child="$emit('add-child', $event)"
-                    @delete-node="$emit('delete-node', $event)"
-                />
-            </div>
-        </div>
-    `
-};
 
 const showModal = ref(false);
 const parentNode = ref(null);
@@ -81,137 +56,218 @@ const suggestType = (parentType) => {
 };
 
 const submitNode = () => {
-    form.post(route('physical-documents.locations.store'), {
-        onSuccess: () => showModal.value = false
+    form.post(route('admin.physical-documents.locations.store'), {
+        onSuccess: () => {
+            showModal.value = false;
+            form.reset();
+        }
     });
 };
 
 const deleteNode = (node) => {
-    if (confirm(`Delete ${node.name}? This will delete all children.`)) {
-        router.delete(route('physical-documents.locations.destroy', node.id));
+    if (confirm(`CRITICAL_ACTION: Permanently delete ${node.name} and all nested sub-nodes?`)) {
+        router.delete(route('admin.physical-documents.locations.destroy', node.id));
     }
 };
 
-// We need to register the recursive component locally (SFC constraint)
-// But since we are using <script setup>, we can't easily do 'components: {}'.
-// Alternative: Flatten the tree or just implement simple recursion in template using <component :is>...
-// Actually, standard Vue SFC recursion works by referring to the component name. 
-// Let's define it as a separate component block or use a simpler non-recursive approach for MVP if strict SFC is an issue.
-// Re-strategy: Inline recursion using <template v-for> is cleaner here?
-// Let's use a self-referencing component pattern in a separate file if needed.
-// FOR NOW: I will build a simple iterative UI that supports only 3 levels (Room > Rack > Shelf) to avoid recursion complexity in one file, or just use a loop.
-// Actually, let's use a "TreeItem" component defined in the same file? No, <script setup> makes that hard.
-// Best approach: A separate file `LocationTreeItem.vue`.
-
-// import { router } from '@inertiajs/vue3';
-
-</script>
-
-<script>
-// Separate script block for component registration if needed?
-// Vue 3 <script setup> allows importing self? 
+const getIcon = (type) => {
+    switch(type) {
+        case 'Room': return HomeIcon;
+        case 'Cabinet': return BuildingOfficeIcon;
+        case 'Rack': return InboxIcon;
+        case 'Shelf': return CommandLineIcon;
+        case 'Bin': return CubeIcon;
+        default: return Square3Stack3DIcon;
+    }
+};
 </script>
 
 <template>
-  <Head title="Storage Configuration" />
-  
-  <div class="p-6 bg-gray-50 min-h-screen">
-    <div class="flex justify-between items-center mb-6">
-        <div>
-             <h1 class="text-2xl font-bold text-gray-900">Storage Builder</h1>
-             <p class="text-gray-500">Define your physical archiving structure (Rack/Shelf/Bin)</p>
-        </div>
-        <button @click="openAddModal(null)" class="px-4 py-2 bg-indigo-600 text-white rounded-lg shadow-sm hover:bg-indigo-700 font-medium text-sm transition-colors">
-            + Add Root Location
-        </button>
-    </div>
+    <Head title="Storage Matrix Configuration" />
+    
+    <div class="h-full flex flex-col font-outfit italic -m-8 p-12 bg-slate-50 min-h-screen relative overflow-hidden animate-in fade-in duration-1000">
+        <!-- AI Grid Background -->
+        <div class="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none"></div>
+        <div class="absolute -right-32 -top-32 w-128 h-128 bg-indigo-500/5 rounded-full blur-[140px] pointer-events-none italic"></div>
 
-    <div class="bg-white rounded-xl shadow-sm p-6 max-w-4xl mx-auto min-h-[500px]">
-        <div v-if="locations.length === 0" class="text-center text-gray-400 py-12">
-            No storage locations defined. Start by adding a Room or Cabinet.
-        </div>
-
-        <!-- Tree View -->
-        <ul class="space-y-4">
-            <li v-for="root in locations" :key="root.id">
-                <!-- Level 1 -->
-                <div class="flex items-center group">
-                    <div class="w-12 h-12 flex items-center justify-center bg-indigo-100 text-indigo-600 rounded-lg mr-4 font-bold">
-                        {{ root.type[0] }}
-                    </div>
-                    <div class="flex-1 border-b border-gray-100 pb-2">
-                        <div class="flex justify-between">
-                            <h3 class="font-semibold text-lg text-gray-800">{{ root.name }} <span class="text-xs font-normal text-gray-400">({{ root.type }})</span></h3>
-                            <div class="opacity-0 group-hover:opacity-100 flex gap-2">
-                                <button @click="openAddModal(root)" class="text-indigo-600 hover:text-indigo-800 text-sm">+ Add Child</button>
-                                <button @click="deleteNode(root)" class="text-red-500 hover:text-red-700 text-sm">Delete</button>
+        <!-- Strategic Header Terminal -->
+        <header class="bg-slate-950 rounded-[3.5rem] border border-white/5 p-12 shadow-3xl mb-12 relative overflow-hidden group">
+            <div class="absolute -right-24 -top-24 w-96 h-96 bg-indigo-500/10 rounded-full blur-[100px] group-hover:bg-indigo-500/20 transition-all duration-1000"></div>
+            
+            <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-10 relative z-10">
+                <div class="flex items-center gap-10 italic text-left">
+                    <Link :href="route('admin.physical-documents.index')" 
+                        class="w-20 h-20 bg-white/5 border border-white/10 rounded-[2rem] flex items-center justify-center text-white hover:bg-white/10 hover:border-indigo-500/50 transition-all active:scale-90 shadow-2xl shrink-0 italic">
+                        <ArrowLeftIcon class="w-8 h-8" />
+                    </Link>
+                    <div class="italic">
+                        <div class="flex items-center gap-6 italic">
+                            <h1 class="text-5xl font-black text-white uppercase tracking-tighter italic leading-none">Storage Builder</h1>
+                            <div class="px-5 py-2 bg-indigo-500/10 border border-indigo-500/20 rounded-xl flex items-center gap-3 italic">
+                                <div class="w-2.5 h-2.5 bg-indigo-400 rounded-full animate-pulse shadow-[0_0_12px_#818cf8]"></div>
+                                <span class="text-[9px] font-black text-indigo-400 uppercase tracking-widest italic">MATRIX_CONFIG_MODE</span>
                             </div>
                         </div>
+                        <p class="text-[11px] font-black text-slate-500 uppercase tracking-[0.6em] mt-5 italic leading-none drop-shadow-sm truncate uppercase">PHYSICAL_STRUCTURE_ARCHITECT_v1.0</p>
                     </div>
                 </div>
 
-                <!-- Level 2 Children -->
-                <ul v-if="root.children && root.children.length" class="ml-16 mt-2 space-y-2 border-l-2 border-gray-100 pl-4">
-                    <li v-for="child in root.children" :key="child.id">
-                         <div class="flex items-center group py-1">
-                            <span class="w-2 h-2 bg-gray-300 rounded-full mr-3"></span>
-                            <div class="flex-1 flex justify-between">
-                                <span class="text-gray-700">{{ child.name }} <span class="text-xs text-gray-400">({{ child.type }})</span></span>
-                                <div class="opacity-0 group-hover:opacity-100 flex gap-2">
-                                    <button @click="openAddModal(child)" class="text-indigo-600 hover:text-indigo-800 text-xs">+ Add Child</button>
-                                     <button @click="deleteNode(child)" class="text-red-500 hover:text-red-700 text-xs">Delete</button>
-                                </div>
+                <div class="flex items-center gap-6 italic">
+                    <button @click="openAddModal(null)" 
+                        class="h-20 px-12 bg-white text-slate-950 rounded-[2rem] text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-indigo-500 hover:text-white transition-all flex items-center gap-6 active:scale-95 group italic border-none">
+                        <PlusIcon class="w-8 h-8 group-hover:rotate-180 transition-transform duration-700 italic" />
+                        <span>Initialize Root Zone</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Architect Workspace -->
+        <main class="flex-1 bg-white/80 backdrop-blur-3xl rounded-[4.5rem] border border-slate-200 p-16 shadow-3xl relative overflow-hidden z-10 transition-all duration-1000 italic scroll-smooth overflow-y-auto custom-scrollbar">
+            <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom_left,_var(--tw-gradient-stops))] from-indigo-50/50 via-transparent to-transparent pointer-events-none italic"></div>
+            
+            <div v-if="locations.length === 0" class="h-full flex flex-col items-center justify-center text-center py-40 italic">
+                 <div class="w-40 h-40 bg-slate-50 border-4 border-white rounded-[4rem] shadow-inner flex items-center justify-center text-slate-200 mb-10 group hover:scale-110 transition-transform duration-700 italic">
+                     <CubeIcon class="w-20 h-20 group-hover:rotate-12 transition-transform italic" />
+                 </div>
+                 <h3 class="text-3xl font-black text-slate-950 uppercase tracking-tighter italic leading-none">Matrix Void Detected</h3>
+                 <p class="text-[11px] font-black text-slate-400 uppercase tracking-[0.5em] mt-6 italic px-10 max-w-lg leading-loose">No storage protocols defined. Initialize your physical repository structure to begin tracking.</p>
+            </div>
+
+            <!-- Recursive Protocol Tree -->
+            <div class="max-w-5xl mx-auto space-y-12 italic pb-20">
+                <div v-for="root in locations" :key="root.id" class="group/root space-y-8 italic">
+                    <!-- Root Node Card -->
+                    <div class="relative bg-slate-950 rounded-[3.5rem] p-8 flex items-center justify-between shadow-2xl border border-white/5 overflow-hidden group/card hover:bg-slate-900 transition-all duration-700 italic">
+                        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-indigo-500/10 via-transparent to-transparent pointer-events-none opacity-40"></div>
+                        
+                        <div class="flex items-center gap-10 relative z-10 italic">
+                            <div class="w-20 h-20 bg-white/5 border border-white/10 rounded-[2rem] flex items-center justify-center text-teal-400 shadow-xl group-hover/card:rotate-6 transition-transform duration-700 italic">
+                                <component :is="getIcon(root.type)" class="w-10 h-10" />
                             </div>
-                         </div>
+                            <div class="italic">
+                                <p class="text-[9px] font-black text-indigo-400 uppercase tracking-widest italic mb-2">{{ root.type }}</p>
+                                <h3 class="text-3xl font-black text-white uppercase tracking-tighter italic leading-none">{{ root.name }}</h3>
+                            </div>
+                        </div>
 
-                         <!-- Level 3 Children -->
-                         <ul v-if="child.children && child.children.length" class="ml-6 mt-1 space-y-1">
-                            <li v-for="grandchild in child.children" :key="grandchild.id" class="flex items-center group text-sm text-gray-500">
-                                <span class="mr-2 text-gray-300">↳</span>
-                                <span class="flex-1">{{ grandchild.name }} ({{ grandchild.type }})</span>
-                                <button @click="deleteNode(grandchild)" class="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 ml-2">&times;</button>
-                            </li>
-                         </ul>
-                    </li>
-                </ul>
-            </li>
-        </ul>
+                        <div class="flex items-center gap-6 relative z-10 opacity-0 group-hover/card:opacity-100 transition-all translate-x-10 group-hover/card:translate-x-0 italic">
+                             <button @click="openAddModal(root)" class="h-14 px-8 bg-white/5 border border-white/10 text-[10px] font-black text-white uppercase tracking-widest rounded-2xl hover:bg-indigo-600 hover:border-indigo-500 transition-all italic">
+                                + ADD_CHILD
+                             </button>
+                             <button @click="deleteNode(root)" class="w-14 h-14 bg-white/5 border border-white/10 rounded-2xl flex items-center justify-center text-rose-400 hover:bg-rose-500 hover:text-white transition-all italic">
+                                <TrashIcon class="w-6 h-6" />
+                             </button>
+                        </div>
+                    </div>
+
+                    <!-- L2 Nesting -->
+                    <div v-if="root.children && root.children.length" class="pl-20 space-y-6 italic relative">
+                        <div class="absolute left-10 top-0 bottom-0 w-1 bg-slate-100 rounded-full"></div>
+                        
+                        <div v-for="child in root.children" :key="child.id" class="space-y-6 italic">
+                             <div class="relative bg-white border-2 border-slate-50 rounded-[3rem] p-8 flex items-center justify-between shadow-sm hover:shadow-2xl hover:border-indigo-100 transition-all duration-700 italic group/child">
+                                <div class="flex items-center gap-8 italic">
+                                    <div class="w-14 h-14 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-indigo-500 group-hover/child:bg-slate-950 group-hover/child:text-teal-400 transition-all italic">
+                                        <component :is="getIcon(child.type)" class="w-7 h-7" />
+                                    </div>
+                                    <div class="italic">
+                                        <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest italic mb-1.5">{{ child.type }}</p>
+                                        <h4 class="text-2xl font-black text-slate-950 uppercase tracking-tighter italic leading-none">{{ child.name }}</h4>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-center gap-5 opacity-0 group-hover/child:opacity-100 transition-all translate-x-10 group-hover/child:translate-x-0 italic">
+                                    <button @click="openAddModal(child)" class="h-12 px-6 bg-slate-50 border border-slate-200 text-[9px] font-black text-slate-500 uppercase tracking-widest rounded-xl hover:bg-indigo-50 hover:text-indigo-600 transition-all italic">
+                                        + NESTED
+                                    </button>
+                                    <button @click="deleteNode(child)" class="w-12 h-12 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center text-slate-300 hover:bg-rose-50 hover:text-rose-500 transition-all italic">
+                                        <TrashIcon class="w-5 h-5" />
+                                    </button>
+                                </div>
+                             </div>
+
+                             <!-- L3 Nesting -->
+                             <div v-if="child.children && child.children.length" class="pl-20 grid grid-cols-1 md:grid-cols-2 gap-6 italic">
+                                <div v-for="gc in child.children" :key="gc.id" 
+                                    class="bg-indigo-50/30 border-2 border-white rounded-[2.5rem] p-6 flex items-center justify-between group/gc hover:bg-white hover:shadow-xl hover:border-indigo-100 transition-all duration-500 italic">
+                                    <div class="flex items-center gap-6 italic">
+                                        <div class="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 group-hover/gc:bg-slate-950 group-hover/gc:text-teal-400 transition-all italic">
+                                            <component :is="getIcon(gc.type)" class="w-5 h-5" />
+                                        </div>
+                                        <div class="italic">
+                                            <p class="text-[7px] font-black text-indigo-400 uppercase tracking-widest italic leading-none mb-1">{{ gc.type }}</p>
+                                            <span class="text-lg font-black text-slate-950 uppercase tracking-tighter italic">{{ gc.name }}</span>
+                                        </div>
+                                    </div>
+                                    <button @click="deleteNode(gc)" class="w-10 h-10 bg-white/50 border border-white rounded-xl flex items-center justify-center text-slate-300 hover:text-rose-500 transition-all italic opacity-0 group-hover/gc:opacity-100">
+                                        <TrashIcon class="w-4 h-4" />
+                                    </button>
+                                </div>
+                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
     </div>
 
-    <!-- Modal -->
-    <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/30 backdrop-blur-sm">
-        <div class="bg-white rounded-lg p-6 w-96 shadow-xl">
-             <h3 class="font-bold text-lg mb-4">{{ parentNode ? `Add to ${parentNode.name}` : 'New Location' }}</h3>
-             
-             <div class="space-y-3">
-                 <div>
-                     <label class="block text-sm font-medium text-gray-700">Type</label>
-                     <select v-model="form.type" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
-                         <option>Room</option>
-                         <option>Cabinet</option>
-                         <option>Rack</option>
-                         <option>Shelf</option>
-                         <option>Bin</option>
-                         <option>Safe</option>
-                         <option>Offsite</option>
-                     </select>
+    <!-- Node Acquisition Modal -->
+    <PremiumModal :show="showModal" @close="showModal = false" title="Node Acquisition" subtitle="Expand physical archiving structure with new storage terminal">
+        <form @submit.prevent="submitNode" class="p-8 space-y-10 italic text-left">
+             <div class="p-6 bg-slate-50 rounded-[2.5rem] border-4 border-white shadow-inner flex items-center gap-8 italic mb-10" v-if="parentNode">
+                 <div class="w-14 h-14 bg-slate-950 rounded-2xl flex items-center justify-center text-teal-400 shrink-0 italic">
+                      <component :is="getIcon(parentNode.type)" class="w-8 h-8" />
                  </div>
-                 <div>
-                     <label class="block text-sm font-medium text-gray-700">Name / Ref</label>
-                     <input v-model="form.name" type="text" placeholder="e.g. Rack A" class="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500">
+                 <div class="italic">
+                      <p class="text-[8px] font-black text-slate-400 uppercase tracking-[0.3em] mb-1 italic">PARENT_NODE</p>
+                      <h5 class="text-xl font-black text-slate-950 uppercase tracking-tighter italic leading-none">{{ parentNode.name }}</h5>
                  </div>
              </div>
 
-             <div class="flex justify-end gap-2 mt-6">
-                 <button @click="showModal = false" class="text-gray-500 hover:text-gray-700">Cancel</button>
-                 <button @click="submitNode" :disabled="form.processing" class="bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700">Save</button>
+             <div class="grid grid-cols-1 md:grid-cols-2 gap-10 italic">
+                <div class="space-y-4 italic">
+                    <InputLabel value="Terminal Classification" />
+                    <BaseSelect v-model="form.type">
+                        <option>Room</option>
+                        <option>Cabinet</option>
+                        <option>Rack</option>
+                        <option>Shelf</option>
+                        <option>Bin</option>
+                        <option>Safe</option>
+                        <option>Offsite</option>
+                    </BaseSelect>
+                </div>
+                <div class="space-y-4 italic">
+                    <InputLabel value="Ref Descriptor (Name)" />
+                    <TextInput v-model="form.name" placeholder="E.G. ZONE_A, BIN_402" required />
+                </div>
              </div>
-        </div>
-    </div>
 
-  </div>
+             <div class="flex items-center justify-between pt-12 border-t border-slate-100 mt-10">
+                <button @click="showModal = false" type="button" class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-300 hover:text-rose-500 transition-all italic">Abort Protocol</button>
+                <button type="submit" :disabled="form.processing" class="h-20 px-12 bg-slate-950 text-white rounded-[1.8rem] text-[11px] font-black uppercase tracking-[0.3em] shadow-2xl hover:bg-indigo-600 transition-all flex items-center gap-6 active:scale-95 disabled:opacity-50 group italic border-4 border-white/5">
+                    <ArrowPathIcon v-if="form.processing" class="w-8 h-8 animate-spin italic" />
+                    <CheckCircleIcon v-else class="w-8 h-8 text-teal-400 group-hover:scale-125 transition-transform duration-500 italic" />
+                    <span>{{ form.processing ? 'SYNCING_MATRIX...' : 'INIT_STORAGE_NODE' }}</span>
+                </button>
+             </div>
+        </form>
+    </PremiumModal>
 </template>
 
 <style scoped>
-/* Removed @apply to avoid build errors. Classes inlined. */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(15, 23, 42, 0.05);
+    border-radius: 20px;
+}
+.shadow-3xl {
+    box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.15);
+}
 </style>

@@ -5,6 +5,7 @@ import { ref, computed } from 'vue';
 import { debounce } from 'lodash';
 import { 
     ChartBarIcon, 
+    BuildingStorefrontIcon,
     BuildingStorefrontIcon as LibraryIcon,
     TableCellsIcon as TableIcon, 
     ShoppingCartIcon, 
@@ -15,8 +16,21 @@ import {
     ServerStackIcon,
     WrenchScrewdriverIcon,
     CubeIcon,
-    BanknotesIcon
-} from '@heroicons/vue/24/outline';
+    BanknotesIcon,
+    InformationCircleIcon,
+    AdjustmentsHorizontalIcon,
+    BoltIcon,
+    SparklesIcon,
+    ArrowPathIcon,
+    ArrowUpRightIcon,
+    CheckCircleIcon,
+    ArchiveBoxIcon,
+    TagIcon,
+    PlusIcon,
+    MapPinIcon,
+    ChevronRightIcon,
+    TrashIcon
+} from '@heroicons/vue/24/solid';
 
 defineOptions({ layout: MainLayout });
 
@@ -26,6 +40,7 @@ const props = defineProps({
     assets: Object,
     vendors: Array,
     procurement: Array,
+    requests: Array,
     categories: Array,
     locations: Array,
     statuses: Array,
@@ -59,278 +74,448 @@ const resetFilters = () => {
 
 // Tab Navigation
 const tabs = [
-    { id: 'stats', label: 'Pulse & Insights', icon: ChartBarIcon },
-    { id: 'vendors', label: 'Vendor Directory', icon: LibraryIcon },
-    { id: 'list', label: 'Asset Inventory', icon: TableIcon },
-    { id: 'procurement', label: 'Procurement', icon: ShoppingCartIcon },
-    { id: 'config', label: 'Configuration', icon: CogIcon }
+    { id: 'stats', label: 'Quick Look', icon: ChartBarIcon },
+    { id: 'requests', label: 'Requests', icon: ArchiveBoxIcon },
+    { id: 'vendors', label: 'Store List', icon: LibraryIcon },
+    { id: 'list', label: 'Master List', icon: TableIcon },
+    { id: 'locations', label: 'Locations', icon: MapPinIcon },
+    { id: 'procurement', label: 'Order More', icon: ShoppingCartIcon },
+    { id: 'config', label: 'Control', icon: CogIcon }
 ];
 
 const switchTab = (id) => {
-    router.get(route('admin.assets.dashboard'), { view: id }, { preserveState: true, replace: true, only: ['tab', 'stats', 'assets', 'vendors', 'procurement', 'categories', 'filters'] });
+    if (id === 'locations') {
+        router.get(route('admin.assets.location-nodes.index'));
+        return;
+    }
+    router.get(route('admin.assets.dashboard'), { view: id }, { preserveState: true, replace: true, only: ['tab', 'stats', 'assets', 'vendors', 'procurement', 'categories', 'filters', 'requests'] });
+};
+
+const deleteAsset = (asset) => {
+    if (confirm(`Delete asset '${asset.name}'?`)) {
+        router.delete(route('admin.assets.destroy', asset.id));
+    }
+};
+
+const rejectRequest = (request) => {
+    const reason = prompt('Enter rejection reason:');
+    if (!reason) {
+        return;
+    }
+
+    router.post(route('admin.assets.asset-requests.reject', request.id), {
+        rejection_reason: reason
+    });
 };
 
 </script>
 
 <template>
-    <Head title="Asset Management Command" />
+    <Head title="Master List" />
 
-    <div class="space-y-10 pb-20 font-outfit animate-in fade-in slide-in-from-bottom-5 duration-700">
+    <div class="space-y-10 pb-20 font-outfit animate-in fade-in duration-700 bg-slate-50/50 -m-8 p-8 min-h-screen">
         <!-- Strategic Header Terminal -->
-        <div class="bg-white/80 backdrop-blur-xl rounded-[2.5rem] border border-slate-100 p-8 shadow-2xl shadow-slate-200/40 relative overflow-hidden group">
-            <div class="absolute -left-8 -top-8 w-32 h-32 bg-emerald-50 rounded-full blur-2xl group-hover:bg-emerald-100 transition-colors duration-1000"></div>
-            
-            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10">
+        <div class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm relative overflow-hidden group">
+            <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-8 relative z-10 text-left">
                 <div class="flex items-center gap-6">
-                    <div class="w-14 h-14 bg-slate-900 rounded-2xl flex items-center justify-center text-emerald-400 shadow-xl group-hover:rotate-12 transition-transform">
+                    <div class="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0">
                         <ServerStackIcon class="w-8 h-8" />
                     </div>
                     <div>
-                        <h1 class="text-2xl font-black text-slate-900 uppercase tracking-tight flex items-center gap-3">
-                            Asset Management Matrix
-                            <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-black bg-emerald-50 text-emerald-600 border border-emerald-100 uppercase tracking-widest shadow-sm">Global Tracker</span>
-                        </h1>
-                        <p class="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mt-1.5 flex items-center gap-2">
-                            <CpuChipIcon class="w-4 h-4 text-emerald-500" />
-                            Hardware allocation, vendor networks & depreciation protocols
+                        <div class="flex items-center gap-4">
+                            <h1 class="text-3xl font-black text-slate-900 tracking-tight uppercase leading-none">Asset Matrix</h1>
+                            <span class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-indigo-100 leading-none">Global View</span>
+                        </div>
+                        <p class="text-xs font-semibold text-slate-400 mt-2 flex items-center gap-2">
+                             Manage IT infrastructure, fixed assets & supply networks
                         </p>
                     </div>
                 </div>
 
                 <div class="flex flex-wrap items-center gap-4 w-full lg:w-auto">
-                    <Link :href="route('admin.assets.bulk-assign')" class="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl text-sm font-black uppercase tracking-widest hover:text-emerald-600 hover:border-emerald-200 transition-all shadow-sm active:scale-95">Bulk Assignment</Link>
-                    <Link :href="route('admin.assets.import.smart')" class="px-6 py-3 bg-white text-slate-500 border border-slate-200 rounded-xl text-sm font-black uppercase tracking-widest hover:text-indigo-600 hover:border-indigo-200 transition-all shadow-sm active:scale-95">Smart Import</Link>
-                    <Link :href="route('admin.assets.create')" class="flex-1 lg:flex-none h-12 px-8 bg-slate-900 text-white rounded-xl text-sm font-black uppercase tracking-[0.3em] shadow-xl hover:bg-emerald-600 transition-all active:scale-95 flex items-center justify-center gap-3 group/add">
-                        <CubeIcon class="w-4 h-4 group-hover/add:scale-110 transition-transform" />
-                        Initialize Asset
+                    <Link :href="route('admin.assets.bulk-assign')" class="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95">Mass Assign</Link>
+                    <Link :href="route('admin.assets.import.smart')" class="px-6 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-slate-50 transition-all active:scale-95">Smart Import</Link>
+                    <Link :href="route('admin.assets.create')" class="h-12 px-8 bg-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest shadow-md hover:bg-indigo-700 transition-all active:scale-95 flex items-center justify-center gap-3">
+                        <PlusIcon class="w-4 h-4" />
+                        Initialize Node
                     </Link>
                 </div>
             </div>
 
+            <div class="mt-8 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6 p-5 bg-slate-50 border border-slate-200 rounded-2xl">
+                <div class="text-left">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Asset Lifecycle</p>
+                    <div class="mt-2 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-widest">
+                        <span class="px-3 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700">Draft</span>
+                        <span class="text-slate-300">-></span>
+                        <span class="px-3 py-1 rounded-lg bg-emerald-50 border border-emerald-100 text-emerald-700">Available</span>
+                        <span class="text-slate-300">-></span>
+                        <span class="px-3 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-700">Assigned</span>
+                        <span class="text-slate-300">-></span>
+                        <span class="px-3 py-1 rounded-lg bg-amber-50 border border-amber-100 text-amber-700">In Service</span>
+                        <span class="text-slate-300">-></span>
+                        <span class="px-3 py-1 rounded-lg bg-slate-100 border border-slate-200 text-slate-700">Returned</span>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-3">
+                    <Link :href="route('admin.assets.audit.run')" class="h-10 px-4 bg-white border border-slate-200 rounded-lg text-[10px] font-bold uppercase tracking-widest text-slate-600">Blind Audit</Link>
+                    <Link :href="route('admin.assets.maintenance.index')" class="h-10 px-4 bg-white border border-slate-200 rounded-lg text-[10px] font-bold uppercase tracking-widest text-slate-600">Maintenance</Link>
+                    <Link :href="route('admin.inventory.dashboard', { view: 'list' })" class="h-10 px-4 bg-white border border-slate-200 rounded-lg text-[10px] font-bold uppercase tracking-widest text-slate-600">Store Master List</Link>
+                    <Link :href="route('admin.physical-documents.index')" class="h-10 px-4 bg-indigo-600 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white">Physical Docs</Link>
+                </div>
+            </div>
+
             <!-- Enhanced Tactical Tab Bar -->
-            <div class="flex items-center gap-2 mt-10 p-1.5 bg-slate-50/80 rounded-2xl border border-slate-100 w-fit overflow-x-auto max-w-full relative z-10 no-scrollbar">
+            <div class="flex items-center gap-2 mt-8 p-1.5 bg-slate-100/50 border border-slate-200 rounded-2xl w-fit overflow-x-auto max-w-full relative z-10 no-scrollbar">
                 <button 
                     v-for="t in tabs" 
                     :key="t.id"
                     @click="switchTab(t.id)"
-                    class="h-11 px-6 text-sm font-black uppercase tracking-[0.2em] rounded-xl transition-all flex items-center gap-3 relative overflow-hidden group/tab shrink-0"
-                    :class="tab === t.id ? 'bg-slate-900 text-white shadow-xl translate-y-[-1px]' : 'text-slate-400 hover:text-slate-600 hover:bg-white transition-all'"
+                    class="h-10 px-6 text-[10px] font-bold uppercase tracking-widest rounded-xl transition-all flex items-center gap-3 shrink-0"
+                    :class="tab === t.id ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'"
                 >
-                    <component :is="t.icon" class="w-4 h-4" :class="tab === t.id ? 'text-emerald-400' : 'text-slate-300'" />
+                    <component :is="t.icon" class="w-4 h-4" />
                     {{ t.label }}
-                    <div v-if="tab === t.id" class="absolute bottom-0 left-0 w-full h-0.5 bg-emerald-400 opacity-50"></div>
                 </button>
+            </div>
+
+            <div v-if="tab === 'requests'" class="animate-in slide-in-from-bottom-4 duration-500">
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="bg-slate-50 border-b border-slate-100">
+                            <tr>
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Requester</th>
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Category</th>
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Priority</th>
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-500">Reason</th>
+                                <th class="px-8 py-5 text-[10px] font-bold uppercase tracking-widest text-slate-500 text-right">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <tr v-for="request in requests" :key="request.id" class="hover:bg-slate-50/50">
+                                <td class="px-8 py-5 text-[11px] font-bold text-slate-700">{{ request.user?.name || 'Unknown' }}</td>
+                                <td class="px-8 py-5 text-[11px] font-bold text-slate-700">{{ request.asset?.name || request.category?.name || 'N/A' }}</td>
+                                <td class="px-8 py-5">
+                                    <span class="px-3 py-1 rounded-lg text-[9px] font-bold uppercase tracking-widest bg-slate-100 text-slate-700 border border-slate-200">{{ request.priority || 'Normal' }}</span>
+                                </td>
+                                <td class="px-8 py-5 text-[11px] text-slate-600">{{ request.reason || 'No reason provided' }}</td>
+                                <td class="px-8 py-5 text-right">
+                                    <div class="inline-flex gap-2">
+                                        <button @click="router.post(route('admin.assets.asset-requests.approve', request.id))" class="h-9 px-3 bg-emerald-50 text-emerald-700 border border-emerald-100 rounded-lg text-[9px] font-bold uppercase tracking-widest">Approve</button>
+                                        <button @click="rejectRequest(request)" class="h-9 px-3 bg-rose-50 text-rose-700 border border-rose-100 rounded-lg text-[9px] font-bold uppercase tracking-widest">Reject</button>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr v-if="!requests || !requests.length">
+                                <td colspan="5" class="px-8 py-16 text-center text-slate-400 text-[11px] font-bold uppercase tracking-widest">No pending requests</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
         <!-- Dynamic Content Engine -->
         <div class="relative min-h-[500px]">
             
-            <!-- Tab 1: Stats & Alerts Overview -->
-            <div v-if="tab === 'stats'" class="space-y-8 animate-in fade-in fill-mode-both duration-500">
-                <!-- Predictive Maintenance AI Screen -->
-                <div v-if="stats.predictive_alerts && stats.predictive_alerts.length" class="bg-indigo-600 rounded-[2.5rem] p-8 md:p-12 text-white shadow-2xl shadow-indigo-500/30 relative overflow-hidden group/ai">
-                    <div class="absolute -right-20 -top-20 w-80 h-80 bg-white/10 rounded-full blur-[100px] group-hover/ai:scale-110 transition-transform duration-1000"></div>
-                    
-                    <div class="flex items-center gap-6 mb-10 relative z-10">
-                        <div class="w-16 h-16 bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl flex items-center justify-center text-indigo-200 shadow-xl group-hover/ai:rotate-12 transition-transform">
-                            <WrenchScrewdriverIcon class="w-8 h-8" />
+            <!-- Tab 1: Stats & Alerts -->
+            <div v-if="tab === 'stats'" class="space-y-8 animate-in slide-in-from-bottom-4 duration-500">
+                <!-- Numbers at a Glance -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div v-for="(s, idx) in [
+                        { label: 'Resource Fleet', val: stats.total_assets, icon: ServerStackIcon, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+                        { label: 'Total Valuation', val: '₹' + (stats.total_value || 0).toLocaleString(), icon: BanknotesIcon, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+                        { label: 'Vendor Nodes', val: stats.active_vendors, icon: LibraryIcon, color: 'text-rose-600', bg: 'bg-rose-50' },
+                        { label: 'Broken / Lost', val: stats.low_health, icon: ExclamationTriangleIcon, color: 'text-orange-600', bg: 'bg-orange-50' }
+                    ]" :key="idx" class="bg-white p-8 rounded-3xl border border-slate-200 shadow-sm group hover:border-indigo-200 transition-all flex flex-col justify-between h-48 relative overflow-hidden">
+                        <div class="flex justify-between items-start text-left">
+                            <div>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">{{ s.label }}</span>
+                                <span class="text-2xl font-black text-slate-900 tracking-tight tabular-nums truncate block">{{ s.val }}</span>
+                            </div>
+                            <div class="w-10 h-10 rounded-xl flex items-center justify-center border border-slate-100 shadow-sm" :class="s.bg">
+                                <component :is="s.icon" class="w-5 h-5" :class="s.color" />
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-slate-50 flex items-center justify-between">
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 leading-none">
+                                <div class="w-1 h-1 rounded-full bg-emerald-500"></div>
+                                Live Sync
+                            </span>
+                            <ChevronRightIcon class="w-4 h-4 text-slate-300 group-hover:translate-x-1 transition-transform" />
+                        </div>
+                    </div>
+                </div>
+
+                <!-- AI Repair Forecast -->
+                <div v-if="stats.predictive_alerts && stats.predictive_alerts.length" class="bg-white rounded-3xl p-8 border border-slate-200 shadow-sm flex flex-col md:flex-row items-center justify-between gap-8">
+                    <div class="flex items-center gap-6 text-left">
+                        <div class="w-14 h-14 bg-indigo-50 rounded-2xl flex items-center justify-center shrink-0 border border-indigo-100">
+                            <SparklesIcon class="w-8 h-8 text-indigo-600" />
                         </div>
                         <div>
-                            <h2 class="text-2xl font-black uppercase tracking-tight italic">AI Maintenance Forecast</h2>
-                            <p class="text-sm font-black text-indigo-200 uppercase tracking-widest mt-1">Predictive analysis of node deterioration</p>
+                            <h2 class="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">Forecast</h2>
+                            <p class="text-xs font-medium text-slate-500 mt-2">Assets requiring upcoming service attention.</p>
                         </div>
                     </div>
+                    <div class="flex gap-4 overflow-x-auto w-full md:w-auto pb-2 no-scrollbar">
+                         <div v-for="alert in stats.predictive_alerts" :key="alert.asset_id" class="bg-slate-50 border border-slate-200 px-6 py-4 rounded-2xl flex items-center gap-4 shrink-0 hover:bg-white hover:border-indigo-200 transition-all cursor-pointer group">
+                            <div class="w-8 h-8 rounded-lg bg-white border border-slate-200 flex items-center justify-center">
+                                <ExclamationTriangleIcon class="w-4 h-4" :class="alert.risk_level === 'Critical' ? 'text-rose-500' : 'text-amber-500'" />
+                            </div>
+                            <div class="text-left">
+                                <div class="text-[10px] font-bold text-slate-900 uppercase tracking-widest truncate w-32 leading-none">{{ alert.name }}</div>
+                                <div class="text-[9px] font-medium text-slate-500 mt-1.5 leading-none">Due in {{ alert.days_until }} days</div>
+                            </div>
+                         </div>
+                    </div>
+                </div>
+            </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 relative z-10">
-                        <div v-for="alert in stats.predictive_alerts" :key="alert.asset_id" class="bg-slate-900/50 border border-white/10 backdrop-blur-md p-6 rounded-[2rem] hover:bg-slate-900 transition-colors">
-                            <div class="flex justify-between items-start mb-6">
-                                <div class="w-10 h-10 rounded-xl flex items-center justify-center font-black text-xs shadow-inner uppercase border border-white/10"
-                                    :class="{
-                                        'bg-rose-500/20 text-rose-400': alert.risk_level === 'Critical',
-                                        'bg-amber-500/20 text-amber-400': alert.risk_level === 'High',
-                                        'bg-emerald-500/20 text-emerald-400': alert.risk_level === 'Medium'
-                                    }">
-                                    <ExclamationTriangleIcon class="w-5 h-5" />
+            <!-- Tab 2: Vendor List -->
+            <div v-if="tab === 'vendors'" class="animate-in slide-in-from-bottom-4 duration-500">
+                <header class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 bg-white p-8 rounded-3xl border border-slate-200 shadow-sm mb-8">
+                    <div class="flex items-center gap-6 text-left">
+                        <div class="w-14 h-14 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600 shadow-sm border border-rose-100 shrink-0">
+                            <LibraryIcon class="w-8 h-8" />
+                        </div>
+                        <div>
+                            <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">Vendor Directory</h2>
+                            <p class="text-xs font-semibold text-slate-400 mt-2">Equipment suppliers & verified maintenance partners.</p>
+                        </div>
+                    </div>
+                    <Link :href="route('admin.assets.configurations', { tab: 'vendors' })" class="h-12 px-8 bg-indigo-600 text-white rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all flex items-center gap-3 active:scale-95 shadow-md">
+                        Map New Store
+                        <PlusIcon class="w-4 h-4" />
+                    </Link>
+                </header>
+                
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
+                    <BaseDataTable
+                        :data="vendors"
+                        :columns="[
+                            { key: 'identity', label: 'Store Identity', sortable: true },
+                            { key: 'category', label: 'Classification', sortable: true },
+                            { key: 'financials', label: 'Financial ID', sortable: false },
+                            { key: 'performance', label: 'Performance', sortable: true },
+                            { key: 'actions', label: '', sortable: false, align: 'right' }
+                        ]"
+                        search-placeholder="Search vendors..."
+                    >
+                        <template #cell-identity="{ row }">
+                            <div class="flex items-center gap-4 py-1">
+                                <div class="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-400 font-bold text-lg shrink-0">
+                                    {{ row.name.charAt(0) }}
                                 </div>
-                                <span class="px-3 py-1 rounded-lg text-xs font-black uppercase tracking-widest border border-white/10"
-                                    :class="alert.days_until < 0 ? 'bg-rose-500 text-white' : 'bg-white/10 text-slate-300'">
-                                    {{ alert.days_until < 0 ? 'Protocol_Overdue' : 'T-Minus ' + alert.days_until + ' Days' }}
+                                <div class="text-left">
+                                    <div class="text-sm font-black text-slate-950 uppercase tracking-tight leading-none">{{ row.name }}</div>
+                                    <div class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 leading-none">Verified Partner</div>
+                                </div>
+                            </div>
+                        </template>
+
+                        <template #cell-category="{ row }">
+                            <div class="text-left text-[11px] font-bold text-slate-600 uppercase tracking-widest">
+                                {{ row.category || 'General Supplier' }}
+                            </div>
+                        </template>
+
+                        <template #cell-financials="{ row }">
+                            <div class="flex items-center gap-2 text-left">
+                                <span class="text-[10px] font-mono font-bold text-slate-500 bg-slate-50 px-3 py-1 rounded-lg border border-slate-100">
+                                    {{ row.gstin || 'NO_TAX_ID' }}
                                 </span>
                             </div>
-                            <h3 class="text-lg font-black text-white uppercase tracking-tight line-clamp-1 mb-2">{{ alert.name }}</h3>
-                            <div class="text-sm font-mono text-indigo-300 uppercase tracking-wider">Servicing_ETA: {{ alert.next_service_due }}</div>
-                        </div>
-                    </div>
-                </div>
+                        </template>
 
-                <!-- Strategic KPI Matrix -->
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:scale-[1.02] transition-all">
-                        <span class="text-sm font-black text-slate-400 uppercase tracking-widest block mb-4">Total Assets Network</span>
-                        <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 bg-emerald-50 text-emerald-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:rotate-12 transition-transform">
-                                <ServerStackIcon class="w-7 h-7" />
+                        <template #cell-performance="{ row }">
+                            <div class="flex items-center gap-4 justify-start">
+                                <div class="flex flex-col items-start gap-1">
+                                    <span class="text-xs font-black text-slate-900 tabular-nums leading-none">{{ row.sla_response_hours }}h</span>
+                                    <span class="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none mt-1">Response</span>
+                                </div>
+                                <div class="w-px h-6 bg-slate-100 mx-2"></div>
+                                <div class="flex flex-col items-start gap-1">
+                                    <span class="text-xs font-black text-emerald-600 uppercase leading-none">Active</span>
+                                    <span class="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em] leading-none mt-1">Status</span>
+                                </div>
                             </div>
-                            <span class="text-4xl font-black text-slate-900 tabular-nums">{{ stats.total_assets }}</span>
-                        </div>
-                    </div>
+                        </template>
 
-                    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:scale-[1.02] transition-all">
-                        <span class="text-sm font-black text-slate-400 uppercase tracking-widest block mb-4">Total Network Valuation</span>
-                        <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:rotate-12 transition-transform">
-                                <BanknotesIcon class="w-7 h-7" />
+                        <template #cell-actions="{ row }">
+                            <div class="flex justify-end gap-2 pr-4">
+                                <button class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest hover:underline">History</button>
+                                <button class="text-[10px] font-bold text-slate-400 uppercase tracking-widest hover:text-indigo-600 transition-all">Details</button>
                             </div>
-                            <span class="text-3xl font-black text-slate-900 font-mono tracking-tighter">₹{{ (stats.total_value || 0).toLocaleString() }}</span>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:scale-[1.02] transition-all">
-                        <span class="text-sm font-black text-slate-400 uppercase tracking-widest block mb-4">Integrated Vendors</span>
-                        <div class="flex items-center gap-4">
-                            <div class="w-14 h-14 bg-purple-50 text-purple-600 rounded-2xl flex items-center justify-center shadow-inner group-hover:rotate-12 transition-transform">
-                                <LibraryIcon class="w-7 h-7" />
-                            </div>
-                            <span class="text-4xl font-black text-slate-900 tabular-nums">{{ stats.active_vendors }}</span>
-                        </div>
-                    </div>
-
-                    <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 group hover:scale-[1.02] transition-all relative overflow-hidden">
-                        <div v-if="stats.low_health > 0" class="absolute inset-0 bg-amber-500/[0.02] animate-pulse"></div>
-                        <span class="text-sm font-black text-slate-400 uppercase tracking-widest block mb-4 relative z-10">Critical Health Nodes</span>
-                        <div class="flex items-center gap-4 relative z-10">
-                            <div class="w-14 h-14 bg-amber-50 text-amber-500 rounded-2xl flex items-center justify-center shadow-inner group-hover:rotate-12 transition-transform">
-                                <ExclamationTriangleIcon class="w-7 h-7" />
-                            </div>
-                            <span class="text-4xl font-black text-slate-900 tabular-nums">{{ stats.low_health }}</span>
-                        </div>
-                    </div>
+                        </template>
+                    </BaseDataTable>
                 </div>
             </div>
 
-            <!-- Tab 2: Vendor Directory -->
-            <div v-if="tab === 'vendors'" class="animate-in fade-in slide-in-from-right-10 duration-500">
-                <div class="flex justify-between items-end mb-8">
-                    <div>
-                        <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tight">Vendor Syndicate</h2>
-                        <p class="text-sm font-black text-slate-400 uppercase tracking-[0.4em] mt-2">External hardware & logistics partners</p>
-                    </div>
-                    <Link :href="route('admin.vendors.index')" class="text-sm font-black text-emerald-600 uppercase tracking-[0.2em] hover:text-emerald-800 transition-colors flex items-center gap-2">
-                        Expand Matrix <span class="text-lg">&rarr;</span>
-                    </Link>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <div v-for="vendor in vendors" :key="vendor.id" class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 relative group overflow-hidden">
-                        <div class="absolute -right-12 -top-12 w-40 h-40 bg-slate-50 rounded-full blur-3xl group-hover:bg-indigo-50 transition-colors duration-1000"></div>
-                        <div class="relative z-10">
-                            <div class="flex items-start justify-between mb-6">
-                                <div class="w-14 h-14 bg-slate-900 text-white rounded-2xl flex items-center justify-center font-black text-lg shadow-xl group-hover:bg-indigo-600 transition-colors">
-                                    {{ vendor.name[0] }}
-                                </div>
-                                <span v-if="vendor.msme_reg" class="px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-black uppercase tracking-[0.2em] rounded border border-indigo-100 shadow-sm">Official_MSME</span>
-                            </div>
-                            <h3 class="text-xl font-black text-slate-900 uppercase tracking-tight mb-1 group-hover:text-indigo-700 transition-colors">{{ vendor.name }}</h3>
-                            <p class="text-sm font-black text-slate-400 uppercase tracking-widest opacity-80">{{ vendor.category || 'Standard Node' }}</p>
-
-                            <div class="mt-8 space-y-4">
-                                <div class="flex justify-between items-center bg-slate-50 p-3 rounded-xl border border-slate-100">
-                                    <span class="text-sm font-black text-slate-400 uppercase tracking-widest">Tax_Vector</span>
-                                    <span class="text-base font-mono text-slate-700 font-bold tracking-tighter">{{ vendor.gstin || 'UNVERIFIED' }}</span>
-                                </div>
-                                <div class="flex gap-4">
-                                    <div class="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">TDS Pulse</span>
-                                        <span class="text-base font-black text-slate-900 tabular-nums">{{ vendor.tds_rate }}%</span>
-                                    </div>
-                                    <div class="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-100 text-center">
-                                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-1">Response SLA</span>
-                                        <span class="text-base font-black text-emerald-600 tabular-nums">{{ vendor.sla_response_hours }}h</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tab 3: Asset Inventory List -->
-            <div v-if="tab === 'list'" class="animate-in fade-in slide-in-from-left-10 duration-500">
+            <!-- Tab 3: Master List Table -->
+            <div v-if="tab === 'list'" class="animate-in slide-in-from-bottom-4 duration-500">
                 <!-- Advanced Tactical Filter Array -->
-                <div class="bg-slate-900 p-3 rounded-[2rem] shadow-2xl shadow-indigo-500/10 flex flex-col lg:flex-row gap-3 items-center mb-8 relative z-20">
-                    <div class="relative w-full lg:w-96 group/search">
-                        <MagnifyingGlassIcon class="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 group-focus-within/search:text-emerald-400 transition-colors" />
-                        <input v-model="filterForm.search" @input="debouncedSearch" type="text" placeholder="Search entity matrices..." class="w-full h-14 bg-white/5 border border-white/10 rounded-2xl pl-6 pr-14 text-base font-black text-white focus:bg-white/10 focus:ring-4 focus:ring-emerald-500/20 focus:border-emerald-500/50 transition-all uppercase tracking-widest placeholder:text-slate-600">
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-slate-200 flex flex-col xl:flex-row gap-4 items-center mb-8 relative z-20">
+                    <div class="relative w-full xl:w-[400px] group/search">
+                        <MagnifyingGlassIcon class="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 group-focus-within/search:text-indigo-600 transition-colors shrink-0" />
+                        <input v-model="filterForm.search" @input="debouncedSearch" type="text" placeholder="Search Master List..." class="w-full h-12 bg-slate-50 border border-slate-200 rounded-xl pl-12 pr-4 text-sm font-bold text-slate-900 focus:bg-white focus:ring-8 focus:ring-indigo-500/5 focus:border-indigo-500 transition-all uppercase tracking-wide placeholder:text-slate-300">
                     </div>
                     
-                    <div class="flex w-full lg:w-auto gap-3">
-                        <select v-model="filterForm.category_id" @change="applyFilters" class="h-14 bg-white/5 border border-white/10 text-sm font-black text-slate-300 focus:text-white rounded-2xl px-6 uppercase tracking-widest focus:ring-4 focus:ring-indigo-500/20 appearance-none cursor-pointer hover:bg-white/10 transition-all flex-1">
-                            <option value="" class="text-slate-900">Global Categories</option>
-                            <option v-for="cat in categories" :key="cat.id" :value="cat.id" class="text-slate-900">{{ cat.name }}</option>
-                        </select>
-                        <select v-model="filterForm.status" @change="applyFilters" class="h-14 bg-white/5 border border-white/10 text-sm font-black text-slate-300 focus:text-white rounded-2xl px-6 uppercase tracking-widest focus:ring-4 focus:ring-indigo-500/20 appearance-none cursor-pointer hover:bg-white/10 transition-all flex-1">
-                            <option value="" class="text-slate-900">All Statuses</option>
-                            <option value="Available" class="text-slate-900">Available</option>
-                            <option value="Assigned" class="text-slate-900">Assigned</option>
-                            <option value="In_Service" class="text-slate-900">In Service</option>
-                        </select>
+                    <div class="flex flex-col sm:flex-row w-full xl:w-auto gap-4">
+                        <div class="relative">
+                            <TagIcon class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                            <select v-model="filterForm.category_id" @change="applyFilters" class="h-12 w-full sm:w-48 bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-600 rounded-xl pl-12 pr-10 uppercase tracking-widest transition-all appearance-none cursor-pointer focus:bg-white focus:border-indigo-500">
+                                <option value="">All Categories</option>
+                                <option v-for="cat in categories" :key="cat.id" :value="cat.id">{{ cat.name }}</option>
+                            </select>
+                        </div>
+                        <div class="relative">
+                            <BoltIcon class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                            <select v-model="filterForm.status" @change="applyFilters" class="h-12 w-full sm:w-48 bg-slate-50 border border-slate-200 text-[10px] font-bold text-slate-600 rounded-xl pl-12 pr-10 uppercase tracking-widest transition-all appearance-none cursor-pointer focus:bg-white focus:border-indigo-500">
+                                <option value="">All Statuses</option>
+                                <option value="Available">Ready</option>
+                                <option value="Assigned">Assigned</option>
+                                <option value="In_Service">In Service</option>
+                            </select>
+                        </div>
                     </div>
+                    
+                    <button @click="resetFilters" class="h-12 px-6 ml-auto text-[10px] font-bold uppercase tracking-widest text-slate-400 hover:text-indigo-600 transition-all">Reset Filters</button>
                 </div>
 
                 <!-- Strategic Terminal Grid -->
-                <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 overflow-hidden relative group">
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden min-h-[500px]">
+                    <BaseDataTable
+                        :data="assets.data"
+                        :meta="assets"
+                        @page-change="(page) => router.get(route('admin.assets.dashboard', { view: 'list', page }), filterForm, { preserveState: true, preserveScroll: true })"
+                        :columns="[
+                            { key: 'node', label: 'Matrix Node (Item)', sortable: true },
+                            { key: 'location', label: 'Deployment Room', sortable: true },
+                            { key: 'source', label: 'Source Channel', sortable: true },
+                            { key: 'integrity', label: 'Integrity Status', sortable: true },
+                            { key: 'actions', label: '', sortable: false, align: 'right' }
+                        ]"
+                        search-placeholder="Filter current view..."
+                    >
+                        <template #cell-node="{ row }">
+                            <div class="flex items-center gap-4 py-1 text-left">
+                                <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 shadow-sm border border-indigo-100 shrink-0">
+                                    <CubeIcon class="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <div class="text-sm font-black text-slate-950 uppercase tracking-tight leading-none">{{ row.name }}</div>
+                                    <div class="text-[9px] font-mono font-bold text-slate-400 mt-1 uppercase tracking-widest leading-none">SN: {{ row.serial_number || 'UNKNOWN' }}</div>
+                                </div>
+                            </div>
+                        </template>
+                        
+                        <template #cell-location="{ row }">
+                            <div class="flex items-center gap-3 text-left">
+                                <MapPinIcon class="w-3.5 h-3.5 text-slate-300" />
+                                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-none">{{ row.current_location_node?.name || 'Central Store' }}</span>
+                            </div>
+                        </template>
+
+                        <template #cell-source="{ row }">
+                            <div class="flex items-center gap-3 text-left">
+                                <BuildingStorefrontIcon class="w-3.5 h-3.5 text-slate-300" />
+                                <span class="text-[11px] font-bold text-slate-500 uppercase tracking-widest leading-none">{{ row.vendor?.name || 'In-House' }}</span>
+                            </div>
+                        </template>
+
+                        <template #cell-integrity="{ row }">
+                            <span class="px-4 py-1.5 inline-flex text-[9px] font-bold tracking-widest rounded-lg border uppercase leading-none" 
+                                :class="{
+                                    'bg-emerald-50 text-emerald-600 border-emerald-100': row.status === 'Available',
+                                    'bg-indigo-50 text-indigo-600 border-indigo-100': row.status === 'Assigned',
+                                    'bg-amber-50 text-amber-600 border-amber-100': ['In_Service', 'Maintenance', 'In Service'].includes(row.status)
+                                }">
+                                {{ row.status.replace('_', ' ') }}
+                            </span>
+                        </template>
+
+                        <template #cell-actions="{ row }">
+                            <div class="flex justify-end gap-3 pr-4">
+                                <Link :href="route('admin.assets.show', row.id)" class="px-4 py-2 bg-indigo-600 text-white rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 shadow-sm">View</Link>
+                                <Link :href="route('admin.assets.label', row.id)" class="px-4 py-2 bg-slate-100 text-slate-700 border border-slate-200 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-slate-200 transition-all">Label</Link>
+                                <button @click="deleteAsset(row)" class="px-4 py-2 bg-rose-50 text-rose-700 border border-rose-100 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-rose-100 transition-all inline-flex items-center gap-2">
+                                    <TrashIcon class="w-3.5 h-3.5" />
+                                    Delete
+                                </button>
+                            </div>
+                        </template>
+                    </BaseDataTable>
+                </div>
+            </div>
+
+            <!-- Tab 4: Procurement Pipeline -->
+            <div v-if="tab === 'procurement'" class="animate-in fade-in slide-in-from-bottom-5 duration-700">
+                <div class="bg-white p-10 rounded-3xl border border-slate-200 shadow-sm mb-10 flex flex-col md:flex-row justify-between items-center gap-10 relative overflow-hidden group">
+                    <div class="absolute -right-24 -top-24 w-64 h-64 bg-slate-50 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-1000 font-outfit"></div>
+                    
+                    <div class="flex items-center gap-8 relative z-10">
+                        <div class="w-16 h-16 bg-emerald-50 rounded-2xl border border-emerald-100 flex items-center justify-center text-emerald-600 shadow-sm transition-transform group-hover:scale-105 shrink-0">
+                            <ShoppingCartIcon class="w-9 h-9" />
+                        </div>
+                        <div class="text-left">
+                            <h2 class="text-3xl font-black text-slate-900 uppercase tracking-tight">Recent Orders</h2>
+                            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-3">Verified equipment procurement logs</p>
+                        </div>
+                    </div>
+                    <Link :href="route('procurement.index')" class="h-14 px-10 bg-indigo-600 text-white rounded-2xl text-[10px] font-black uppercase tracking-[0.3em] hover:bg-indigo-700 transition-all flex items-center gap-5 active:scale-95 shadow-lg relative z-10 group/btn">
+                        <PlusIcon class="w-5 h-5 group-hover/btn:rotate-90 transition-transform" />
+                        New Purchase Order
+                    </Link>
+                </div>
+
+                <div class="bg-white rounded-3xl border border-slate-200 shadow-sm overflow-hidden">
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse">
                             <thead>
-                                <tr class="bg-slate-50 border-b border-slate-100">
-                                    <th class="px-8 py-6 text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Entity Profiling</th>
-                                    <th class="px-8 py-6 text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Assigned Syndicate</th>
-                                    <th class="px-8 py-6 text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Operational Status</th>
-                                    <th class="px-8 py-6 text-right text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Command</th>
+                                <tr class="bg-slate-50 border-b border-slate-200">
+                                    <th class="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Order Identifier</th>
+                                    <th class="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Store Channel</th>
+                                    <th class="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Capital Outlay</th>
+                                    <th class="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Protocol Status</th>
+                                    <th class="px-10 py-6 text-right text-[10px] font-black text-slate-400 uppercase tracking-widest">Operation</th>
                                 </tr>
                             </thead>
-                            <tbody class="divide-y divide-slate-50">
-                                <tr v-for="asset in assets.data" :key="asset.id" class="group/row hover:bg-slate-50/80 transition-all duration-300">
-                                    <td class="px-8 py-7">
-                                        <div class="flex items-center gap-4">
-                                            <div class="w-12 h-12 bg-slate-900 rounded-2xl flex items-center justify-center text-white shadow-lg group-hover/row:bg-emerald-600 transition-colors">
-                                                <CubeIcon class="w-6 h-6" />
+                            <tbody class="divide-y divide-slate-100">
+                                <tr v-for="po in procurement" :key="po.id" class="group/prow hover:bg-slate-50 transition-all duration-300">
+                                    <td class="px-10 py-8">
+                                        <div class="flex items-center gap-6">
+                                            <div class="w-12 h-12 bg-white border border-slate-200 rounded-xl flex items-center justify-center text-slate-400 shadow-sm group-hover/prow:bg-indigo-50 group-hover/prow:text-indigo-600 transition-all shrink-0">
+                                                <BanknotesIcon class="w-6 h-6" />
                                             </div>
-                                            <div>
-                                                <div class="text-lg font-black text-slate-900 uppercase tracking-tight group-hover/row:text-emerald-700 transition-colors">{{ asset.name }}</div>
-                                                <div class="text-sm font-mono text-slate-400 mt-1 uppercase tracking-widest italic opacity-80">{{ asset.serial_number }}</div>
-                                            </div>
+                                            <span class="font-mono text-base font-black text-slate-900 uppercase tracking-tight">{{ po.po_number || 'PLAN_NODE' }}</span>
                                         </div>
                                     </td>
-                                    <td class="px-8 py-7">
-                                        <div class="text-base font-black text-slate-500 uppercase tracking-widest px-4 py-2 bg-white border border-slate-100 rounded-xl inline-block shadow-sm">
-                                            {{ asset.vendor?.name || 'UNLINKED_NODE' }}
+                                    <td class="px-10 py-8 text-sm font-black text-slate-600 uppercase tracking-widest">{{ po.vendor?.name }}</td>
+                                    <td class="px-10 py-8 text-center">
+                                        <div class="px-5 py-2.5 bg-white border border-slate-200 rounded-xl text-lg font-black text-slate-900 font-mono tracking-tighter shadow-sm inline-flex items-center gap-3">
+                                            <BanknotesIcon class="w-5 h-5 text-emerald-500" />
+                                            ₹{{ (po.total_cost || 0).toLocaleString() }}
                                         </div>
                                     </td>
-                                    <td class="px-8 py-7">
-                                        <span class="px-4 py-1.5 inline-flex text-xs font-black tracking-[0.2em] rounded border shadow-sm uppercase" 
-                                            :class="{
-                                                'bg-emerald-50 text-emerald-600 border-emerald-100': asset.status === 'Available',
-                                                'bg-indigo-50 text-indigo-600 border-indigo-100': asset.status === 'Assigned',
-                                                'bg-amber-50 text-amber-600 border-amber-100': asset.status === 'In_Service' || asset.status === 'Maintenance'
-                                            }">
-                                            <span v-if="asset.status === 'Available'" class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2 mt-0.5 animate-pulse"></span>
-                                            {{ asset.status.replace('_', ' ') }}
+                                    <td class="px-10 py-8 text-center">
+                                        <span class="px-4 py-1.5 bg-slate-100 text-[9px] font-black text-slate-500 uppercase tracking-widest rounded-lg border border-slate-200 shadow-sm shrink-0">
+                                            {{ po.status }}
                                         </span>
                                     </td>
-                                    <td class="px-8 py-7 text-right">
-                                        <div class="flex justify-end gap-3 opacity-0 group-hover/row:opacity-100 transition-all translate-x-4 group-hover/row:translate-x-0">
-                                            <Link :href="route('admin.assets.show', asset.id)" class="h-10 px-6 bg-slate-900 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl active:scale-95 flex items-center gap-2">
-                                                Inspect
-                                            </Link>
-                                        </div>
+                                    <td class="px-10 py-8 text-right">
+                                        <Link v-if="po.status !== 'Converted'" method="post" as="button" :href="route('procurement.convert', po.id)" class="h-12 px-8 bg-indigo-600 text-white rounded-xl text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 transition-all shadow-md inline-flex items-center gap-4 group/conv active:scale-95">
+                                            Commit to Matrix
+                                            <CubeIcon class="w-4 h-4 text-indigo-400 group-hover/conv:scale-125 transition-transform" />
+                                        </Link>
+                                        <div v-else class="text-[10px] font-black text-emerald-500 uppercase tracking-widest flex items-center justify-end gap-3"><CheckCircleIcon class="w-5 h-5" /> Synchronized</div>
                                     </td>
                                 </tr>
-                                <tr v-if="assets.data.length === 0">
-                                    <td colspan="4" class="px-8 py-32 text-center grayscale opacity-30">
-                                        <ServerStackIcon class="w-20 h-20 mx-auto text-slate-300 mb-6 animate-pulse" />
-                                        <p class="text-sm font-black uppercase tracking-[0.4em]">Zero tracking entities isolated globally</p>
+                                <tr v-if="!procurement.length">
+                                    <td colspan="5" class="px-10 py-32 text-center bg-slate-50/30">
+                                        <ShoppingCartIcon class="w-20 h-20 mx-auto text-slate-200 mb-8" />
+                                        <p class="text-sm font-black text-slate-400 uppercase tracking-[0.4em]">No active procurement logs found.</p>
                                     </td>
                                 </tr>
                             </tbody>
@@ -339,89 +524,26 @@ const switchTab = (id) => {
                 </div>
             </div>
 
-            <!-- Tab 4: Procurement Bridge -->
-            <div v-if="tab === 'procurement'" class="animate-in fade-in slide-in-from-bottom-5 duration-500">
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tight">Financial Acquisition Stream</h2>
-                        <p class="text-sm font-black text-slate-400 uppercase tracking-[0.4em] mt-2">Active purchase orders & resource pipelines</p>
-                    </div>
-                    <Link :href="route('procurement.index')" class="h-12 px-6 bg-emerald-50 text-emerald-600 rounded-xl text-sm font-black uppercase tracking-widest hover:bg-emerald-600 hover:text-white transition-all shadow-sm flex items-center gap-2 active:scale-95 border border-emerald-100">
-                        Synthesize New PO
-                    </Link>
-                </div>
-
-                <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/40 overflow-hidden">
-                    <table class="w-full text-left border-collapse">
-                        <thead>
-                            <tr class="bg-indigo-950 border-b border-indigo-900">
-                                <th class="px-8 py-6 text-sm font-black text-indigo-200/50 uppercase tracking-[0.2em]">Transaction Registry</th>
-                                <th class="px-8 py-6 text-sm font-black text-indigo-200/50 uppercase tracking-[0.2em]">Designated Vendor</th>
-                                <th class="px-8 py-6 text-sm font-black text-indigo-200/50 uppercase tracking-[0.2em]">Capital Impact</th>
-                                <th class="px-8 py-6 text-sm font-black text-indigo-200/50 uppercase tracking-[0.2em]">State</th>
-                                <th class="px-8 py-6 text-right text-sm font-black text-indigo-200/50 uppercase tracking-[0.2em]">Protocol</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-indigo-50">
-                            <tr v-for="po in procurement" :key="po.id" class="group/prow hover:bg-indigo-50/50 transition-all duration-300">
-                                <td class="px-8 py-7">
-                                    <div class="flex items-center gap-4">
-                                        <div class="w-10 h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-500 shadow-inner group-hover/prow:bg-indigo-500 group-hover/prow:text-white transition-colors">
-                                            <BanknotesIcon class="w-5 h-5" />
-                                        </div>
-                                        <span class="font-mono text-base font-black text-slate-900 uppercase tracking-tighter">{{ po.po_number || 'SYSTEM_DRAFT' }}</span>
-                                    </div>
-                                </td>
-                                <td class="px-8 py-7 text-base font-black text-slate-600 uppercase tracking-tight">{{ po.vendor?.name }}</td>
-                                <td class="px-8 py-7">
-                                    <span class="text-lg font-black text-slate-900 font-mono tracking-tighter bg-white px-3 py-1.5 rounded-lg border border-slate-100 shadow-sm inline-block">
-                                        ${{ (po.total_cost || 0).toLocaleString() }}
-                                    </span>
-                                </td>
-                                <td class="px-8 py-7">
-                                    <span class="px-3 py-1 bg-slate-100 text-xs font-black text-slate-500 uppercase tracking-[0.2em] rounded shadow-sm border border-slate-200">
-                                        {{ po.status }}
-                                    </span>
-                                </td>
-                                <td class="px-8 py-7 text-right">
-                                    <Link v-if="po.status !== 'Converted'" method="post" as="button" :href="route('procurement.convert', po.id)" class="h-10 px-5 bg-slate-900 text-white rounded-xl text-sm font-black uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl active:scale-95 inline-flex items-center gap-2 group/conv">
-                                        Compile Assets
-                                        <CubeIcon class="w-4 h-4 text-emerald-400 group-hover/conv:scale-110 transition-transform" />
-                                    </Link>
-                                    <span v-else class="text-sm font-black text-slate-300 uppercase tracking-[0.2em] italic">Transmuted</span>
-                                </td>
-                            </tr>
-                            <tr v-if="!procurement.length">
-                                <td colspan="5" class="px-8 py-24 text-center grayscale opacity-30 italic">
-                                    <ShoppingCartIcon class="w-16 h-16 mx-auto text-slate-300 mb-6 animate-pulse" />
-                                    <p class="text-sm font-black uppercase tracking-[0.4em]">Zero active capital transactions recorded</p>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Tab 5: Dynamic Configuration Placeholder -->
-            <div v-if="tab === 'config'" class="animate-in zoom-in-95 duration-500 bg-white rounded-[3rem] border border-slate-100 p-20 shadow-2xl shadow-slate-200/40 text-center flex flex-col items-center group relative overflow-hidden">
-                <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-slate-50 via-transparent to-transparent"></div>
+            <!-- Tab 5: Control Center -->
+            <div v-if="tab === 'config'" class="animate-in zoom-in-95 duration-700 bg-white rounded-3xl border border-slate-200 p-12 shadow-sm text-center flex flex-col items-center group relative overflow-hidden">
+                <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-indigo-50 via-transparent to-transparent"></div>
                 <div class="relative z-10 flex flex-col items-center">
-                    <div class="w-24 h-24 bg-slate-900 rounded-[2rem] flex items-center justify-center text-white shadow-2xl mb-8 group-hover:rotate-180 transition-transform duration-1000">
-                        <CogIcon class="w-12 h-12 text-slate-300" />
+                    <div class="w-20 h-20 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600 shadow-sm mb-8 border border-indigo-100 shrink-0">
+                        <AdjustmentsHorizontalIcon class="w-10 h-10" />
                     </div>
-                    <h3 class="text-3xl font-black text-slate-900 uppercase tracking-tight mb-4">Neural Architecture Config</h3>
-                    <div class="h-1.5 w-24 bg-gradient-to-r from-slate-300 to-slate-400 rounded-full mb-8 shadow-sm"></div>
-                    <p class="text-sm font-black text-slate-400 uppercase tracking-[0.4em] mb-12 max-w-lg leading-relaxed">
-                        Asset categorization nodes, dynamic form properties, and complex depreciation algorithms are administered here. Core integration pending visual sync.
+                    <h3 class="text-3xl font-black text-slate-950 uppercase tracking-tight mb-4">Control Center</h3>
+                    <div class="h-1.5 w-20 bg-gradient-to-r from-indigo-400 to-indigo-600 rounded-full mb-8 shadow-inner"></div>
+                    <p class="text-sm font-semibold text-slate-500 mb-10 max-w-xl leading-relaxed">
+                        Manage categories and item details here. define how items should be grouped and tracked across the company.
                     </p>
                     
-                    <div class="grid gap-3 w-full max-w-sm">
-                        <Link v-for="cat in categories" :key="cat.id" :href="route('admin.assets.configurations', { tab: 'attributes', category_id: cat.id })" class="p-5 bg-white border border-slate-100 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-xl hover:border-indigo-400 group/list transition-all active:scale-[0.98]">
+                    <div class="grid gap-4 w-full max-w-lg">
+                        <Link v-for="cat in categories" :key="cat.id" :href="route('admin.assets.configurations', { tab: 'attributes', category_id: cat.id })" class="p-6 bg-white border border-slate-200 rounded-2xl flex items-center justify-between shadow-sm hover:shadow-md hover:border-indigo-300 group/list transition-all active:scale-[0.98] font-black">
                             <div class="flex items-center gap-4">
-                                <div class="w-2.5 h-2.5 rounded-full bg-slate-300 group-hover/list:bg-emerald-400 transition-colors shadow-sm"></div>
-                                <span class="text-base font-black text-slate-700 uppercase tracking-widest">{{ cat.name }}</span>
+                                <div class="w-2.5 h-2.5 rounded-full bg-slate-300 group-hover/list:bg-indigo-500 transition-colors shadow-sm"></div>
+                                <span class="text-base font-black text-slate-800 uppercase tracking-tight leading-none">{{ cat.name }}</span>
                             </div>
-                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] group-hover/list:text-indigo-600 transition-colors">Configure &rarr;</span>
+                            <span class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em] group-hover/list:text-indigo-600 transition-colors">Set Up &rarr;</span>
                         </Link>
                     </div>
                 </div>
@@ -441,5 +563,18 @@ const switchTab = (id) => {
 .no-scrollbar {
     -ms-overflow-style: none;
     scrollbar-width: none;
+}
+.custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+    background: rgba(0,0,0,0.05);
+    border-radius: 10px;
+}
+.shadow-3xl {
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.15);
 }
 </style>

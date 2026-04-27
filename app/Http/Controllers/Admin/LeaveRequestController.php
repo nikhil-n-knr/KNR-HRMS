@@ -165,7 +165,7 @@ class LeaveRequestController extends Controller
             $attachmentPath = $file->store('leave-attachments', 'public');
         }
 
-        $daysRequested = $this->leaveService->calculateNetDays($validated['start_date'], $validated['end_date']);
+        $daysRequested = $this->leaveService->calculateNetDays($validated['start_date'], $validated['end_date'], $user->employee->id);
 
         if ($daysRequested <= 0) {
              return $this->error("The selected range does not contain any working days.", 422);
@@ -285,7 +285,7 @@ class LeaveRequestController extends Controller
         ]);
 
         return \Illuminate\Support\Facades\DB::transaction(function() use ($leaveRequest, $validated, $request, $user) {
-             $newDays = $this->leaveService->calculateNetDays($validated['start_date'], $validated['end_date']);
+             $newDays = $this->leaveService->calculateNetDays($validated['start_date'], $validated['end_date'], $user->employee->id);
 
              if ($newDays <= 0) {
                   throw new \Illuminate\Validation\ValidationException(\Illuminate\Validation\ValidationException::withMessages([

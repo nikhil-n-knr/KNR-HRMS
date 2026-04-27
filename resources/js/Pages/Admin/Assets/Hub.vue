@@ -3,16 +3,36 @@ import { ref, computed } from 'vue';
 import { router, Head, Link, useForm } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import PremiumModal from '@/Components/PremiumModal.vue';
+import TextInput from '@/Components/TextInput.vue';
+import InputLabel from '@/Components/InputLabel.vue';
+import BaseSelect from '@/Components/BaseSelect.vue';
+import InputError from '@/Components/InputError.vue';
 import { 
-    Squares2X2Icon, 
-    TableCellsIcon, 
-    BriefcaseIcon, 
-    ShoppingCartIcon, 
-    WrenchScrewdriverIcon, 
-    Cog6ToothIcon,
-    PlusIcon,
-    ArrowUpTrayIcon
-} from '@heroicons/vue/24/outline';
+    PlusIcon, 
+    ArrowUpTrayIcon, 
+    CubeIcon, 
+    ChartBarIcon, 
+    ArchiveBoxIcon, 
+    BoltIcon, 
+    AdjustmentsHorizontalIcon, 
+    SparklesIcon,
+    UserGroupIcon,
+    CheckCircleIcon,
+    ArrowPathIcon,
+    PresentationChartLineIcon,
+    ShoppingCartIcon,
+    BriefcaseIcon,
+    WrenchScrewdriverIcon,
+    ShieldCheckIcon,
+    MagnifyingGlassIcon,
+    InboxIcon,
+    IdentificationIcon,
+    CloudArrowUpIcon,
+    ArrowRightIcon,
+    CommandLineIcon,
+    BanknotesIcon,
+    ExclamationTriangleIcon
+} from '@heroicons/vue/24/solid';
 
 // Tabs
 import TabDashboard from './Tabs/TabDashboard.vue';
@@ -28,18 +48,22 @@ const props = defineProps({
     assets: Object,
     kits: Array,
     categories: Array,
+    locations: Array,
+    statuses: Array,
     tickets: Object,
     requests: Object,
-    vendors: Array
+    vendors: Array,
+    users: Array,
+    filters: Object
 });
 
 const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Squares2X2Icon, color: 'text-indigo-600', bg: 'bg-indigo-50' },
-    { id: 'inventory', label: 'Inventory', icon: TableCellsIcon, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { id: 'kits', label: 'Kits & Bundles', icon: BriefcaseIcon, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { id: 'requests', label: 'Procurement', icon: ShoppingCartIcon, color: 'text-rose-600', bg: 'bg-rose-50' },
-    { id: 'maintenance', label: 'Maintenance', icon: WrenchScrewdriverIcon, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { id: 'config', label: 'Configuration', icon: Cog6ToothIcon, color: 'text-slate-600', bg: 'bg-slate-50' },
+    { id: 'dashboard', label: 'Dashboard', icon: ChartBarIcon, color: 'text-indigo-600', bg: 'bg-indigo-50', border: 'border-indigo-100' },
+    { id: 'inventory', label: 'All Assets', icon: ArchiveBoxIcon, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100' },
+    { id: 'kits', label: 'Bundles', icon: BriefcaseIcon, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100' },
+    { id: 'requests', label: 'Requests', icon: ShoppingCartIcon, color: 'text-rose-600', bg: 'bg-rose-50', border: 'border-rose-100' },
+    { id: 'maintenance', label: 'Maintenance', icon: WrenchScrewdriverIcon, color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-100' },
+    { id: 'config', label: 'Configuration', icon: AdjustmentsHorizontalIcon, color: 'text-slate-600', bg: 'bg-slate-100', border: 'border-slate-200' },
 ];
 
 const activeTab = computed(() => props.tab || 'dashboard');
@@ -52,7 +76,7 @@ const createForm = useForm({
     serial_number: '',
     purchase_date: '',
     purchase_cost: '',
-    status: 'In Stock'
+    status: 'Available'
 });
 
 const submitCreate = () => {
@@ -64,201 +88,200 @@ const submitCreate = () => {
     });
 };
 
+// Bulk Assign Logic (Actually redirects to BulkAssign.vue or similar, but Hub has a placeholder)
+const showBulkModal = ref(false);
+
 // Import Logic
 const fileInput = ref(null);
-const triggerImport = () => fileInput.value.click();
-const handleImport = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    
-    const form = useForm({ file: file });
-    form.post(route('admin.assets.import'), {
-        onSuccess: () => {
-             e.target.value = ''; // Reset
-        }
-    });
+const triggerImport = () => {
+    // Redirecting to Smart Import instead of simple flow
+    router.get(route('admin.assets.import.smart'));
 };
 </script>
 
 <template>
-    <Head title="Asset Command Center" />
+    <Head title="Asset Management" />
+    
     <MainLayout>
-        <div class="h-full flex flex-col font-outfit">
-            <!-- Strategic Header -->
-            <div class="mb-8 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 px-1">
-                <div class="flex items-center gap-5">
-                    <div class="p-4 bg-slate-900 border border-slate-800 rounded-2xl text-indigo-400 shadow-xl shadow-slate-200/50 relative overflow-hidden group">
-                        <div class="absolute inset-0 bg-gradient-to-br from-indigo-500/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
-                        <Squares2X2Icon class="w-7 h-7 relative z-10" />
-                    </div>
-                    <div>
-                        <h1 class="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-                            Asset Command Center
-                            <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-black bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-widest">Enterprise Core</span>
-                        </h1>
-                        <p class="text-sm font-black text-slate-400 uppercase tracking-[0.2em] mt-1">Lifecycle monitoring & strategic inventory management</p>
-                    </div>
-                </div>
-
-                <!-- Global Actions -->
-                <div class="flex items-center gap-3 w-full lg:w-auto">
-                    <button @click="triggerImport" class="h-12 w-12 bg-white text-slate-400 rounded-2xl flex items-center justify-center border border-slate-200 shadow-sm hover:text-indigo-600 hover:border-indigo-100 transition-all active:scale-90 shrink-0">
-                        <ArrowUpTrayIcon class="w-5 h-5" />
-                    </button>
-                    <button @click="showCreateModal = true" class="flex-1 lg:flex-none flex items-center justify-center gap-3 bg-slate-900 text-white h-12 px-8 rounded-2xl hover:bg-indigo-600 transition-all text-sm font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 active:scale-95 group">
-                        <PlusIcon class="w-4 h-4 text-indigo-400 group-hover:rotate-90 transition-transform" />
-                        <span>Initialize Asset Node</span>
-                    </button>
-                    <input type="file" ref="fileInput" class="hidden" @change="handleImport" accept=".csv,.xlsx" />
-                </div>
-            </div>
-
-            <!-- Dashboard Neural Interface -->
-            <div class="bg-white/40 backdrop-blur-xl rounded-[2.5rem] border border-white shadow-2xl shadow-slate-200/50 flex flex-col overflow-hidden min-h-[600px]">
-                <!-- Tab Terminal -->
-                <div class="flex items-center px-6 pt-6 border-b border-slate-100 overflow-x-auto hide-scrollbar gap-2 shrink-0">
-                    <Link 
-                        v-for="t in tabs" 
-                        :key="t.id"
-                        :href="route('admin.assets.hub', { tab: t.id })" 
-                        preserve-state
-                        class="px-6 py-4 text-sm font-black uppercase tracking-[0.15em] border-b-2 transition-all flex items-center gap-3 whitespace-nowrap active:scale-95 group"
-                        :class="activeTab === t.id 
-                            ? 'border-indigo-600 text-indigo-600 font-black' 
-                            : 'border-transparent text-slate-400 hover:text-slate-600'"
-                    >
-                        <div 
-                            class="w-6 h-6 rounded-lg flex items-center justify-center transition-all group-hover:scale-110"
-                            :class="activeTab === t.id ? t.bg + ' ' + t.color : 'bg-slate-50 text-slate-400'"
-                        >
-                            <component :is="t.icon" class="h-3.5 w-3.5" />
+        <div class="h-full flex flex-col font-outfit -m-8 p-12 bg-slate-50 min-h-screen relative animate-in fade-in duration-1000">
+            <!-- Strategic Header Terminal -->
+            <header class="bg-white rounded-3xl p-10 border border-slate-200 shadow-sm mb-12 relative overflow-hidden group">
+                <div class="flex flex-col xl:flex-row xl:items-center xl:justify-between gap-12 relative z-10">
+                    <div class="flex items-center gap-8 text-left">
+                        <div class="w-20 h-20 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-lg shrink-0">
+                            <CubeIcon class="w-10 h-10" />
                         </div>
-                        {{ t.label }}
+                        <div>
+                            <div class="flex items-center gap-4">
+                                <h1 class="text-4xl font-black text-slate-900 uppercase tracking-tight leading-none">Asset Management</h1>
+                                <span class="px-3 py-1 bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-widest rounded-lg border border-indigo-100 leading-none">Live</span>
+                            </div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-[0.5em] mt-3 leading-none">Track, assign, maintain, and audit assets</p>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-4">
+                        <div v-for="stat in [
+                            { label: 'Asset Valuation', value: '₹' + (stats?.total_valuation || 0).toLocaleString(), color: 'text-indigo-600', icon: BanknotesIcon },
+                            { label: 'Audit Compliance', value: (stats?.audit_compliance_pct || 0) + '%', color: 'text-emerald-600', icon: ShieldCheckIcon },
+                            { label: 'Critical Alerts', value: stats?.critical_alerts || 0, color: 'text-rose-600', icon: ExclamationTriangleIcon },
+                            { label: 'Total Nodes', value: stats?.total_assets || 0, color: 'text-slate-900', icon: CubeIcon }
+                        ]" :key="stat.label" class="bg-slate-50 border border-slate-100 rounded-2xl px-6 py-4 min-w-[160px] flex items-center gap-4 group/stat hover:border-indigo-100 transition-all">
+                            <div class="w-10 h-10 rounded-xl bg-white border border-slate-100 shadow-sm flex items-center justify-center shrink-0">
+                                <component :is="stat.icon || CubeIcon" class="w-5 h-5" :class="stat.color" />
+                            </div>
+                            <div class="text-left">
+                                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest leading-none">{{ stat.label }}</p>
+                                <p class="text-lg font-black text-slate-900 mt-1.5 tabular-nums leading-none tracking-tight">{{ stat.value }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Ops Launcher & Unified Navigation -->
+            <section class="rounded-3xl border border-slate-200 bg-white p-8 mb-12 relative z-20">
+                <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8 mb-10">
+                    <div class="text-left">
+                        <h2 class="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">Operations Workspace</h2>
+                        <p class="text-xs font-semibold text-slate-400 mt-2">Manage assets, requests, maintenance, and audits from one place.</p>
+                    </div>
+
+                    <nav class="flex items-center bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200 overflow-x-auto no-scrollbar shrink-0">
+                         <div v-for="t in tabs" :key="t.id" 
+                            @click="router.get(route('admin.assets.hub'), { tab: t.id }, { preserveState: true, preserveScroll: true })"
+                            class="px-5 py-2.5 rounded-xl text-[10px] font-bold uppercase tracking-widest transition-all cursor-pointer flex items-center gap-3 whitespace-nowrap active:scale-95"
+                            :class="activeTab === t.id ? 'bg-white text-indigo-600 shadow-sm border border-slate-200' : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'">
+                            <component :is="t.icon" class="w-4 h-4" />
+                            {{ t.label }}
+                         </div>
+                    </nav>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <button @click="showCreateModal = true" 
+                        class="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white transition-all text-left flex items-start gap-5 grow group">
+                        <div class="w-12 h-12 bg-indigo-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md group-hover:scale-110 transition-transform">
+                            <PlusIcon class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest">Assets</p>
+                            <h4 class="text-lg font-black text-slate-900 mt-1 uppercase tracking-tight leading-tight">Add Asset</h4>
+                            <p class="text-[10px] font-medium text-slate-400 mt-1.5 uppercase leading-none tracking-widest">Create a new asset record</p>
+                        </div>
+                    </button>
+
+                    <Link :href="route('admin.assets.import.smart')" 
+                        class="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-emerald-200 hover:bg-white transition-all text-left flex items-start gap-5 grow group">
+                        <div class="w-12 h-12 bg-emerald-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md group-hover:scale-110 transition-transform">
+                            <CloudArrowUpIcon class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">Import</p>
+                            <h4 class="text-lg font-black text-slate-900 mt-1 uppercase tracking-tight leading-tight">Smart Import</h4>
+                            <p class="text-[10px] font-medium text-slate-400 mt-1.5 uppercase leading-none tracking-widest">Bulk upload and validation</p>
+                        </div>
+                    </Link>
+
+                    <Link :href="route('admin.assets.audit.run')" 
+                        class="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-amber-200 hover:bg-white transition-all text-left flex items-start gap-5 grow group">
+                        <div class="w-12 h-12 bg-amber-600 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md group-hover:scale-110 transition-transform">
+                            <PresentationChartLineIcon class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-amber-600 uppercase tracking-widest">Blind Audit</p>
+                            <h4 class="text-lg font-black text-slate-900 mt-1 uppercase tracking-tight leading-tight">Run Audit</h4>
+                            <p class="text-[10px] font-medium text-slate-400 mt-1.5 uppercase leading-none tracking-widest">Scan and verify assets</p>
+                        </div>
+                    </Link>
+
+                    <Link :href="route('admin.assets.bulk-assign')" 
+                        class="p-6 bg-slate-50 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-white transition-all text-left flex items-start gap-5 grow group">
+                        <div class="w-12 h-12 bg-indigo-900 text-white rounded-xl flex items-center justify-center shrink-0 shadow-md group-hover:scale-110 transition-transform">
+                            <UserGroupIcon class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold text-indigo-900 uppercase tracking-widest">Assignment</p>
+                            <h4 class="text-lg font-black text-slate-900 mt-1 uppercase tracking-tight leading-tight">Bulk Assign</h4>
+                            <p class="text-[10px] font-medium text-slate-400 mt-1.5 uppercase leading-none tracking-widest">Assign multiple assets</p>
+                        </div>
                     </Link>
                 </div>
+            </section>
 
-                <!-- Content Area -->
-                <div class="p-6 md:p-10 flex-1 bg-slate-50/30 overflow-y-auto custom-scrollbar overflow-x-hidden">
-                    <Transition name="fade-slide" mode="out-in">
-                        <div :key="activeTab">
-                            <TabDashboard v-if="activeTab === 'dashboard'" :stats="stats" />
-                            <TabInventory v-if="activeTab === 'inventory'" :assets="assets" :categories="categories" />
-                            <TabKits v-if="activeTab === 'kits'" :kits="kits" :categories="categories" />
-                            <TabProcurement v-if="activeTab === 'requests'" :requests="requests" />
-                            <TabMaintenance v-if="activeTab === 'maintenance'" :tickets="tickets" />
-                            <TabConfiguration v-if="activeTab === 'config'" :categories="categories" :vendors="vendors" />
-                        </div>
-                    </Transition>
-                </div>
-            </div>
+            <!-- Workspace Terminal (Active Tab Content) -->
+            <main class="flex-1 relative z-10 min-h-0">
+                <Transition name="tab-fade" mode="out-in">
+                    <TabDashboard v-if="activeTab === 'dashboard'" :stats="stats" />
+                    <TabInventory v-else-if="activeTab === 'inventory'" :assets="assets" :categories="categories" :locations="locations" :statuses="statuses" :filters="filters" :users="users" />
+                    <TabKits v-else-if="activeTab === 'kits'" :kits="kits" />
+                    <TabProcurement v-else-if="activeTab === 'requests'" :requests="requests" :vendors="vendors" />
+                    <TabMaintenance v-else-if="activeTab === 'maintenance'" :tickets="tickets" />
+                    <TabConfiguration v-else-if="activeTab === 'config'" :categories="categories" :vendors="vendors" />
+                </Transition>
+            </main>
         </div>
 
-        <!-- Initialize Asset Modal -->
-        <PremiumModal 
-            :show="showCreateModal" 
-            @close="showCreateModal = false" 
-            title="Initialize Asset" 
-            subtitle="Register New Hardware/Software Resource"
-            icon="fa-laptop-code"
-            maxWidth="3xl"
-        >
-            <form @submit.prevent="submitCreate" class="space-y-6 pt-4 px-2">
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-2.5">
-                        <label class="text-sm font-black text-slate-500 uppercase tracking-[0.2em] px-1">Asset Designation</label>
-                        <div class="relative group">
-                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-indigo-500 transition-colors pointer-events-none font-black text-base">@</div>
-                            <input v-model="createForm.name" type="text" class="w-full h-12 bg-slate-50 border-2 border-slate-100 rounded-2xl pl-11 pr-4 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-slate-300 uppercase tracking-widest shadow-sm" required placeholder="ASSET_NAME...">
+        <!-- Initialize Asset Registry Modal -->
+        <PremiumModal :show="showCreateModal" @close="showCreateModal = false" title="Add Asset" subtitle="Create a new asset record">
+            <form @submit.prevent="submitCreate" class="p-8 space-y-10 text-left">
+                 <div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+                    <div class="space-y-4">
+                        <InputLabel value="Asset Name" />
+                        <TextInput v-model="createForm.name" placeholder="E.G. MACBOOK PRO M3" required />
+                        <InputError :message="createForm.errors.name" />
+                    </div>
+                    <div class="space-y-4">
+                        <InputLabel value="Category" />
+                        <BaseSelect v-model="createForm.category_id">
+                            <option value="">Select Category...</option>
+                            <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name.toUpperCase() }}</option>
+                        </BaseSelect>
+                        <InputError :message="createForm.errors.category_id" />
+                    </div>
+                    <div class="space-y-4">
+                        <InputLabel value="Serial Number" />
+                        <TextInput v-model="createForm.serial_number" placeholder="Enter serial number" class="font-mono" />
+                        <InputError :message="createForm.errors.serial_number" />
+                    </div>
+                    <div class="space-y-4">
+                        <InputLabel value="Initial Status" />
+                        <div class="h-16 flex items-center px-10 bg-emerald-50 border border-emerald-100 rounded-2xl shadow-sm">
+                             <div class="flex items-center gap-4">
+                                 <div class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_12px_#10b981]"></div>
+                                 <span class="text-[10px] font-black text-emerald-700 uppercase tracking-widest">Available</span>
+                             </div>
                         </div>
                     </div>
-                     <div class="space-y-2.5">
-                        <label class="text-sm font-black text-slate-500 uppercase tracking-[0.2em] px-1">Category Node</label>
-                        <div class="relative group">
-                            <select v-model="createForm.category_id" class="w-full h-12 bg-slate-50 border-2 border-slate-100 rounded-2xl pl-4 pr-10 text-sm font-black uppercase text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all appearance-none cursor-pointer tracking-widest shadow-sm" required>
-                                <option value="">SELECT_CLASS</option>
-                                <option v-for="c in categories" :key="c.id" :value="c.id">{{ c.name }}</option>
-                            </select>
-                            <svg class="w-3 h-3 absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
-                        </div>
-                    </div>
-                </div>
+                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-2.5">
-                        <label class="text-sm font-black text-slate-500 uppercase tracking-[0.2em] px-1">Unique Serial Log</label>
-                        <input v-model="createForm.serial_number" type="text" class="w-full h-12 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all placeholder:text-slate-300 uppercase tracking-widest shadow-sm" placeholder="S/N CODE...">
-                    </div>
-                     <div class="space-y-2.5">
-                        <label class="text-sm font-black text-slate-500 uppercase tracking-[0.2em] px-1">Acquisition Anchor</label>
-                        <input v-model="createForm.purchase_date" type="date" class="w-full h-12 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all uppercase tracking-widest shadow-sm">
-                    </div>
-                </div>
-                
-                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="space-y-2.5">
-                        <label class="text-sm font-black text-slate-500 uppercase tracking-[0.2em] px-1">Procurement Cost</label>
-                        <div class="relative group">
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">INR</span>
-                            <input v-model="createForm.purchase_cost" type="number" step="0.01" class="w-full h-12 bg-slate-50 border-2 border-slate-100 rounded-2xl pl-12 pr-4 text-base font-black text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all uppercase tracking-widest shadow-sm" placeholder="0.00">
-                        </div>
-                    </div>
-                    <div class="space-y-2.5">
-                        <label class="text-sm font-black text-slate-500 uppercase tracking-[0.2em] px-1">Initial Protocol</label>
-                        <select v-model="createForm.status" class="w-full h-12 bg-slate-50 border-2 border-slate-100 rounded-2xl px-4 text-sm font-black uppercase text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500 transition-all appearance-none cursor-pointer tracking-widest shadow-sm">
-                            <option value="In Stock">IN_STORAGE</option>
-                            <option value="In Use">ACTIVE_SERVICE</option>
-                            <option value="Under Maintenance">UNDER_REPAIR</option>
-                            <option value="Disposed">DECOMMISSIONED</option>
-                        </select>
-                    </div>
-                </div>
-
-                <div class="flex items-center justify-between pt-8 border-t border-slate-100 mt-8">
-                    <button @click="showCreateModal = false" type="button" class="text-sm font-black uppercase tracking-[0.2em] text-slate-400 hover:text-slate-600 transition-colors">Abort Initialization</button>
-                    <button type="submit" :disabled="createForm.processing" class="h-14 px-12 bg-slate-900 text-white rounded-2xl text-sm font-black uppercase tracking-[0.2em] hover:bg-indigo-600 transition-all flex items-center gap-3 shadow-xl shadow-slate-200 active:scale-95 group">
-                        <PlusIcon class="w-4 h-4 text-indigo-400 group-hover:rotate-90 transition-transform" />
-                        <span>{{ createForm.processing ? 'Syncing...' : 'Confirm Registration' }}</span>
+                 <div class="flex items-center justify-between pt-12 border-t border-slate-100 mt-10 pb-4">
+                    <button @click="showCreateModal = false" type="button" class="text-[11px] font-black uppercase tracking-[0.4em] text-slate-300 hover:text-rose-500 transition-all">Cancel</button>
+                    <button type="submit" :disabled="createForm.processing" class="h-12 px-8 bg-indigo-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-sm hover:bg-indigo-700 transition-all flex items-center gap-3 active:scale-95 disabled:opacity-50 group">
+                        <ArrowPathIcon v-if="createForm.processing" class="w-5 h-5 animate-spin" />
+                        <CheckCircleIcon v-else class="w-5 h-5 text-white" />
+                        <span>{{ createForm.processing ? 'Saving...' : 'Save Asset' }}</span>
                     </button>
-                </div>
+                 </div>
             </form>
         </PremiumModal>
     </MainLayout>
 </template>
 
 <style scoped>
-.hide-scrollbar::-webkit-scrollbar {
-    display: none;
+.tab-fade-enter-active, .tab-fade-leave-active { 
+    transition: all 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+.tab-fade-enter-from { opacity: 0; transform: translateY(20px) scale(0.98); }
+.tab-fade-leave-to { opacity: 0; transform: translateY(-20px) scale(1.02); }
+
+.no-scrollbar::-webkit-scrollbar { display: none; }
+
+.shadow-3xl {
+    box-shadow: 0 50px 100px -20px rgba(0, 0, 0, 0.15);
 }
 
-.fade-slide-enter-active, .fade-slide-leave-active { 
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.fade-slide-enter-from { 
-    opacity: 0; 
-    transform: translateX(20px);
-}
-.fade-slide-leave-to { 
-    opacity: 0; 
-    transform: translateX(-20px);
-}
-
-.custom-scrollbar::-webkit-scrollbar {
-    width: 6px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-    background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-    background: #e2e8f0;
-    border-radius: 10px;
-}
-
-input[type="date"]::-webkit-calendar-picker-indicator {
-    filter: invert(0.4) sepia(1) saturate(5) hue-rotate(240deg);
-    cursor: pointer;
+.font-mono {
+    font-family: 'JetBrains Mono', monospace;
 }
 </style>

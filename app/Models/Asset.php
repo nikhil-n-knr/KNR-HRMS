@@ -5,9 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use Illuminate\Database\Eloquent\SoftDeletes;
+
 class Asset extends Model
 {
-    use HasFactory;
+    use HasFactory, SoftDeletes;
     protected $guarded = [];
     
     protected $casts = [
@@ -20,11 +22,15 @@ class Asset extends Model
 
     public function tenant() { return $this->belongsTo(Tenant::class); }
     public function category() { return $this->belongsTo(AssetCategory::class); }
+    public function subcategory() { return $this->belongsTo(AssetCategory::class, 'category_sub_id'); }
     public function vendor() { return $this->belongsTo(Vendor::class); }
     public function assignment() { return $this->hasOne(AssetAssignment::class)->latestOfMany(); }
     public function assignments() { return $this->hasMany(AssetAssignment::class); }
     public function location() { return $this->belongsTo(Location::class); }
+    public function currentLocationNode() { return $this->belongsTo(LocationNode::class, 'current_location_node_id'); }
+    public function locationAssignments() { return $this->morphMany(LocationAssignment::class, 'entity'); }
     public function maintenanceLogs() { return $this->hasMany(AssetMaintenanceLog::class); }
+    public function usageHistory() { return $this->hasMany(AssetUsageHistory::class)->orderByDesc('start_at'); }
 
     /**
      * TCO (Total Cost of Ownership) Analysis

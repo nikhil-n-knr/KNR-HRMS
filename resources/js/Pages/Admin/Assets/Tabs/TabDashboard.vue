@@ -1,165 +1,193 @@
 <script setup>
+import { computed } from 'vue';
+import BaseChart from '@/Components/BaseChart.vue';
 import { 
     BanknotesIcon, 
     CheckBadgeIcon, 
     UserGroupIcon, 
     CalendarIcon,
     ArrowTrendingUpIcon,
-    ArrowTrendingDownIcon
-} from '@heroicons/vue/24/outline';
+    ArrowTrendingDownIcon,
+    ShieldCheckIcon,
+    CpuChipIcon,
+    InformationCircleIcon,
+    WrenchScrewdriverIcon,
+    BoltIcon,
+    SparklesIcon,
+    ChartBarIcon,
+    CurrencyRupeeIcon as CashIcon,
+    ArchiveBoxIcon,
+    ClockIcon,
+    BellAlertIcon,
+    ArrowRightIcon,
+    PresentationChartLineIcon
+} from '@heroicons/vue/24/solid';
 
 const props = defineProps({
     stats: Object
 });
+
+// Mock Chart Data for Visual Intelligence
+const valuationTrendData = {
+    labels: ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN'],
+    datasets: [{
+        label: 'Value (₹L)',
+        data: [45, 52, 48, 61, 58, 65],
+        borderColor: '#0d9488',
+        backgroundColor: '#0d948822',
+        fill: true,
+        tension: 0.4,
+        pointRadius: 4,
+        borderWidth: 3
+    }]
+};
+
+const chartOptions = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+        legend: { display: false },
+        tooltip: {
+            backgroundColor: '#0f172a',
+            titleFont: { family: 'Outfit', weight: '900', size: 12 },
+            bodyFont: { family: 'Outfit', weight: '600' },
+            padding: 12,
+            cornerRadius: 12
+        }
+    },
+    scales: {
+        y: { display: false },
+        x: {
+            grid: { display: false },
+            ticks: { font: { family: 'Outfit', weight: '900', size: 9 }, color: '#94a3b8' }
+        }
+    }
+};
 </script>
 
 <template>
-    <div class="space-y-10 font-outfit">
-        <!-- Strategic KPI Array -->
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-             <!-- Valuation -->
-             <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300">
-                <div class="absolute -right-4 -top-4 w-24 h-24 bg-indigo-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
-                <div class="relative z-10">
-                    <div class="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-indigo-100">
-                        <BanknotesIcon class="h-6 w-6" />
+    <div class="space-y-8 font-outfit animate-in fade-in slide-in-from-bottom-5 duration-700">
+        
+        <!-- Operations Pulse -->
+        <section class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm">
+            <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-8">
+                <div class="text-left">
+                    <p class="text-[10px] font-bold uppercase tracking-widest text-indigo-600">Operations Pulse</p>
+                    <h2 class="text-3xl font-black text-slate-900 mt-2 uppercase tracking-tight">Intelligence Dashboard</h2>
+                    <p class="text-xs font-semibold text-slate-400 mt-2">Real-time health and deployment progress across all assets.</p>
+                </div>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
+                    <div v-for="s in [
+                        { label: 'Valuation', value: '₹' + (stats?.total_valuation || 0).toLocaleString(), color: 'text-indigo-600' },
+                        { label: 'Compliance', value: (stats?.audit_compliance_pct || 0) + '%', color: 'text-emerald-600' },
+                        { label: 'In Stock', value: stats?.in_stock || 0, color: 'text-slate-900' },
+                        { label: 'Attention', value: stats?.critical_alerts || 0, color: 'text-rose-600' }
+                    ]" :key="s.label" class="rounded-2xl border border-slate-100 bg-slate-50 px-6 py-4 min-w-[130px] text-left">
+                        <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 leading-none">{{ s.label }}</p>
+                        <p class="text-xl font-black mt-2 tabular-nums leading-none" :class="s.color">{{ s.value }}</p>
                     </div>
-                    <p class="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Total valuation</p>
-                    <div class="mt-2 flex items-baseline gap-2">
-                        <span class="text-2xl font-black text-slate-900 tracking-tighter">₹{{ (stats?.total_valuation || 0).toLocaleString('en-IN') }}</span>
-                    </div>
-                    <div class="mt-4 flex items-center gap-2">
-                        <div class="flex items-center text-sm font-black text-emerald-500 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-full">
-                            <ArrowTrendingUpIcon class="h-3 w-3 mr-1" />
-                            +12% Asset Density
+                </div>
+            </div>
+        </section>
+
+        <!-- Analytics Overview -->
+        <section class="grid grid-cols-1 xl:grid-cols-[1.4fr_1fr] gap-8">
+            <!-- Valuation Trend -->
+            <article class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col min-h-[450px]">
+                <div class="flex items-center justify-between mb-8 border-b border-slate-50 pb-6 text-left">
+                    <div class="flex items-center gap-6">
+                        <div class="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-600 shadow-sm shrink-0">
+                            <PresentationChartLineIcon class="w-6 h-6" />
+                        </div>
+                        <div>
+                            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Visual Intelligence</p>
+                            <h3 class="text-xl font-black text-slate-900 tracking-tight uppercase">Valuation Drift</h3>
                         </div>
                     </div>
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-[9px] font-bold bg-indigo-50 text-indigo-600 border border-indigo-100 uppercase tracking-widest leading-none">Live Data</span>
                 </div>
-            </div>
-
-             <!-- In Stock -->
-             <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300">
-                <div class="absolute -right-4 -top-4 w-24 h-24 bg-emerald-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
-                <div class="relative z-10">
-                    <div class="w-12 h-12 bg-emerald-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-emerald-100">
-                        <CheckBadgeIcon class="h-6 w-6" />
-                    </div>
-                    <p class="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Stock available</p>
-                    <div class="mt-2 flex items-baseline gap-2">
-                        <span class="text-2xl font-black text-slate-900 tracking-tighter">{{ stats?.in_stock }}</span>
-                        <span class="text-sm font-black text-emerald-600 uppercase tracking-widest bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100 shadow-sm">Protocol_Ready</span>
-                    </div>
-                    <p class="mt-4 text-sm font-black text-slate-400 uppercase tracking-widest opacity-60">Instant Allocation Buffer</p>
+                
+                <div class="flex-1 relative">
+                    <BaseChart type="line" :data="valuationTrendData" :options="chartOptions" />
                 </div>
-            </div>
 
-             <!-- Assigned -->
-             <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300">
-                <div class="absolute -right-4 -top-4 w-24 h-24 bg-blue-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
-                <div class="relative z-10">
-                    <div class="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-blue-100">
-                        <UserGroupIcon class="h-6 w-6" />
+                <div class="mt-8 grid grid-cols-3 gap-6 pt-6 border-t border-slate-50 text-left">
+                    <div class="space-y-1">
+                        <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Pace</p>
+                        <p class="text-[13px] font-black text-slate-900">+12% vs LY</p>
                     </div>
-                    <p class="text-sm font-black text-slate-400 uppercase tracking-[0.2em]">Active Deployment</p>
-                    <div class="mt-2 flex items-baseline gap-2">
-                        <span class="text-2xl font-black text-slate-900 tracking-tighter">{{ stats?.assigned_assets }}</span>
-                        <span class="text-sm font-black text-blue-600 uppercase tracking-widest bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-100 shadow-sm">Utilized</span>
+                    <div class="space-y-1 text-center">
+                        <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Avg Unit Cost</p>
+                        <p class="text-[13px] font-black text-slate-900">₹42,500</p>
                     </div>
-                    <p class="mt-4 text-sm font-black text-slate-400 uppercase tracking-widest opacity-60">Operative Engagement Nodes</p>
-                </div>
-            </div>
-
-             <!-- Warranty -->
-             <div class="bg-white p-6 rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 relative overflow-hidden group hover:scale-[1.02] transition-all duration-300">
-                <div class="absolute -right-4 -top-4 w-24 h-24 bg-rose-50 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700"></div>
-                <div class="relative z-10">
-                    <div class="w-12 h-12 bg-rose-500 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-rose-100">
-                        <CalendarIcon class="h-6 w-6" />
-                    </div>
-                    <p class="text-sm font-black text-rose-400 uppercase tracking-[0.2em]">Risk: Warranty End</p>
-                    <div class="mt-2 flex items-baseline gap-2">
-                        <span class="text-2xl font-black text-rose-600 tracking-tighter">{{ stats?.warranty_expiring_soon || 0 }}</span>
-                        <span class="text-sm font-black text-rose-600 uppercase tracking-widest bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100 shadow-sm border-dashed">EXP_30D</span>
-                    </div>
-                    <div class="mt-4 flex items-center text-rose-500 gap-1.5">
-                        <ArrowTrendingDownIcon class="h-3 w-3" />
-                        <span class="text-sm font-black uppercase tracking-widest">Renewal Required</span>
+                    <div class="space-y-1 text-right">
+                        <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400">Optimization</p>
+                        <p class="text-[13px] font-black text-emerald-600 uppercase tracking-widest">Optimal</p>
                     </div>
                 </div>
-            </div>
-        </div>
+            </article>
 
-        <!-- High Fidelity Intelligence Grid -->
-        <div class="grid grid-cols-1 xl:grid-cols-2 gap-8">
-             <!-- Category Breakdown Card -->
-             <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden">
-                <div class="flex justify-between items-center mb-10">
+            <!-- Risk Snapshot & Alerts -->
+            <article class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm flex flex-col">
+                <div class="flex items-center justify-between mb-8 border-b border-slate-50 pb-6 text-left">
                     <div>
-                        <h3 class="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Category Distribution</h3>
-                        <p class="text-sm font-black text-slate-400 uppercase tracking-widest mt-1">Resource allocation by class</p>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Risk Snapshot</p>
+                        <h3 class="text-xl font-black text-slate-900 tracking-tight uppercase">Priority Alerts</h3>
                     </div>
-                    <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer border border-slate-100">
-                        <ArrowTrendingUpIcon class="h-5 w-5" />
-                    </div>
+                    <BellAlertIcon class="w-6 h-6 text-rose-500 animate-pulse" />
                 </div>
                 
-                <div class="space-y-6">
-                    <!-- Dynamic Bars based on sample stats -->
-                    <div v-for="(count, cat) in {'Laptops': 65, 'Mobiles': 42, 'Furniture': 15, 'Servers': 8}" :key="cat" class="space-y-2">
-                        <div class="flex justify-between items-center px-1">
-                            <span class="text-sm font-black text-slate-600 uppercase tracking-widest">{{ cat }}</span>
-                            <span class="text-base font-black text-slate-900 tabular-nums">{{ count }} Unit</span>
-                        </div>
-                        <div class="h-2 w-full bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                            <div 
-                                class="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full shadow-[0_0_10px_rgba(79,70,229,0.3)] transition-all duration-1000" 
-                                :style="{ width: (count / 100 * 100) + '%' }"
-                            ></div>
+                <div class="space-y-4 flex-1 overflow-y-auto no-scrollbar pr-2 text-left">
+                    <div v-for="i in 4" :key="i" class="p-5 bg-slate-50 border border-slate-100 rounded-2xl relative overflow-hidden group hover:bg-white hover:border-indigo-200 transition-all shadow-sm">
+                        <div class="absolute left-0 top-0 w-1 h-full bg-slate-200 group-hover:bg-indigo-600 transition-colors"></div>
+                        <div class="flex flex-col gap-2">
+                                      <span class="text-[8px] font-bold text-indigo-600 uppercase tracking-widest leading-none">Security Alert</span>
+                                      <p class="text-sm font-bold text-slate-700 leading-tight">Asset #{{ 1024 + i }} requires a mandatory physical audit.</p>
+                             <div class="flex items-center justify-between mt-3">
+                                <span class="text-[8px] font-bold text-slate-400 uppercase tracking-widest">T-{{ i * 2 }}H Ago</span>
+                                <ArrowRightIcon class="w-4 h-4 text-slate-300 group-hover:text-indigo-600 transition-all -translate-x-2 group-hover:translate-x-0" />
+                             </div>
                         </div>
                     </div>
                 </div>
-             </div>
 
-             <!-- Health Pulse Card -->
-             <div class="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden group">
-                <div class="flex justify-between items-center mb-10">
-                    <div>
-                        <h3 class="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Maintenance Pulse</h3>
-                        <p class="text-sm font-black text-slate-400 uppercase tracking-widest mt-1">Asset physical status report</p>
-                    </div>
+                <div class="mt-8 pt-6 border-t border-slate-100 space-y-4 text-left">
+                     <div class="flex items-center justify-between">
+                         <span class="text-[9px] font-bold uppercase text-slate-400 tracking-widest">Warranty Pulse</span>
+                         <span class="text-xs font-black text-rose-600">{{ stats?.warranty_expiring_soon || 0 }} Critical Units</span>
+                     </div>
+                     <div class="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                         <div class="h-full bg-rose-500 rounded-full" :style="{ width: '35%' }"></div>
+                     </div>
                 </div>
-                
-                <div class="flex items-center justify-center h-48 relative">
-                    <!-- Complex Circle UI -->
-                    <div class="w-40 h-40 rounded-full border-[10px] border-slate-50 flex items-center justify-center relative shadow-inner">
-                        <div class="absolute inset-0 rounded-full border-[10px] border-emerald-500 border-t-transparent -rotate-45 shadow-[0_0_15px_rgba(16,185,129,0.2)]"></div>
-                        <div class="text-center group-hover:scale-110 transition-transform">
-                            <div class="text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-1 leading-none">Healthy</div>
-                            <div class="text-3xl font-black text-slate-900 leading-none">94<span class="text-sm opacity-30">%</span></div>
-                        </div>
-                    </div>
-                    
-                    <div class="absolute top-0 right-0 p-4 space-y-3">
-                         <div class="flex items-center gap-2">
-                             <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                             <span class="text-sm font-black text-slate-500 uppercase tracking-widest">Normal Ops</span>
-                         </div>
-                         <div class="flex items-center gap-2">
-                             <div class="w-2 h-2 rounded-full bg-amber-500"></div>
-                             <span class="text-sm font-black text-slate-500 uppercase tracking-widest">Restricted</span>
-                         </div>
-                         <div class="flex items-center gap-2">
-                             <div class="w-2 h-2 rounded-full bg-rose-500"></div>
-                             <span class="text-sm font-black text-slate-500 uppercase tracking-widest">Critical</span>
-                         </div>
-                    </div>
+            </article>
+        </section>
+
+        <!-- Key Insights -->
+        <section class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+            <article v-for="card in [
+                { label: 'Fixed Assets', value: stats?.fixed_assets || 0, caption: 'Core Capital hardware' },
+                { label: 'Scan Status', value: 'Active', caption: 'Live monitoring enabled' },
+                { label: 'Restock Queue', value: stats?.pending_requests || 0, caption: 'Procurement Pipeline' },
+                { label: 'Physical Docs', value: stats?.doc_compliance || '92%', caption: 'Archive health' }
+            ]" :key="card.label" class="rounded-3xl border border-slate-200 bg-white p-8 shadow-sm hover:border-indigo-200 transition-all group text-left">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400 group-hover:text-indigo-600 transition-colors">{{ card.label }}</p>
+                <div class="mt-4 flex items-end justify-between gap-4">
+                    <p class="text-3xl font-black text-slate-900 tracking-tight">{{ card.value }}</p>
+                    <p class="text-[9px] font-bold text-slate-400 text-right uppercase tracking-widest leading-tight w-24 opacity-60">{{ card.caption }}</p>
                 </div>
-                
-                <div class="mt-8 flex gap-4">
-                     <button class="flex-1 h-11 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-black text-indigo-600 uppercase tracking-widest hover:bg-indigo-600 hover:text-white transition-all shadow-sm">View Reports</button>
-                     <button class="flex-1 h-11 bg-slate-900 text-white rounded-2xl text-sm font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl shadow-slate-200">System Scan</button>
-                </div>
-             </div>
-        </div>
+            </article>
+        </section>
     </div>
 </template>
+
+<style scoped>
+.no-scrollbar::-webkit-scrollbar { display: none; }
+</style>
+
+<style scoped>
+.shadow-3xl {
+    box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.08);
+}
+.no-scrollbar::-webkit-scrollbar { display: none; }
+</style>

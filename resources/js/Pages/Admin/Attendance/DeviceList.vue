@@ -56,9 +56,9 @@
                         >
                             <i class="fas fa-tower-broadcast text-base"></i>
                         </div>
-                        <div class="truncate">
+                        <div class="truncate flex-1 min-w-0">
                             <h3 class="text-base font-black text-slate-800 uppercase tracking-tight truncate leading-none">{{ device.name }}</h3>
-                            <p class="text-xs font-black text-slate-400 font-mono mt-1.5 leading-none uppercase tracking-widest">{{ device.ip_address }}</p>
+                            <!-- <p class="text-xs font-black text-slate-400 font-mono mt-1.5 leading-none uppercase tracking-widest truncate break-all" :title="device.ip_address">{{ device.ip_address }}</p> -->
                         </div>
                     </div>
                     
@@ -95,6 +95,11 @@
                     </div>
                     <div v-if="device.location_name" class="px-2 py-1 bg-slate-100 rounded text-xs font-black text-slate-500 uppercase tracking-widest">
                         Loc: {{ device.location_name }}
+                    </div>
+                </div>
+                 <div class="flex flex-wrap gap-2 mb-4">
+                    <div v-if="device.port" class="px-2 py-1 bg-slate-100 rounded text-xs font-black text-slate-500 uppercase tracking-widest">
+                         <p class="text-xs font-black text-slate-400 font-mono mt-1.5 leading-none uppercase tracking-widest truncate break-all" :title="device.ip_address">{{ device.ip_address }}</p> 
                     </div>
                 </div>
 

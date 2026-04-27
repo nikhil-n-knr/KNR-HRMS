@@ -45,6 +45,18 @@
                     Request Verification
                 </button>
 
+                <button
+                    @click="sendReminder"
+                    :disabled="sendingReminder || bug?.reminder_sent_today"
+                    class="whitespace-nowrap flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-black uppercase tracking-widest border transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                    :class="bug?.reminder_sent_today
+                        ? 'bg-slate-100 text-slate-500 border-slate-200'
+                        : 'bg-indigo-50 text-indigo-700 border-indigo-100 hover:bg-indigo-600 hover:text-white'"
+                >
+                    <ClockIcon class="w-3.5 h-3.5" />
+                    {{ bug?.reminder_sent_today ? 'Reminder Sent Today' : (sendingReminder ? 'Sending...' : 'Send Reminder') }}
+                </button>
+
                 <!-- QA Cycle (Visible if In Review or similar) -->
                 <div class="flex bg-slate-100 rounded-lg p-1 gap-1">
                     <button @click="qaAction('approve')" class="p-1 px-2.5 rounded-md hover:bg-emerald-500 hover:text-white text-emerald-600 transition-all" title="Sign-off Fix">
@@ -131,10 +143,22 @@
                                 </dd>
                             </div>
                             <div>
-                                <dt class="text-sm text-gray-400 uppercase font-black tracking-widest mb-1.5">Owner</dt>
-                                <dd class="flex items-center gap-2 font-bold text-slate-900 border-r pr-4">
-                                    <div class="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-sm">{{ bug.assignee?.name?.charAt(0) || '?' }}</div>
-                                    {{ bug.assignee ? (bug.assignee.name || bug.assignee.first_name) : 'Awaiting Assignment' }}
+                                <dt class="text-sm text-gray-400 uppercase font-black tracking-widest mb-1.5">{{ assignedMembers.length > 1 ? 'Owners' : 'Owner' }}</dt>
+                                <dd class="border-r pr-4">
+                                    <div v-if="assignedMembers.length" class="flex flex-wrap gap-2">
+                                        <span
+                                            v-for="member in assignedMembers"
+                                            :key="`owner-${member.id}`"
+                                            class="inline-flex items-center gap-2 rounded-full bg-slate-100 border border-slate-200 px-3 py-1 text-xs font-bold text-slate-700"
+                                        >
+                                            <span class="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-[10px]">{{ member.name?.charAt(0) || '?' }}</span>
+                                            {{ member.name }}
+                                        </span>
+                                    </div>
+                                    <div v-else class="flex items-center gap-2 font-bold text-slate-900">
+                                        <div class="h-6 w-6 rounded-full bg-slate-200 flex items-center justify-center text-sm">{{ ownerLabel.charAt(0) || '?' }}</div>
+                                        {{ ownerLabel }}
+                                    </div>
                                 </dd>
                             </div>
                             <div class="relative group/link">
@@ -143,6 +167,46 @@
                                     <LinkIcon class="w-3 h-3" />
                                     Add Relation
                                 </button>
+                            </div>
+
+                            <div class="col-span-2 rounded-xl border border-slate-200 bg-white p-4">
+                                <div class="flex items-center justify-between gap-3 mb-3">
+                                    <div>
+                                        <dt class="text-sm text-gray-400 uppercase font-black tracking-widest mb-1">Assign Members</dt>
+                                        <p class="text-xs text-slate-500 font-semibold">Choose project team members for this bug.</p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        class="px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-black uppercase tracking-widest disabled:opacity-50"
+                                        :disabled="savingAssignments || !selectedAssigneeIds.length"
+                                        @click="saveAssignees"
+                                    >
+                                        {{ savingAssignments ? 'Saving...' : 'Save Members' }}
+                                    </button>
+                                </div>
+
+                                <select
+                                    v-model="selectedAssigneeIds"
+                                    multiple
+                                    class="block w-full border-gray-300 rounded-xl shadow-sm focus:border-emerald-500 focus:ring-emerald-500 sm:text-sm h-32"
+                                >
+                                    <option v-for="member in availableAssignees" :key="member.id" :value="String(member.id)">
+                                        {{ member.name }}
+                                    </option>
+                                </select>
+                                <p class="mt-2 text-xs text-slate-400 font-medium">Hold Ctrl on Windows to select multiple members.</p>
+
+                                <div class="mt-3 flex flex-wrap gap-2">
+                                    <span
+                                        v-for="member in assignedMembers"
+                                        :key="`assigned-${member.id}`"
+                                        class="inline-flex items-center gap-2 rounded-full bg-emerald-50 border border-emerald-200 px-3 py-1 text-xs font-bold text-emerald-700"
+                                    >
+                                        <span class="h-5 w-5 rounded-full bg-emerald-100 flex items-center justify-center text-[10px]">{{ member.name?.charAt(0) || '?' }}</span>
+                                        {{ member.name }}
+                                    </span>
+                                    <span v-if="!assignedMembers.length" class="text-xs font-semibold text-slate-400">No members assigned yet.</span>
+                                </div>
                             </div>
                         </div>
 
@@ -308,6 +372,7 @@ import {
     LockClosedIcon
 } from '@heroicons/vue/24/outline';
 import InputLabel from '@/Components/InputLabel.vue'; // Standardizing
+import { useToastStore } from '@/stores/toast';
 
 const props = defineProps({
     bugId: Number,
@@ -315,11 +380,54 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['close', 'updated']);
+const toast = useToastStore();
 
 const bug = ref(null);
 const loading = ref(false);
 const activeTab = ref('comments');
 const selectedStage = ref(null);
+const availableAssignees = ref([]);
+const selectedAssigneeIds = ref([]);
+const savingAssignments = ref(false);
+const sendingReminder = ref(false);
+
+const assignedMembers = computed(() => {
+    if (!bug.value) return [];
+
+    if (Array.isArray(bug.value.assignees) && bug.value.assignees.length) {
+        return bug.value.assignees
+            .map((entry) => ({
+                id: entry.assignee_id,
+                name: entry.assignee?.name || [entry.assignee?.first_name, entry.assignee?.last_name].filter(Boolean).join(' ') || 'Unknown',
+            }))
+            .filter((member) => member.id);
+    }
+
+    if (bug.value.assignee_id && bug.value.assignee) {
+        return [{
+            id: bug.value.assignee_id,
+            name: bug.value.assignee.name || [bug.value.assignee.first_name, bug.value.assignee.last_name].filter(Boolean).join(' ') || 'Unknown',
+        }];
+    }
+
+    return [];
+});
+
+const ownerLabel = computed(() => {
+    if (!bug.value) return 'Awaiting Assignment';
+
+    if (bug.value.assignee) {
+        const name = bug.value.assignee.name
+            || [bug.value.assignee.first_name, bug.value.assignee.last_name].filter(Boolean).join(' ');
+        if (name) return name;
+    }
+
+    if (assignedMembers.value.length) {
+        return assignedMembers.value[0].name;
+    }
+
+    return 'Awaiting Assignment';
+});
 
 const isAwaitingApproval = computed(() => {
     if (!bug.value || !props.stages) return false;
@@ -343,9 +451,10 @@ const quickApprove = async () => {
             body: `<strong>Gate Authorization:</strong> ${usePage().props.auth.user.name} has authorized movement from '${bug.value.stage.name}'.`,
             is_public: true
         });
-        alert("Gate unlocked. You can now move the ticket to the next stage.");
+        toast.success('Gate unlocked. You can now move the ticket to the next stage.');
     } catch (e) {
         console.error("Approval failed", e);
+        toast.error('Approval failed.');
     }
 };
 
@@ -366,8 +475,9 @@ const handleVerification = async (action) => {
         await axios.post(route(`bugs.stage.${action}`, bug.value.id), { comment });
         fetchBugDetails();
         emit('updated');
+        toast.success(isApprove ? 'Fix approved successfully.' : 'Fix rejected successfully.');
     } catch (e) {
-        alert(e.response?.data?.message || "Operation failed");
+        toast.error(e.response?.data?.message || 'Operation failed.');
     }
 };
 
@@ -384,7 +494,7 @@ const approveTicket = async () => {
     }
 
     if (!nextStage) {
-        alert("Could not determine next workflow stage. Please select manually.");
+        toast.info('Could not determine next workflow stage. Please select manually.');
         return;
     }
 
@@ -395,8 +505,10 @@ const approveTicket = async () => {
         });
         emit('updated');
         fetchBugDetails();
+        toast.success('Ticket approved and released for development.');
     } catch (e) {
         console.error("Approval failed", e);
+        toast.error('Approval failed.');
     }
 };
 
@@ -410,10 +522,70 @@ const fetchBugDetails = async () => {
         const { data } = await axios.get(route('bugs.show', props.bugId));
         bug.value = data;
         selectedStage.value = data.workflow_stage_id;
+        selectedAssigneeIds.value = Array.isArray(data.assignees) && data.assignees.length
+            ? data.assignees.map((entry) => String(entry.assignee_id))
+            : (data.assignee_id ? [String(data.assignee_id)] : []);
+
+        await loadAvailableAssignees(data.project_id || data.project?.id);
     } catch (e) {
         console.error("Failed to fetch bug details", e);
     } finally {
         loading.value = false;
+    }
+};
+
+const loadAvailableAssignees = async (projectId) => {
+    if (!projectId) {
+        availableAssignees.value = [];
+        return;
+    }
+
+    try {
+        const response = await axios.get(route('bugs.assignees'), {
+            params: { project_id: projectId },
+        });
+        availableAssignees.value = response.data || [];
+    } catch (e) {
+        console.error('Failed to fetch bug assignees', e);
+        availableAssignees.value = [];
+    }
+};
+
+const saveAssignees = async () => {
+    if (!bug.value?.id || !bug.value?.workflow_stage_id) return;
+
+    savingAssignments.value = true;
+    try {
+        const response = await axios.post(route('bugs.stage.update.advanced', bug.value.id), {
+            stage: bug.value.workflow_stage_id,
+            assignee_ids: selectedAssigneeIds.value,
+            note: 'Updated assignees from bug detail pane.',
+        });
+        await fetchBugDetails();
+        emit('updated');
+        toast.success(response?.data?.message || 'Assignees updated successfully.');
+    } catch (e) {
+        console.error('Failed to save bug assignees', e);
+        toast.error(e?.response?.data?.message || 'Failed to update assignees.');
+    } finally {
+        savingAssignments.value = false;
+    }
+};
+
+const sendReminder = async () => {
+    if (!bug.value?.id || sendingReminder.value || bug.value?.reminder_sent_today) return;
+
+    sendingReminder.value = true;
+    try {
+        const response = await axios.post(route('bugs.reminder.send', bug.value.id));
+        bug.value.reminder_sent_today = true;
+        toast.success(response.data?.message || 'Reminder sent successfully.');
+        emit('updated');
+    } catch (e) {
+        const message = e?.response?.data?.message || 'Failed to send reminder.';
+        toast.error(message);
+    } finally {
+        sendingReminder.value = false;
     }
 };
 
@@ -475,8 +647,10 @@ const bounceBack = async () => {
         });
         emit('updated');
         fetchBugDetails();
+        toast.success('Ticket bounced back successfully.');
     } catch (e) {
         console.error("Bounce back failed", e);
+        toast.error('Bounce back failed.');
     }
 };
 
@@ -489,8 +663,10 @@ const requestVerification = async () => {
         });
         emit('updated');
         fetchBugDetails();
+        toast.success('Verification requested successfully.');
     } catch (e) {
         console.error("Verification request failed", e);
+        toast.error('Verification request failed.');
     }
 };
 
@@ -505,8 +681,10 @@ const qaAction = async (action) => {
         });
         emit('updated');
         fetchBugDetails();
+        toast.success(isApprove ? 'QA approval completed.' : 'QA rejection recorded.');
     } catch (e) {
         console.error("QA action failed", e);
+        toast.error('QA action failed.');
     }
 };
 
@@ -534,6 +712,7 @@ const captureEnv = async () => {
         fetchBugDetails();
     } catch (e) {
         console.error("Failed to capture env", e);
+        toast.error('Failed to capture environment snapshot.');
     }
 };
 
@@ -556,8 +735,10 @@ const processStageUpdate = async (stageId, note = null) => {
         });
         emit('updated'); // Signal parent to refresh list
         fetchBugDetails();
+        toast.success('Stage updated successfully.');
     } catch (e) {
         console.error("Failed to update stage", e);
+        toast.error('Failed to update stage.');
         // Revert on error
         if (bug.value) selectedStage.value = bug.value.workflow_stage_id;
     }

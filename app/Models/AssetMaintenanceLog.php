@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class AssetMaintenanceLog extends Model
 {
     use HasFactory;
+    protected $table = 'maintenance_logs';
     protected $guarded = [];
 
     protected $casts = [
