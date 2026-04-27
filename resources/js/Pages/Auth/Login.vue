@@ -1,8 +1,5 @@
 <template>
-  <div
-    class="relative min-h-screen overflow-hidden"
-    :class="roleTheme.pageBg"
-  >
+  <div class="relative min-h-screen overflow-hidden" :class="roleTheme.pageBg">
     <!-- soft grid background -->
     <div class="absolute inset-0 opacity-[0.18]" :style="roleTheme.gridStyle"></div>
 
@@ -11,7 +8,7 @@
     <div class="absolute top-1/2 -right-20 h-[26rem] w-[26rem] rounded-full blur-3xl" :class="roleTheme.orbB"></div>
     <div class="absolute bottom-0 left-1/3 h-72 w-72 rounded-full blur-3xl" :class="roleTheme.orbC"></div>
 
-    <div class="relative z-10 mx-auto flex min-h-screen w-full max-w-6xl items-center justify-center px-4 py-10 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+    <div class="relative mx-auto flex min-h-screen w-full items-center justify-center px-4 lg:grid lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
       <!-- Left Brand / Role Panel -->
       <div class="hidden lg:flex flex-col justify-center">
         <div class="flex items-center gap-4">
@@ -20,10 +17,11 @@
             alt="KNR Logo"
             class="h-14 w-auto object-contain"
           >
+          <span class="text-6xl font-black" :class="roleTheme.accentText">CONNECT</span>
         </div>
 
         <h1 class="mt-8 text-5xl font-black leading-tight text-slate-900">
-          One login.
+          Unified login.
           <span class="block" :class="roleTheme.accentText">Every role.</span>
         </h1>
         <p class="mt-4 text-lg text-slate-600 max-w-md">
@@ -77,8 +75,8 @@
               alt="KNR Logo"
               class="h-12 w-auto mx-auto object-contain"
             >
-            <p class="mt-2 text-[10px] font-black uppercase tracking-[0.4em]" :class="roleTheme.accentTextSoft">KNR HRMS</p>
-            <h2 class="mt-3 text-2xl font-black text-slate-900">Welcome back</h2>
+            <p class="mt-2 text-[10px] font-black uppercase tracking-[0.4em]" :class="roleTheme.accentTextSoft">KNR CONNECT</p>
+           <!-- <h2 class="mt-3 text-2xl font-black text-slate-900">Welcome back</h2> -->
             <p class="text-sm text-slate-500">Sign in to your workspace</p>
           </div>
 

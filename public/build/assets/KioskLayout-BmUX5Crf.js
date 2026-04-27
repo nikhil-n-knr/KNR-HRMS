@@ -1,0 +1,9 @@
+<<<<<<< HEAD:public/build/assets/KioskLayout-BmUX5Crf.js
+import{c as t,b as o,J as n,o as l}from"./app-BSSC7_v8.js";const a={class:"h-screen w-screen overflow-hidden bg-white select-none touch-manipulation"},i={class:"h-full w-full"},u={__name:"KioskLayout",setup(r){return(s,e)=>(l(),t("div",a,[e[1]||(e[1]=o("header",{class:"hidden"},null,-1)),o("main",i,[n(s.$slots,"default")]),o("div",{class:"fixed bottom-0 right-0 w-16 h-16 z-50 opacity-0",onDblclick:e[0]||(e[0]=d=>s.$inertia.visit(s.route("dashboard")))},null,32)]))}};export{u as _};
+=======
+<<<<<<<< HEAD:public/build/assets/KioskLayout-BGLlAcf7.js
+import{c as t,b as o,K as n,o as l}from"./app-ChgzMNoz.js";const a={class:"h-screen w-screen overflow-hidden bg-white select-none touch-manipulation"},i={class:"h-full w-full"},u={__name:"KioskLayout",setup(r){return(s,e)=>(l(),t("div",a,[e[1]||(e[1]=o("header",{class:"hidden"},null,-1)),o("main",i,[n(s.$slots,"default")]),o("div",{class:"fixed bottom-0 right-0 w-16 h-16 z-50 opacity-0",onDblclick:e[0]||(e[0]=d=>s.$inertia.visit(s.route("dashboard")))},null,32)]))}};export{u as _};
+========
+import{c as t,b as o,J as n,o as l}from"./app-Q6v5HO2r.js";const a={class:"h-screen w-screen overflow-hidden bg-white select-none touch-manipulation"},i={class:"h-full w-full"},u={__name:"KioskLayout",setup(r){return(s,e)=>(l(),t("div",a,[e[1]||(e[1]=o("header",{class:"hidden"},null,-1)),o("main",i,[n(s.$slots,"default")]),o("div",{class:"fixed bottom-0 right-0 w-16 h-16 z-50 opacity-0",onDblclick:e[0]||(e[0]=d=>s.$inertia.visit(s.route("dashboard")))},null,32)]))}};export{u as _};
+>>>>>>>> c4cf3b5855091be65648cc0f180c82342e977952:public/build/assets/KioskLayout-JF-L_bss.js
+>>>>>>> eb3e610431666554ff07882de744f850a6fa0a14:public/build/assets/KioskLayout-JF-L_bss.js

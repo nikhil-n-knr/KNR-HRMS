@@ -1,0 +1,9 @@
+<<<<<<< HEAD:public/build/assets/404-DgmaAWFL.js
+import{c as s,b as t,a,w as o,d as r,u as l,p as n,o as d}from"./app-BSSC7_v8.js";const x={class:"min-h-screen flex flex-col items-center justify-center bg-gray-100 text-gray-700"},i={__name:"404",setup(f){return(m,e)=>(d(),s("div",x,[e[1]||(e[1]=t("h1",{class:"text-6xl font-bold mb-4"},"404",-1)),e[2]||(e[2]=t("p",{class:"text-xl mb-8"},"Page Not Found",-1)),a(l(n),{href:"/",class:"text-emerald-600 hover:underline"},{default:o(()=>[...e[0]||(e[0]=[r("Go Home",-1)])]),_:1})]))}};export{i as default};
+=======
+<<<<<<<< HEAD:public/build/assets/404-BUhJKbWa.js
+import{c as s,b as t,a,w as o,d as r,u as l,p as n,o as d}from"./app-ChgzMNoz.js";const x={class:"min-h-screen flex flex-col items-center justify-center bg-gray-100 text-gray-700"},i={__name:"404",setup(f){return(m,e)=>(d(),s("div",x,[e[1]||(e[1]=t("h1",{class:"text-6xl font-bold mb-4"},"404",-1)),e[2]||(e[2]=t("p",{class:"text-xl mb-8"},"Page Not Found",-1)),a(l(n),{href:"/",class:"text-emerald-600 hover:underline"},{default:o(()=>[...e[0]||(e[0]=[r("Go Home",-1)])]),_:1})]))}};export{i as default};
+========
+import{c as s,b as t,a,w as o,d as r,u as l,p as n,o as d}from"./app-Q6v5HO2r.js";const x={class:"min-h-screen flex flex-col items-center justify-center bg-gray-100 text-gray-700"},i={__name:"404",setup(f){return(m,e)=>(d(),s("div",x,[e[1]||(e[1]=t("h1",{class:"text-6xl font-bold mb-4"},"404",-1)),e[2]||(e[2]=t("p",{class:"text-xl mb-8"},"Page Not Found",-1)),a(l(n),{href:"/",class:"text-emerald-600 hover:underline"},{default:o(()=>[...e[0]||(e[0]=[r("Go Home",-1)])]),_:1})]))}};export{i as default};
+>>>>>>>> c4cf3b5855091be65648cc0f180c82342e977952:public/build/assets/404-Cn-tKy7x.js
+>>>>>>> eb3e610431666554ff07882de744f850a6fa0a14:public/build/assets/404-Cn-tKy7x.js
