@@ -395,9 +395,6 @@ class TimesheetController extends Controller
         ]);
     }
 
-    /**
-     * Fetch Timesheet Entries for a Date Range (for Weekly Grid)
-     */
     public function getWeeklyLog(Request $request)
     {
         $request->validate([
@@ -405,12 +402,28 @@ class TimesheetController extends Controller
             'end_date' => 'required|date'
         ]);
 
-        $entries = \App\Models\Timesheet::where('employee_id', Auth::user()->employee->id)
+        $employee = Auth::user()->employee;
+
+        $entries = \App\Models\Timesheet::where('employee_id', $employee->id)
             ->whereBetween('date', [$request->start_date, $request->end_date])
             ->with(['project:id,name,code', 'task:id,title'])
             ->get();
 
-        return response()->json($entries);
+        $registry = app(\App\Services\Attendance\AttendanceRegistryService::class);
+        $offDays = [];
+        
+        $start = Carbon::parse($request->start_date);
+        $end = Carbon::parse($request->end_date);
+        for ($date = $start->copy(); $date->lte($end); $date->addDay()) {
+            if ($registry->isNonWorkingDay($employee, $date)) {
+                $offDays[] = $date->format('Y-m-d');
+            }
+        }
+
+        return response()->json([
+            'entries' => $entries,
+            'off_days' => $offDays
+        ]);
     }
     /**
      * Fetch ALL Assigned Tasks for the User (Across Projects) for Weekly Grid

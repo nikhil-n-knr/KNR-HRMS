@@ -220,6 +220,8 @@ class AttendanceController extends Controller
 
         $isLoopback = collect($ips)->contains(fn ($ip) => in_array($ip, ['127.0.0.1', '::1'], true));
         if ($isLoopback) {
+            $ips[] = '127.0.0.1';
+            $ips[] = '::1';
             try {
                 $publicIp = Http::timeout(2)->get('https://api.ipify.org?format=json')->json('ip');
                 if (!empty($publicIp)) {

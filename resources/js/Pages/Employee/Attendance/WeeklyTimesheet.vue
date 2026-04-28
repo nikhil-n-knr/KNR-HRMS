@@ -25,6 +25,7 @@ const processing = ref(false);
 const weekRange = ref(''); 
 const config = ref({ allowed_past_days: 30, allowed_future_days: 30 }); // Defaults
 const lockedDates = ref([]);
+const offDays = ref([]);
 
 // New Row State
 const showAddRow = ref(false);
@@ -149,8 +150,9 @@ const loadData = async () => {
         });
 
         // 2. Fill with Log Data
-        const logs = Array.isArray(logRes.data) ? logRes.data : [];
-        console.log('Weekly Logs:', logs);
+        const logs = logRes.data.entries ? logRes.data.entries : (Array.isArray(logRes.data) ? logRes.data : []);
+        offDays.value = logRes.data.off_days || [];
+        console.log('Weekly Logs:', logs, 'Off Days:', offDays.value);
 
         lockedDates.value = [...new Set(
             logs
@@ -364,7 +366,7 @@ onMounted(() => {
                 <thead class="text-xs text-gray-500 uppercase bg-gray-50 border-b border-gray-100">
                     <tr>
                         <th class="px-4 py-3 min-w-[250px]">Project / Task</th>
-                        <th v-for="day in weekDays" :key="day.date" class="px-2 py-3 text-center min-w-[60px]" :class="{'bg-orange-50': ['Sat','Sun'].includes(day.dayName)}">
+                        <th v-for="day in weekDays" :key="day.date" class="px-2 py-3 text-center min-w-[60px]" :class="{'bg-orange-50': offDays.includes(day.date)}">
                             <div class="font-bold">{{ day.dayName }}</div>
                             <div class="text-sm">{{ day.dateNum }}</div>
                         </th>
@@ -380,7 +382,7 @@ onMounted(() => {
                                  <span class="text-gray-400">{{ row.project_name }}</span>
                              </div>
                         </td>
-                        <td v-for="day in weekDays" :key="day.date" class="px-1 py-1 text-center" :class="{'bg-orange-50/50': ['Sat','Sun'].includes(day.dayName)}">
+                        <td v-for="day in weekDays" :key="day.date" class="px-1 py-1 text-center" :class="{'bg-orange-50/50': offDays.includes(day.date)}">
                             <input 
                                 type="number" 
                                 v-model="row.cells[day.date]" 
