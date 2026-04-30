@@ -3,490 +3,410 @@ import { ref, computed } from 'vue';
 import { Link, router, Head, useForm } from '@inertiajs/vue3';
 import { useAuthStore } from '@/stores/auth';
 import MainLayout from '@/Layouts/MainLayout.vue';
-import EmployeeDocumentsTab from './Tabs/EmployeeDocumentsTab.vue'; 
-import EmployeeOverviewTab from './Tabs/EmployeeOverviewTab.vue';
-import EmployeePersonalTab from './Tabs/EmployeePersonalTab.vue';
-import EmployeeBankingTab from './Tabs/EmployeeBankingTab.vue';
-import EmployeeExpensesTab from './Tabs/EmployeeExpensesTab.vue';
-import EmployeeTaxTab from './Tabs/EmployeeTaxTab.vue';
-import EmployeePayslipsTab from './Tabs/EmployeePayslipsTab.vue';
-import CreateLoginModal from '@/Components/Modals/CreateLoginModal.vue';
-import PasswordResetModal from '@/Components/Modals/PasswordResetModal.vue';
+import EmployeeDocumentsTab  from './Tabs/EmployeeDocumentsTab.vue';
+import EmployeeOverviewTab   from './Tabs/EmployeeOverviewTab.vue';
+import EmployeePersonalTab   from './Tabs/EmployeePersonalTab.vue';
+import EmployeeBankingTab    from './Tabs/EmployeeBankingTab.vue';
+import EmployeeExpensesTab   from './Tabs/EmployeeExpensesTab.vue';
+import EmployeeTaxTab        from './Tabs/EmployeeTaxTab.vue';
+import EmployeePayslipsTab   from './Tabs/EmployeePayslipsTab.vue';
+import CreateLoginModal      from '@/Components/Modals/CreateLoginModal.vue';
+import PasswordResetModal    from '@/Components/Modals/PasswordResetModal.vue';
 import StatutoryDetailsModal from '@/Components/Modals/StatutoryDetailsModal.vue';
-import BankDetailsModal from '@/Components/Modals/BankDetailsModal.vue';
-import CareerDnaModal from '@/Components/Analytics/CareerDnaModal.vue';
-import FamilyMemberModal from '@/Components/Modals/FamilyMemberModal.vue';
-import { 
-    ChevronLeftIcon,
-    UserCircleIcon,
-    IdentificationIcon,
-    UserGroupIcon,
-    FolderIcon,
-    ClockIcon,
-    DocumentTextIcon,
-    HeartIcon,
-    ShieldCheckIcon,
-    KeyIcon,
-    PlusIcon,
-    PencilSquareIcon,
-    TrashIcon,
-    MapPinIcon,
-    EnvelopeIcon,
-    BriefcaseIcon,
-    SparklesIcon,
-    Squares2X2Icon,
-    ArrowPathRoundedSquareIcon,
-    BanknotesIcon,
-    CameraIcon
+import BankDetailsModal      from '@/Components/Modals/BankDetailsModal.vue';
+import CareerDnaModal        from '@/Components/Analytics/CareerDnaModal.vue';
+import FamilyMemberModal     from '@/Components/Modals/FamilyMemberModal.vue';
+import {
+    ChevronLeftIcon, IdentificationIcon, UserGroupIcon, FolderIcon,
+    ClockIcon, DocumentTextIcon, HeartIcon, ShieldCheckIcon, KeyIcon,
+    PlusIcon, PencilSquareIcon, TrashIcon, MapPinIcon, EnvelopeIcon,
+    BriefcaseIcon, SparklesIcon, Squares2X2Icon, ArrowPathRoundedSquareIcon,
+    BanknotesIcon, CameraIcon
 } from '@heroicons/vue/24/outline';
+import axios from 'axios';
+import { useToastStore } from '@/stores/toast';
 
-const authStore = useAuthStore();
-const hasAdminRole = computed(() => {
-    const r = authStore.user?.role?.name;
-    return r === 'Super Admin' || r === 'Admin' || r === 'Manager';
-});
+const authStore  = useAuthStore();
+const toast      = useToastStore();
+const hasAdminRole = computed(() => ['Super Admin','Admin','Manager'].includes(authStore.user?.role?.name));
 
 const props = defineProps({
     employee: Object,
-    history: Array, 
+    history:  Array,
     payslips: Array,
-    tab: String 
+    tab:      String
 });
 
-const currentTab = ref(props.tab || 'overview');
-const showCreateLogin = ref(false);
-const showResetPassword = ref(false);
-const showStatutoryModal = ref(false);
-const showBankModal = ref(false);
-const showCareerDna = ref(false);
-const showFamilyModal = ref(false);
+const currentTab          = ref(props.tab || 'overview');
+const showCreateLogin     = ref(false);
+const showResetPassword   = ref(false);
+const showStatutoryModal  = ref(false);
+const showBankModal       = ref(false);
+const showCareerDna       = ref(false);
+const showFamilyModal     = ref(false);
 const selectedFamilyMember = ref(null);
 
-const avatarForm = useForm({
-    avatar: null
-});
+const avatarForm = useForm({ avatar: null });
+const fileInput  = ref(null);
 
-const fileInput = ref(null);
-
-const triggerAvatarUpload = () => {
-    if (props.employee.uuid) {
-        fileInput.value.click();
-    }
-};
-
-const handleAvatarChange = (e) => {
+const triggerAvatarUpload = () => { if (props.employee.uuid) fileInput.value?.click(); };
+const handleAvatarChange  = (e) => {
     const file = e.target.files[0];
-    if (file) {
-        avatarForm.avatar = file;
-        avatarForm.post(route('employee.profile.update-avatar', props.employee.uuid), {
-            forceFormData: true,
-            preserveScroll: true,
-            onSuccess: () => {
-                toast.success("Profile picture updated!");
-            },
-            onError: (err) => {
-                toast.error("Failed to update profile picture.");
-            }
-        });
-    }
+    if (!file) return;
+    avatarForm.avatar = file;
+    avatarForm.post(route('employee.profile.update-avatar', props.employee.uuid), {
+        forceFormData: true, preserveScroll: true,
+        onSuccess: () => toast.success('Profile picture updated!'),
+        onError:   () => toast.error('Failed to update profile picture.')
+    });
 };
 
 const tabs = [
-    { id: 'overview', name: 'Overview', icon: Squares2X2Icon },
-    { id: 'personal', name: 'Personal', icon: IdentificationIcon },
-    { id: 'family', name: 'Family', icon: UserGroupIcon },
+    { id: 'overview',  name: 'Overview',  icon: Squares2X2Icon },
+    { id: 'personal',  name: 'Personal',  icon: IdentificationIcon },
+    { id: 'family',    name: 'Family',    icon: UserGroupIcon },
     { id: 'documents', name: 'Documents', icon: FolderIcon },
-    { id: 'history', name: 'History', icon: ClockIcon },
-    { id: 'tax', name: 'Tax / TDS', icon: DocumentTextIcon },
-    { id: 'payslips', name: 'Payslips', icon: BanknotesIcon },
-    { id: 'expenses', name: 'Expenses', icon: HeartIcon },
+    { id: 'history',   name: 'History',   icon: ClockIcon },
+    { id: 'tax',       name: 'Tax / TDS', icon: DocumentTextIcon },
+    { id: 'payslips',  name: 'Payslips',  icon: BanknotesIcon },
+    { id: 'expenses',  name: 'Expenses',  icon: HeartIcon },
 ];
 
-const getInitials = (f, l) => `${f?.[0] || ''}${l?.[0] || ''}`.toUpperCase();
-const formatStatus = (s) => (s || '').split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-const formatCurrency = (val) => new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(val || 0);
-
-const fetchEmployee = () => {
-    router.reload({ only: ['employee'] });
+const statusStyles = {
+    active:        'bg-emerald-400/20 text-emerald-200 border-emerald-400/30',
+    probation:     'bg-blue-400/20 text-blue-200 border-blue-400/30',
+    notice_period: 'bg-amber-400/20 text-amber-200 border-amber-400/30',
+    terminated:    'bg-rose-400/20 text-rose-200 border-rose-400/30',
+    resigned:      'bg-rose-400/20 text-rose-200 border-rose-400/30',
+    on_leave:      'bg-purple-400/20 text-purple-200 border-purple-400/30',
 };
-
-const openFamilyModal = (member = null) => {
-    selectedFamilyMember.value = member;
-    showFamilyModal.value = true;
+const statusDotColors = {
+    active:'bg-emerald-400', probation:'bg-blue-400', notice_period:'bg-amber-400',
+    terminated:'bg-rose-400', resigned:'bg-rose-400', on_leave:'bg-purple-400',
 };
+const getStatusStyles  = (s) => statusStyles[s]    || 'bg-white/10 text-white/70 border-white/20';
+const getStatusDot     = (s) => statusDotColors[s] || 'bg-white/40';
+const formatStatus     = (s) => (s||'').replace(/_/g,' ').replace(/\b\w/g,c=>c.toUpperCase());
+const getInitials      = (f, l) => `${f?.[0]||''}${l?.[0]||''}`.toUpperCase();
 
-const closeFamilyModal = () => {
-    showFamilyModal.value = false;
-    selectedFamilyMember.value = null;
-};
-
-import axios from 'axios';
-import { useToastStore } from '@/stores/toast';
-const toast = useToastStore();
+const fetchEmployee    = () => router.reload({ only: ['employee'] });
+const openFamilyModal  = (member = null) => { selectedFamilyMember.value = member; showFamilyModal.value = true; };
+const closeFamilyModal = () => { showFamilyModal.value = false; selectedFamilyMember.value = null; };
 
 const deleteFamilyMember = async (member) => {
-    if (!confirm("Are you sure you want to delete this family member?")) return;
+    if (!confirm('Delete this family member?')) return;
     try {
         await axios.delete(`/admin/employees/${props.employee.id}/families/${member.id}`);
-        toast.success("Family member deleted");
-        fetchEmployee();
-    } catch (e) {
-        toast.error("Failed to delete member");
-    }
+        toast.success('Family member deleted'); fetchEmployee();
+    } catch { toast.error('Failed to delete member'); }
 };
 
-const getStatusStyles = (status) => {
-    switch (status) {
-        case 'active': return 'bg-emerald-50 text-emerald-600 border-emerald-100 shadow-emerald-500/5';
-        case 'probation': return 'bg-blue-50 text-blue-600 border-blue-100 shadow-blue-500/5';
-        case 'notice_period': return 'bg-amber-50 text-amber-600 border-amber-100 shadow-amber-500/5';
-        case 'terminated':
-        case 'resigned': return 'bg-rose-50 text-rose-600 border-rose-100 shadow-rose-500/5';
-        case 'on_leave': return 'bg-indigo-50 text-indigo-600 border-indigo-100 shadow-indigo-500/5';
-        default: return 'bg-slate-50 text-slate-400 border-slate-100';
-    }
+// Card-level status badges for content tabs
+const cardStatusStyles = {
+    active:        'bg-emerald-50 text-emerald-700 border-emerald-100',
+    probation:     'bg-blue-50 text-blue-700 border-blue-100',
+    notice_period: 'bg-amber-50 text-amber-700 border-amber-100',
+    terminated:    'bg-rose-50 text-rose-700 border-rose-100',
+    resigned:      'bg-rose-50 text-rose-700 border-rose-100',
+    on_leave:      'bg-purple-50 text-purple-700 border-purple-100',
 };
+const cardStatusDots = {
+    active:'bg-emerald-500', probation:'bg-blue-500', notice_period:'bg-amber-500',
+    terminated:'bg-rose-500', resigned:'bg-rose-500', on_leave:'bg-purple-500',
+};
+const getCardStatusStyles = (s) => cardStatusStyles[s] || 'bg-slate-50 text-slate-500 border-slate-100';
+const getCardStatusDot    = (s) => cardStatusDots[s]   || 'bg-slate-400';
 </script>
 
 <template>
-    <Head :title="employee.first_name + ' ' + employee.last_name + ' | Profile'" />
+    <Head :title="`${employee.first_name} ${employee.last_name} | Profile`" />
     <MainLayout>
-        <div class="max-w-[96%] mx-auto px-4 xl:px-8 space-y-8 font-outfit pb-20">
-            <!-- Strategic Profile Terminal -->
-            <div class="bg-white rounded-[2.5rem] border border-slate-100 shadow-2xl shadow-slate-200/50 relative overflow-hidden group">
-                <!-- Premium Background Accents -->
-                <div class="absolute -right-20 -top-20 w-80 h-80 bg-indigo-50 rounded-full opacity-30 group-hover:scale-110 transition-transform duration-1000"></div>
-                
-                <div class="relative z-10 p-8 md:p-10">
-                    <!-- Back Controller (Admin only) -->
-                    <Link 
-                        v-if="hasAdminRole"
-                        :href="route('admin.employees.index')"
-                        class="inline-flex items-center gap-2 mb-8 text-xs font-black text-slate-400 uppercase tracking-[0.2em] hover:text-indigo-600 transition-colors"
-                    >
-                        <ChevronLeftIcon class="w-4 h-4" />
-                        Return to Registry
+
+        <!-- ░░ Outer Page Shell ░░ -->
+        <div class="min-h-screen bg-[#f4f5fa]">
+
+            <!-- ▓▓ GRADIENT HERO HEADER ▓▓ -->
+            <div class="relative overflow-hidden sm:rounded-2xl mx-0 sm:mx-6 mt-0 sm:mt-6
+                        bg-gradient-to-br from-[#3d27b4] via-[#6b3fd4] to-[#a855f7]">
+                <div class="absolute -top-20 -right-20 w-80 h-80 bg-white/5 rounded-full pointer-events-none"></div>
+                <div class="absolute bottom-0 left-1/3 w-56 h-56 bg-white/5 rounded-full pointer-events-none"></div>
+
+                <div class="relative z-10 px-6 sm:px-10 pt-8 pb-0">
+
+                    <!-- Back link -->
+                    <Link v-if="hasAdminRole" :href="route('admin.employees.index')"
+                        class="inline-flex items-center gap-1.5 text-xs font-semibold text-white/60 hover:text-white transition-colors mb-5">
+                        <ChevronLeftIcon class="w-3.5 h-3.5" />
+                        Back to Workforce Registry
                     </Link>
 
-                    <div class="flex flex-col lg:flex-row justify-between items-start gap-10">
-                        <div class="flex flex-col md:flex-row gap-10 items-center md:items-start text-center md:text-left">
-                            <!-- Avatar Terminal -->
-                            <div class="relative group/avatar">
-                                <div 
-                                    @click="triggerAvatarUpload"
-                                    class="h-32 w-32 rounded-[2.5rem] bg-slate-900 flex items-center justify-center text-4xl font-black text-indigo-400 border-4 border-white shadow-2xl shadow-slate-300 transform group-hover/avatar:rotate-6 transition-transform cursor-pointer overflow-hidden relative"
-                                >
-                                    <template v-if="employee.avatar_url">
-                                        <img :src="employee.avatar_url" class="w-full h-full object-cover" :alt="employee.first_name" />
-                                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
-                                            <CameraIcon class="w-8 h-8 text-white" />
-                                        </div>
-                                    </template>
-                                    <template v-else>
-                                        {{ getInitials(employee.first_name, employee.last_name) }}
-                                        <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/avatar:opacity-100 transition-opacity flex items-center justify-center">
-                                            <CameraIcon class="w-8 h-8 text-white" />
-                                        </div>
-                                    </template>
-                                </div>
-                                <input 
-                                    type="file" 
-                                    ref="fileInput" 
-                                    class="hidden" 
-                                    accept="image/*" 
-                                    @change="handleAvatarChange" 
-                                />
-                                <div class="absolute -bottom-2 -right-2 w-10 h-10 bg-emerald-500 border-4 border-white rounded-2xl flex items-center justify-center text-white shadow-lg" title="Operative Status: Active">
-                                    <ShieldCheckIcon class="w-5 h-5" />
-                                </div>
+                    <!-- Profile row -->
+                    <div class="flex flex-col md:flex-row gap-6 items-start pb-6">
+
+                        <!-- Avatar -->
+                        <div class="relative group/av shrink-0 self-center md:self-start">
+                            <div @click="triggerAvatarUpload"
+                                class="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-white/20 backdrop-blur flex items-center justify-center text-3xl sm:text-4xl font-extrabold text-white cursor-pointer overflow-hidden border-2 border-white/30 shadow-xl">
+                                <template v-if="employee.avatar_url">
+                                    <img :src="employee.avatar_url" class="w-full h-full object-cover" />
+                                    <div class="absolute inset-0 bg-black/40 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                                        <CameraIcon class="w-6 h-6 text-white" />
+                                    </div>
+                                </template>
+                                <template v-else>
+                                    {{ getInitials(employee.first_name, employee.last_name) }}
+                                    <div class="absolute inset-0 bg-black/30 opacity-0 group-hover/av:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                                        <CameraIcon class="w-6 h-6 text-white" />
+                                    </div>
+                                </template>
                             </div>
-                            
-                            <!-- Identity Metadata -->
-                            <div class="space-y-6">
-                                <div>
-                                    <div class="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-4">
-                                        <h1 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight uppercase leading-none">{{ employee.first_name }} {{ employee.last_name }}</h1>
-                                        <span class="px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-[0.2em] border shadow-sm transition-all" :class="getStatusStyles(employee.status)">
-                                            {{ formatStatus(employee.status) }}
-                                        </span>
-                                    </div>
-                                    <div class="flex flex-wrap justify-center md:justify-start gap-4">
-                                        <span class="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                                            <BriefcaseIcon class="w-3.5 h-3.5 text-indigo-500" />
-                                            {{ employee.designation }}
-                                        </span>
-                                        <span class="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 font-mono">
-                                            <IdentificationIcon class="w-3.5 h-3.5 text-blue-500" />
-                                            {{ employee.employee_code }}
-                                        </span>
-                                        <span class="flex items-center gap-2 text-xs font-black text-slate-400 uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
-                                            <EnvelopeIcon class="w-3.5 h-3.5 text-emerald-500" />
-                                            {{ employee.email || 'No email set' }}
-                                        </span>
-                                    </div>
-                                </div>
+                            <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleAvatarChange" />
+                            <div class="absolute -bottom-1 -right-1 w-5 h-5 bg-emerald-400 rounded-full border-2 border-white/20 flex items-center justify-center">
+                                <ShieldCheckIcon class="w-2.5 h-2.5 text-white" />
                             </div>
                         </div>
 
-                        <!-- System Controls -->
-                        <div class="flex flex-col sm:flex-row lg:flex-col gap-3 w-full lg:w-64">
-                            <button 
-                                v-if="!employee.user_id"
-                                @click="showCreateLogin = true"
-                                class="flex-1 h-14 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:bg-indigo-600 transition-all flex items-center justify-center gap-3 active:scale-95 group/btn"
-                            >
-                                <KeyIcon class="w-4 h-4 text-indigo-400 group-hover/btn:rotate-12 transition-transform" />
+                        <!-- Identity -->
+                        <div class="flex-1 min-w-0">
+                            <div class="flex flex-wrap items-center gap-3 mb-2">
+                                <p class="text-xs font-bold text-white/50 uppercase tracking-widest">Employee Profile</p>
+                            </div>
+                            <h1 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-3">
+                                {{ employee.first_name }} {{ employee.last_name }}
+                            </h1>
+                            <div class="flex flex-wrap gap-2">
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/20 text-xs font-semibold text-white/80">
+                                    <BriefcaseIcon class="w-3.5 h-3.5 text-white/50" />
+                                    {{ employee.designation }}
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/20 text-xs font-mono font-semibold text-white/80">
+                                    <IdentificationIcon class="w-3.5 h-3.5 text-white/50" />
+                                    {{ employee.employee_code }}
+                                </span>
+                                <span v-if="employee.email" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/20 text-xs font-semibold text-white/80">
+                                    <EnvelopeIcon class="w-3.5 h-3.5 text-white/50" />
+                                    {{ employee.email }}
+                                </span>
+                                <span v-if="employee.department" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-white/10 border border-white/20 text-xs font-semibold text-white/80">
+                                    <MapPinIcon class="w-3.5 h-3.5 text-white/50" />
+                                    {{ employee.department?.name }}
+                                </span>
+                                <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border text-xs font-semibold" :class="getStatusStyles(employee.status)">
+                                    <span class="w-1.5 h-1.5 rounded-full" :class="getStatusDot(employee.status)"></span>
+                                    {{ formatStatus(employee.status) }}
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons (right) -->
+                        <div class="flex flex-row md:flex-col gap-2 flex-wrap md:flex-nowrap shrink-0">
+                            <button v-if="!employee.user_id" @click="showCreateLogin = true"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white text-indigo-700 text-xs font-bold hover:bg-indigo-50 transition-all shadow-sm">
+                                <KeyIcon class="w-3.5 h-3.5" />
                                 Create Login
                             </button>
-                            <button 
-                                v-else
-                                @click="showResetPassword = true"
-                                class="flex-1 h-14 bg-white border-2 border-slate-100 text-slate-500 rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-slate-50 hover:text-amber-600 transition-all flex items-center justify-center gap-3 active:scale-95 group/btn shadow-sm"
-                            >
-                                <ArrowPathRoundedSquareIcon class="w-4 h-4 text-amber-500" />
+                            <button v-else @click="showResetPassword = true"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-semibold hover:bg-white/20 transition-all">
+                                <ArrowPathRoundedSquareIcon class="w-3.5 h-3.5" />
                                 Reset Password
                             </button>
-                            
-                            <div class="flex gap-3">
-                                <Link
-                                    :href="route('employee.rewards.index', { uuid: employee.uuid })"
-                                    class="flex-1 h-14 bg-gradient-to-r from-teal-500 to-cyan-500 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:from-teal-600 hover:to-cyan-600 transition-all flex items-center justify-center gap-2 active:scale-95 shadow-lg shadow-teal-500/20"
-                                >
-                                    <SparklesIcon class="w-4 h-4" />
-                                    Rewards
-                                </Link>
-                                <button class="flex-1 h-14 bg-indigo-50 text-indigo-600 border border-indigo-100 rounded-2xl text-xs font-black uppercase tracking-[0.2em] hover:bg-indigo-100 transition-all flex items-center justify-center gap-2 active:scale-95">
-                                    <SparklesIcon class="w-4 h-4" />
-                                    AI Profile Audit
-                                </button>
-                                <button @click="showCareerDna = true" class="w-14 h-14 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-white transition-all shadow-sm">
-                                    <HeartIcon class="w-6 h-6" />
-                                </button>
-                            </div>
+                            <Link :href="route('employee.rewards.index', { uuid: employee.uuid })"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-semibold hover:bg-white/20 transition-all">
+                                <SparklesIcon class="w-3.5 h-3.5" />
+                                Rewards
+                            </Link>
+                            <button @click="showCareerDna = true"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white/10 border border-white/20 text-white text-xs font-semibold hover:bg-white/20 transition-all">
+                                <HeartIcon class="w-3.5 h-3.5" />
+                                Career DNA
+                            </button>
                         </div>
                     </div>
-                </div>
 
-                <!-- Neural Navigation System -->
-                <div class="bg-slate-50/50 border-t border-slate-100 p-2 overflow-x-auto no-scrollbar">
-                    <div class="flex gap-1 min-w-max justify-center">
-                        <button 
-                            v-for="tab in tabs" 
-                            :key="tab.id"
+                    <!-- Tab Navigation (inside hero, bottom) -->
+                    <div class="flex gap-0.5 overflow-x-auto no-scrollbar">
+                        <button v-for="tab in tabs" :key="tab.id"
                             @click="currentTab = tab.id"
-                            class="px-8 py-4 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 flex items-center gap-3 group relative overflow-hidden"
-                            :class="[
-                                currentTab === tab.id
-                                ? 'bg-white text-indigo-600 shadow-xl shadow-slate-200 border border-indigo-50'
-                                : 'text-slate-400 hover:text-slate-900 hover:bg-white/50'
-                            ]"
-                        >
-                             <component :is="tab.icon" class="w-4 h-4 transition-transform group-hover:scale-110" :class="currentTab === tab.id ? 'text-indigo-600' : 'text-slate-300'" />
-                             {{ tab.name }}
-                             <div v-if="currentTab === tab.id" class="absolute bottom-0 left-0 w-full h-1 bg-indigo-600"></div>
+                            class="inline-flex items-center gap-2 px-4 py-3 text-xs font-bold transition-all relative whitespace-nowrap shrink-0"
+                            :class="currentTab === tab.id ? 'text-white' : 'text-white/50 hover:text-white/80'">
+                            <component :is="tab.icon" class="w-4 h-4" />
+                            {{ tab.name }}
+                            <div v-if="currentTab === tab.id"
+                                class="absolute bottom-0 left-0 right-0 h-0.5 bg-white rounded-t-full"></div>
                         </button>
                     </div>
                 </div>
             </div>
 
-            <!-- Contextual Data Payload -->
-            <div class="min-h-[600px] relative">
+            <!-- ▓▓ INNER CONTENT BODY ▓▓ -->
+            <div class="mx-0 sm:mx-6 mt-5 pb-12">
                 <Transition name="fade-slide" mode="out-in">
-                    <!-- 1. Overview Tab -->
-                    <div v-if="currentTab === 'overview'" :key="'overview'" class="animate-in fade-in slide-in-from-bottom-5 duration-500">
+
+                    <!-- Overview -->
+                    <div v-if="currentTab === 'overview'" key="overview">
                         <EmployeeOverviewTab :employee="employee" />
                     </div>
 
-                    <!-- 2. Personal Detail/Master Tab -->
-                    <div v-else-if="currentTab === 'personal'" :key="'personal'" class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        <div class="lg:col-span-2 space-y-8">
+                    <!-- Personal -->
+                    <div v-else-if="currentTab === 'personal'" key="personal" class="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                        <div class="lg:col-span-2 space-y-5">
                             <EmployeePersonalTab :employee="employee" @refresh="fetchEmployee" />
                         </div>
-                        <div class="space-y-8">
+                        <div class="space-y-5">
                             <EmployeeBankingTab :employee="employee" @refresh="fetchEmployee" />
-                            
-                            <!-- Statutory Compliance Module -->
-                            <div class="bg-white rounded-[2.5rem] border border-slate-100 p-8 shadow-2xl shadow-slate-200/40 relative overflow-hidden group">
-                                <div class="absolute right-0 top-0 w-1.5 h-full bg-emerald-500 group-hover:w-2 transition-all"></div>
-                                <div class="flex justify-between items-center mb-8">
-                                    <h3 class="text-xs font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-3">
-                                        Statutory Details
+                            <!-- Statutory -->
+                            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                                <div class="flex items-center justify-between mb-4">
+                                    <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
                                         <ShieldCheckIcon class="w-4 h-4 text-emerald-500" />
+                                        Statutory Details
                                     </h3>
-                                    <button @click="showStatutoryModal = true" class="w-8 h-8 rounded-lg bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-emerald-50 hover:text-emerald-600 transition-all shadow-sm">
-                                        <PencilSquareIcon class="w-4 h-4" />
+                                    <button @click="showStatutoryModal = true"
+                                        class="w-8 h-8 rounded-xl border border-slate-200 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 hover:border-indigo-200 transition-all">
+                                        <PencilSquareIcon class="w-3.5 h-3.5" />
                                     </button>
                                 </div>
-                                
-                                <div class="space-y-6">
-                                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">PAN Number</span>
-                                        <span class="text-xs font-black text-slate-900 uppercase font-mono tracking-tighter">{{ employee.pan_number || 'Not provided' }}</span>
+                                <div class="space-y-3">
+                                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                        <p class="text-xs text-slate-400 font-medium mb-1">PAN Number</p>
+                                        <p class="text-xs font-mono font-semibold text-slate-800 uppercase tracking-wider">{{ employee.pan_number || 'Not provided' }}</p>
                                     </div>
-                                    <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest block mb-2">UAN Number</span>
-                                        <span class="text-xs font-black text-slate-900 uppercase font-mono tracking-tighter">{{ employee.uan_number || 'Not provided' }}</span>
+                                    <div class="bg-slate-50 rounded-xl p-3 border border-slate-100">
+                                        <p class="text-xs text-slate-400 font-medium mb-1">UAN Number</p>
+                                        <p class="text-xs font-mono font-semibold text-slate-800 uppercase tracking-wider">{{ employee.uan_number || 'Not provided' }}</p>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- 3. Family Tab -->
-                    <div v-else-if="currentTab === 'family'" :key="'family'" class="bg-white rounded-[2.5rem] border border-slate-100 p-8 md:p-10 shadow-2xl shadow-slate-200/40 min-h-[500px]">
-                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-12 gap-6 pb-6 border-b border-slate-50">
+                    <!-- Family -->
+                    <div v-else-if="currentTab === 'family'" key="family" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
                             <div>
-                                <h3 class="text-xs font-black text-slate-900 uppercase tracking-[0.2em] mb-2 flex items-center gap-3">
-                                    <UserGroupIcon class="w-5 h-5 text-indigo-500" />
+                                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <UserGroupIcon class="w-4 h-4 text-indigo-500" />
                                     Family & Dependents
                                 </h3>
-                                <p class="text-xs font-black text-slate-400 uppercase tracking-widest">Emergency contacts and family members</p>
+                                <p class="text-xs text-slate-400 mt-1">Emergency contacts and family members</p>
                             </div>
-                            <button @click="openFamilyModal()" class="h-12 px-8 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-[0.2em] shadow-xl shadow-slate-200 hover:bg-indigo-600 transition-all flex items-center gap-3 active:scale-95 group">
-                                <PlusIcon class="w-4 h-4 text-indigo-400 group-hover:rotate-12 transition-transform" />
+                            <button @click="openFamilyModal()"
+                                class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-semibold hover:bg-indigo-700 transition-all shadow-sm">
+                                <PlusIcon class="w-3.5 h-3.5" />
                                 Add Member
                             </button>
                         </div>
-
-                        <div v-if="employee.families && employee.families.length > 0" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-                            <div v-for="member in employee.families" :key="member.id" class="p-6 rounded-[2rem] border border-slate-100 bg-slate-50/50 relative group/member hover:border-indigo-200 hover:bg-white hover:shadow-2xl hover:shadow-indigo-500/5 transition-all">
-                                <div class="flex items-center gap-5">
-                                    <div class="h-14 w-14 rounded-2xl bg-white border border-slate-100 flex items-center justify-center text-slate-400 font-black text-sm group-hover/member:bg-indigo-50 group-hover/member:text-indigo-600 transition-colors">
-                                        {{ member.name.charAt(0) }}
+                        <div v-if="employee.families?.length" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
+                            <div v-for="member in employee.families" :key="member.id"
+                                class="group/m relative bg-slate-50 hover:bg-white rounded-2xl border border-slate-100 hover:border-indigo-200 hover:shadow-md p-4 transition-all">
+                                <div class="flex items-center gap-3 mb-3">
+                                    <div class="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-sm font-bold text-indigo-600 group-hover/m:bg-indigo-50 group-hover/m:border-indigo-200 transition-colors">
+                                        {{ member.name.charAt(0).toUpperCase() }}
                                     </div>
                                     <div>
-                                        <h4 class="text-xs font-black text-slate-900 uppercase tracking-tight group-hover/member:text-indigo-600 transition-colors">{{ member.name }}</h4>
-                                        <div class="flex items-center gap-2 mt-2">
-                                            <span class="text-xs font-black text-indigo-600 uppercase tracking-widest bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100">{{ member.relationship }}</span>
-                                            <span v-if="member.is_emergency_contact" class="text-xs font-black text-amber-600 uppercase tracking-widest border border-amber-200 px-2 py-0.5 rounded-full bg-white shadow-sm italic">Emergency Contact</span>
+                                        <p class="text-sm font-semibold text-slate-900 group-hover/m:text-indigo-600 transition-colors">{{ member.name }}</p>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            <span class="text-xs font-medium text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-lg">{{ member.relationship }}</span>
+                                            <span v-if="member.is_emergency_contact" class="text-xs font-medium text-amber-700 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-lg">Emergency</span>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="mt-6 pt-6 border-t border-slate-50 flex justify-end gap-2 opacity-0 group-hover/member:opacity-100 translate-y-2 group-hover/member:translate-y-0 transition-all">
-                                     <button @click="openFamilyModal(member)" class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-indigo-50 hover:text-indigo-600 transition-all shadow-sm"><PencilSquareIcon class="w-4 h-4" /></button>
-                                     <button @click="deleteFamilyMember(member)" class="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition-all shadow-sm"><TrashIcon class="w-4 h-4" /></button>
+                                <div class="flex justify-end gap-2 opacity-0 group-hover/m:opacity-100 transition-opacity mt-2 pt-2 border-t border-slate-100">
+                                    <button @click="openFamilyModal(member)"
+                                        class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-indigo-600 hover:border-indigo-200 transition-all">
+                                        <PencilSquareIcon class="w-3.5 h-3.5" />
+                                    </button>
+                                    <button @click="deleteFamilyMember(member)"
+                                        class="w-8 h-8 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 transition-all">
+                                        <TrashIcon class="w-3.5 h-3.5" />
+                                    </button>
                                 </div>
                             </div>
                         </div>
-                        <!-- Empty State -->
-                        <div v-else class="flex flex-col items-center justify-center py-32 text-slate-300 opacity-20 grayscale animate-pulse">
-                            <UserGroupIcon class="h-20 w-20 mb-6" />
-                            <p class="text-xs font-black uppercase tracking-[0.4em]">No family members added yet</p>
+                        <div v-else class="flex flex-col items-center justify-center py-20 text-slate-300">
+                            <UserGroupIcon class="h-12 w-12 mb-3" />
+                            <p class="text-sm font-semibold text-slate-400">No family members added yet</p>
                         </div>
                     </div>
 
-                    <!-- 4. Documents Tab -->
-                    <div v-else-if="currentTab === 'documents'" :key="'documents'">
+                    <!-- Documents -->
+                    <div v-else-if="currentTab === 'documents'" key="documents">
                         <EmployeeDocumentsTab :employee="employee" />
                     </div>
 
-                    <!-- 5. History Tab -->
-                    <div v-else-if="currentTab === 'history'" :key="'history'" class="bg-white rounded-[2.5rem] border border-slate-100 p-8 md:p-10 shadow-2xl shadow-slate-200/40 relative overflow-hidden group min-h-[600px]">
-                        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-12 gap-6 relative z-10">
+                    <!-- History -->
+                    <div v-else-if="currentTab === 'history'" key="history" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+                        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100">
                             <div>
-                                <h3 class="text-xs font-black text-slate-900 uppercase tracking-[0.2em] flex items-center gap-3">
-                                    <ClockIcon class="w-5 h-5 text-indigo-500" />
+                                <h3 class="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                    <ClockIcon class="w-4 h-4 text-indigo-500" />
                                     Employment History
                                 </h3>
-                                <p class="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">Audit trail of all profile changes and events</p>
+                                <p class="text-xs text-slate-400 mt-1">Audit trail of all profile changes and events</p>
                             </div>
-                            <div class="px-6 py-2.5 bg-slate-900 text-white rounded-2xl text-xs font-black uppercase tracking-[0.3em] shadow-xl shadow-slate-200">
+                            <span class="inline-flex items-center px-3 py-1.5 rounded-xl bg-slate-100 text-xs font-semibold text-slate-600">
                                 {{ history?.length || 0 }} Records
-                            </div>
+                            </span>
                         </div>
-
-                        <!-- High-Fidelity Timeline -->
-                        <div v-if="history && history.length > 0" class="relative z-10 space-y-12 before:absolute before:inset-0 before:ml-6 before:h-full before:w-0.5 before:bg-slate-100 before:shadow-inner">
-                            <div v-for="log in history" :key="log.id" class="relative pl-14 group/log">
-                                <!-- Specialized Marker -->
-                                <div class="absolute left-0 top-1.5 h-12 w-12 rounded-2xl bg-white border-4 border-slate-50 shadow-xl flex items-center justify-center text-slate-300 group-hover/log:border-indigo-100 group-hover/log:text-indigo-600 transition-all duration-500 z-10 group-hover/log:rotate-12 group-hover/log:scale-110">
-                                    <ClockIcon class="w-6 h-6" />
-                                </div>
-                                
-                                <div class="bg-slate-50/50 p-6 rounded-[2rem] border border-transparent hover:border-slate-100 hover:bg-white hover:shadow-2xl hover:shadow-slate-200/50 transition-all duration-500">
-                                    <div class="flex flex-col sm:flex-row justify-between items-start mb-4 gap-3">
-                                        <span class="text-xs font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase tracking-[0.2em] border border-indigo-100 shadow-sm">{{ new Date(log.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' }) }}</span>
-                                        <span class="text-xs font-black text-slate-400 uppercase tracking-widest opacity-60 font-mono">{{ new Date(log.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }}</span>
+                        <div v-if="history?.length" class="relative pl-6 space-y-5 before:absolute before:left-0 before:top-2 before:bottom-2 before:w-px before:bg-slate-100">
+                            <div v-for="log in history" :key="log.id" class="relative group/log">
+                                <div class="absolute -left-[25px] top-1 w-4 h-4 rounded-full bg-white border-2 border-indigo-300 group-hover/log:border-indigo-500 group-hover/log:bg-indigo-50 transition-all z-10"></div>
+                                <div class="bg-slate-50 hover:bg-white rounded-xl border border-transparent hover:border-slate-200 hover:shadow-sm p-4 transition-all">
+                                    <div class="flex flex-wrap items-start justify-between gap-2 mb-2">
+                                        <span class="text-xs font-semibold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2.5 py-1 rounded-lg">
+                                            {{ new Date(log.created_at).toLocaleDateString(undefined, { month:'short', day:'numeric', year:'numeric' }) }}
+                                        </span>
+                                        <span class="text-xs text-slate-400 font-mono">{{ new Date(log.created_at).toLocaleTimeString([], { hour:'2-digit', minute:'2-digit' }) }}</span>
                                     </div>
-                                    <h4 class="text-sm font-black text-slate-900 uppercase tracking-tight leading-relaxed italic opacity-85">" {{ log.description }} "</h4>
-                                    
-                                    <div v-if="log.properties" class="mt-5 flex flex-wrap gap-2 pt-5 border-t border-slate-50">
-                                        <div v-for="(val, key) in log.properties" :key="key" class="px-3 py-1 bg-white rounded-xl text-xs font-black text-slate-400 border border-slate-100 uppercase tracking-widest shadow-inner">
-                                            {{ key }}: <span class="text-slate-700">{{ val }}</span>
+                                    <p class="text-sm font-medium text-slate-700 leading-relaxed">{{ log.description }}</p>
+                                    <div v-if="log.properties" class="flex flex-wrap gap-2 mt-3 pt-3 border-t border-slate-100">
+                                        <div v-for="(val, key) in log.properties" :key="key"
+                                            class="text-xs text-slate-500 bg-white border border-slate-200 rounded-lg px-2.5 py-1">
+                                            <span class="text-slate-400">{{ key }}:</span> <span class="font-semibold text-slate-700">{{ val }}</span>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-
-                        <!-- Empty State -->
-                        <div v-else class="flex flex-col items-center justify-center py-32 text-slate-300 opacity-20 grayscale animate-pulse">
-                            <ClockIcon class="h-20 w-20 mb-6" />
-                            <p class="text-xs font-black uppercase tracking-[0.4em]">No history records found</p>
+                        <div v-else class="flex flex-col items-center justify-center py-20 text-slate-300">
+                            <ClockIcon class="h-12 w-12 mb-3" />
+                            <p class="text-sm font-semibold text-slate-400">No history records found</p>
                         </div>
                     </div>
 
-                    <!-- 6. Tax / TDS Tab -->
-                    <div v-else-if="currentTab === 'tax'" :key="'tax'">
-                          <EmployeeTaxTab :employee="employee" />
+                    <!-- Tax / TDS -->
+                    <div v-else-if="currentTab === 'tax'" key="tax">
+                        <EmployeeTaxTab :employee="employee" />
                     </div>
 
-                    <!-- 7. Expenses Tab -->
-                    <div v-else-if="currentTab === 'expenses'" :key="'expenses'">
-                          <EmployeeExpensesTab :employee="employee" />
+                    <!-- Expenses -->
+                    <div v-else-if="currentTab === 'expenses'" key="expenses">
+                        <EmployeeExpensesTab :employee="employee" />
                     </div>
 
-                    <!-- 8. Payslips Tab -->
-                    <div v-else-if="currentTab === 'payslips'" :key="'payslips'">
-                          <EmployeePayslipsTab :employee="employee" :payslips="payslips" />
+                    <!-- Payslips -->
+                    <div v-else-if="currentTab === 'payslips'" key="payslips">
+                        <EmployeePayslipsTab :employee="employee" :payslips="payslips" />
                     </div>
+
                 </Transition>
-            </div>
-        </div>
+            </div><!-- /inner body -->
+        </div><!-- /outer shell -->
 
-        <!-- System Modals Grid -->
-        <CreateLoginModal :show="showCreateLogin" :employee="employee" @close="showCreateLogin = false" @saved="fetchEmployee" />
-        <PasswordResetModal :show="showResetPassword" :employee="employee" @close="showResetPassword = false" />
-        
-        <BankDetailsModal 
-            :show="showBankModal"
-            :employee="employee"
-            @close="showBankModal = false"
-            @saved="fetchEmployee"
-        />
-
-        <StatutoryDetailsModal
-            :show="showStatutoryModal"
-            :employee="employee"
-            @close="showStatutoryModal = false"
-            @saved="fetchEmployee"
-        />
-        
-        <CareerDnaModal :show="showCareerDna" :employee-id="employee.id" @close="showCareerDna = false" />
-
-        <FamilyMemberModal 
-            :show="showFamilyModal"
-            :employee="employee"
-            :member-data="selectedFamilyMember"
-            @close="closeFamilyModal"
-            @saved="fetchEmployee"
-        />
+        <!-- Modals -->
+        <CreateLoginModal      :show="showCreateLogin"    :employee="employee"      @close="showCreateLogin = false"    @saved="fetchEmployee" />
+        <PasswordResetModal    :show="showResetPassword"  :employee="employee"      @close="showResetPassword = false" />
+        <BankDetailsModal      :show="showBankModal"      :employee="employee"      @close="showBankModal = false"      @saved="fetchEmployee" />
+        <StatutoryDetailsModal :show="showStatutoryModal" :employee="employee"      @close="showStatutoryModal = false" @saved="fetchEmployee" />
+        <CareerDnaModal        :show="showCareerDna"      :employee-id="employee.id" @close="showCareerDna = false" />
+        <FamilyMemberModal     :show="showFamilyModal"    :employee="employee"      :member-data="selectedFamilyMember" @close="closeFamilyModal" @saved="fetchEmployee" />
     </MainLayout>
 </template>
 
 <style scoped>
-.fade-slide-enter-active, .fade-slide-leave-active { 
-    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-.fade-slide-enter-from { 
-    opacity: 0; 
-    transform: translateY(20px);
-}
-.fade-slide-leave-to { 
-    opacity: 0; 
-    transform: translateY(-20px);
-}
-.font-mono {
-    font-family: 'JetBrains Mono', monospace;
-}
+.fade-slide-enter-active, .fade-slide-leave-active { transition: all 0.2s cubic-bezier(0.16,1,0.3,1); }
+.fade-slide-enter-from { opacity: 0; transform: translateY(8px); }
+.fade-slide-leave-to   { opacity: 0; transform: translateY(-4px); }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 </style>
