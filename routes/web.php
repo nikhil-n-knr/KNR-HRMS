@@ -1655,6 +1655,9 @@ Route::prefix('client-portal')->group(function () {
 });
 
 Route::get('/login', function () {
+    if (auth()->check()) {
+        return redirect()->route('dashboard');
+    }
     return Inertia::render('Auth/Login');
 })->name('login')->middleware('nocache');
     // Public Verification (No Auth)

@@ -232,7 +232,16 @@ class AttendanceRegistryService
                 continue;
             }
 
-            $outTime = $cutoffTime->copy();
+            // Cap out_time to the exact shift end time so they don't get an extra hour for forgetting
+            $shiftStart = Carbon::parse(Carbon::parse($log->date)->format('Y-m-d') . ' ' . $shift->start_time);
+            $shiftEnd = Carbon::parse(Carbon::parse($log->date)->format('Y-m-d') . ' ' . $shift->end_time);
+            if ($shiftEnd->lessThanOrEqualTo($shiftStart)) {
+                $shiftEnd->addDay();
+            }
+
+            $outTime = $shiftEnd->copy();
+            
+            // If they clocked in AFTER the shift ended, cap outTime to their in_time (0 duration)
             if ($outTime->lt(Carbon::parse($session->in_time))) {
                 $outTime = Carbon::parse($session->in_time);
             }
@@ -320,6 +329,7 @@ class AttendanceRegistryService
         $overtime = 0;
         if ($totalMinutes > $shiftMinutes) {
             $overtime = $totalMinutes - $shiftMinutes;
+            $totalMinutes = $shiftMinutes; // Cap the regular working hours so they never exceed shift duration
         }
 
         $log->update([
