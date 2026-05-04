@@ -1,48 +1,45 @@
 <template>
-  <div class="space-y-6 pb-20">
-    <!-- Header Section -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/40 backdrop-blur-md p-6 rounded-3xl border border-white/50 shadow-sm">
-      <div>
-        <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-800 to-teal-700">
-          Permission Matrix
-        </h1>
-        <p class="text-emerald-900/70 text-sm mt-1 font-medium">
-            Granular access control for <span class="text-emerald-700 font-bold">{{ selectedRoleName || 'Selected Role' }}</span>
-        </p>
-      </div>
+  <Head title="Permission Matrix" />
+  <div class="bg-[#f4f5fa]">
+    <GradientHeroHeader
+      kicker="Administration"
+      title="Permission Matrix"
+      :subtitle="selectedRoleName ? `Granular access control for ${selectedRoleName}.` : 'Granular access control for the selected role.'"
+      :allow-overflow="true"
+    >
+      <template #right>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="w-full sm:w-[380px]">
+            <Combobox
+              v-model="selectedRoleId"
+              :items="roles"
+              label-key="name"
+              value-key="id"
+              placeholder="Search role…"
+            />
+          </div>
 
-      <div class="flex flex-wrap items-center gap-4 w-full md:w-auto">
-         <!-- Role Selector -->
-         <div class="relative group">
-             <div class="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl opacity-30 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 blur"></div>
-             <select 
-                v-model="selectedRoleId" 
-                class="relative w-full md:w-64 rounded-xl border-none ring-1 ring-emerald-900/10 bg-white shadow-xl focus:ring-2 focus:ring-emerald-500 py-2.5 pl-4 pr-10 text-sm font-semibold text-gray-700 transition"
-             >
-                 <option value="" disabled>Select Role to Configure</option>
-                 <option v-for="role in roles" :key="role.id" :value="role.id">{{ role.name }}</option>
-             </select>
-         </div>
+          <button
+            @click="savePermissions"
+            :disabled="!selectedRoleId || saving"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-indigo-700 text-sm font-extrabold
+                   hover:bg-indigo-50 active:scale-[0.97] transition-all shadow-lg shadow-black/10 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <svg v-if="saving" class="animate-spin h-4 w-4" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <svg v-else xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+            </svg>
+            <span class="hidden sm:inline">{{ saving ? 'Saving…' : 'Save' }}</span>
+          </button>
+        </div>
+      </template>
+    </GradientHeroHeader>
 
-         <!-- Save Button -->
-         <button 
-           @click="savePermissions"
-           :disabled="!selectedRoleId || saving"
-           class="relative overflow-hidden px-8 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white rounded-xl font-bold shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed group"
-         >
-           <span class="relative z-10 flex items-center gap-2">
-               <svg v-if="saving" class="animate-spin h-4 w-4" viewBox="0 0 24 24">
-                   <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
-                   <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-               </svg>
-               <svg v-else xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
-               </svg>
-               {{ saving ? 'Saving Access...' : 'Save Configuration' }}
-           </span>
-         </button>
-      </div>
-    </div>
+    <div class="mx-0 sm:mx-6 mt-5 pb-12">
+      <div class="space-y-6 pb-20">
 
     <!-- Matrix Container -->
     <div v-if="selectedRoleId && modules.length" class="space-y-8 animate-fade-in-up">
@@ -170,14 +167,22 @@
         <h3 class="text-xl font-bold text-gray-600">No Role Selected</h3>
         <p class="text-gray-400 mt-2">Please select a role from the dropdown above to start configuring permissions.</p>
     </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue';
 import axios from 'axios';
+import { Head } from '@inertiajs/vue3';
+import MainLayout from '@/Layouts/MainLayout.vue';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
+import Combobox from '@/Components/Combobox.vue';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
+
+defineOptions({ layout: MainLayout });
 
 const authStore = useAuthStore();
 const toast = useToastStore();

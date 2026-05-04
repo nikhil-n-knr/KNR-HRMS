@@ -1,25 +1,39 @@
 <template>
-    <div class="max-w-3xl mx-auto space-y-6">
-        <!-- Header -->
-        <div class="flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-800 to-teal-700">
-                    {{ isEditing ? 'Edit User' : 'Create User' }}
-                </h1>
-                <p class="text-emerald-600/80 text-sm mt-1">{{ isEditing ? 'Update user details and permissions' : 'Add a new user to the system' }}</p>
-            </div>
-            <Link href="/admin/users" class="px-4 py-2 bg-white border border-gray-200 text-gray-600 rounded-xl text-sm font-medium shadow-sm hover:bg-gray-50 transition">
-                Back to List
-            </Link>
-        </div>
+    <Head :title="isEditing ? 'Edit User' : 'Create User'" />
+    <div class="bg-[#f4f5fa]">
+        <GradientHeroHeader
+            kicker="Administration"
+            :title="isEditing ? 'Edit User' : 'Create User'"
+            :subtitle="isEditing ? 'Update user details and permissions.' : 'Add a new user to the system.'"
+        >
+            <template #right>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[160px]">
+                        <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Mode</p>
+                        <p class="text-3xl font-extrabold text-white leading-none">{{ isEditing ? 'Edit' : 'Create' }}</p>
+                    </div>
+                    <Link
+                        href="/admin/users"
+                        class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-indigo-700 text-sm font-extrabold hover:bg-indigo-50 active:scale-[0.97] transition-all shadow-lg shadow-black/10"
+                    >
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                        <span class="hidden sm:inline">Back</span>
+                    </Link>
+                </div>
+            </template>
+        </GradientHeroHeader>
 
-        <!-- Form Card -->
-        <div class="bg-white/60 backdrop-blur-xl rounded-2xl border border-white/40 shadow-sm p-6">
-            <form @submit.prevent="submit" class="space-y-6">
-                
-                <!-- Basic Info -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <BaseInput v-model="form.name" label="Full Name" placeholder="John Doe" required :error="form.errors.name" />
+        <div class="mx-0 sm:mx-6 mt-5 pb-12">
+            <div class="max-w-3xl mx-auto space-y-6">
+                <!-- Form Card -->
+                <div class="bg-white/80 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm p-6">
+                    <form @submit.prevent="submit" class="space-y-6">
+                     
+                     <!-- Basic Info -->
+                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                         <BaseInput v-model="form.name" label="Full Name" placeholder="John Doe" required :error="form.errors.name" />
                     <BaseInput v-model="form.email" label="Email Address" type="email" placeholder="john@company.com" required :error="form.errors.email" />
                 </div>
 
@@ -82,19 +96,22 @@
                         class="px-5 py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-medium rounded-xl shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/30 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
                     >
                         {{ form.processing ? 'Saving...' : (isEditing ? 'Update User' : 'Create User') }}
-                    </button>
+                     </button>
+                 </div>
+             </form>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 </template>
 
 <script setup>
 import { computed } from 'vue';
-import { useForm, Link } from '@inertiajs/vue3';
+import { useForm, Link, Head } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import BaseInput from '@/Components/BaseInput.vue';
 import { useToastStore } from '@/stores/toast';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
 
 defineOptions({ layout: MainLayout });
 

@@ -116,6 +116,7 @@
         <!-- Main View Area - Enhanced -->
         <main ref="mainContentRef" class="flex-1 overflow-x-hidden overflow-y-auto px-8 pb-8 pt-2 scroll-smooth">
           <slot />
+          <AppFooter />
         </main>
       </div>
     </div>
@@ -135,6 +136,7 @@ import { useAuthStore } from '@/stores/auth';
 import NavItem from '@/Components/NavItem.vue';
 import ToastNotification from '@/Components/ToastNotification.vue';
 import GlobalLoader from '@/Components/GlobalLoader.vue';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 import axios from 'axios';
 // Import Icons explicitly if NavItem doesn't dynamic import (NavItem usually expects string, but let's assume it resolves them or we need to pass component if not dynamic)
 // Actually NavItem implementation dictates this. 

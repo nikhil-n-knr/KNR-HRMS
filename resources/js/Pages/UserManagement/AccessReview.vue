@@ -1,28 +1,28 @@
 <template>
-  <div class="space-y-6 pb-20">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-white/40 backdrop-blur-md p-6 rounded-3xl border border-white/50 shadow-sm">
-      <div>
-        <h1 class="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-800 to-teal-700">
-          Access Review
-        </h1>
-        <p class="text-emerald-900/70 text-sm mt-1 font-medium">
-            Audit effective permissions and security scopes.
-        </p>
-      </div>
+  <Head title="Access Review" />
+  <div class="bg-[#f4f5fa]">
+    <GradientHeroHeader
+      kicker="Administration"
+      title="Access Review"
+      subtitle="Audit effective permissions, roles, and scopes for any user."
+      :allow-overflow="true"
+    >
+      <template #right>
+        <div class="w-full sm:w-[380px]">
+          <Combobox
+            v-model="selectedUserId"
+            :items="users.data || []"
+            label-key="first_name"
+            value-key="id"
+            :display-format="(u) => `${u?.first_name || ''}${u?.email ? ` (${u.email})` : ''}`.trim()"
+            placeholder="Search user…"
+          />
+        </div>
+      </template>
+    </GradientHeroHeader>
 
-      <!-- User Selector -->
-      <div class="w-full md:w-auto relative group">
-          <div class="absolute -inset-0.5 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-xl opacity-20 group-hover:opacity-100 transition duration-1000 group-hover:duration-200 blur"></div>
-          <select 
-             v-model="selectedUserId" 
-             class="relative w-full md:w-72 rounded-xl border-none ring-1 ring-emerald-900/10 bg-white shadow-xl focus:ring-2 focus:ring-emerald-500 py-3 pl-4 pr-10 text-sm font-semibold text-gray-700 transition"
-          >
-              <option value="" disabled>Select User to Review</option>
-              <option v-for="u in users.data" :key="u.id" :value="u.id">{{ u.first_name }} ({{ u.email }})</option>
-          </select>
-      </div>
-    </div>
+    <div class="mx-0 sm:mx-6 mt-5 pb-12">
+      <div class="space-y-6 pb-20">
 
     <!-- Report Area -->
     <div v-if="accessReport" class="space-y-6 animate-fade-in-up">
@@ -138,13 +138,17 @@
         </div>
         <p class="text-lg font-medium text-gray-500">Search and select a user to view their effective access.</p>
     </div>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, watch } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, Head } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
+import Combobox from '@/Components/Combobox.vue';
 
 defineOptions({ layout: MainLayout });
 

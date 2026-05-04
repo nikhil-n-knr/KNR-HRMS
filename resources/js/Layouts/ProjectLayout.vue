@@ -7,6 +7,7 @@
             <!-- Content Area -->
             <div class="flex-1 overflow-y-auto bg-gray-50/50 p-4 md:p-6 relative">
                 <slot />
+                <AppFooter />
             </div>
         </div>
     </MainLayout>
@@ -16,6 +17,7 @@
 import { Link } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import ProjectHeader from '@/Components/Project/ProjectHeader.vue';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 
 const props = defineProps({
     project: Object

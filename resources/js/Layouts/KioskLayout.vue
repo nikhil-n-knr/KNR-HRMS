@@ -1,5 +1,6 @@
 <script setup>
 import { Head } from '@inertiajs/vue3';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 </script>
 
 <template>
@@ -12,6 +13,12 @@ import { Head } from '@inertiajs/vue3';
         <main class="h-full w-full">
             <slot />
         </main>
+
+        <div class="absolute inset-x-0 bottom-2 pointer-events-none">
+            <div class="opacity-60">
+                <AppFooter />
+            </div>
+        </div>
         
         <!-- Optional Kiosk Toolbar (Hidden trigger for admin exit) -->
         <div class="fixed bottom-0 right-0 w-16 h-16 z-50 opacity-0" @dblclick="$inertia.visit(route('dashboard'))"></div>

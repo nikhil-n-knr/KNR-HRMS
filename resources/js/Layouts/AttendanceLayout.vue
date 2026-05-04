@@ -2,6 +2,7 @@
 import { ref, computed, watch } from 'vue';
 import { Head, Link, router } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 
 const tabRouteMap = {
     'monitor_view': 'admin.attendance.monitoring',
@@ -293,6 +294,7 @@ const selectTab = (tabId) => {
         <div class="flex-1 overflow-auto p-4 lg:p-6 bg-white relative">
             <div class="max-w-[1400px] mx-auto transition-all duration-300">
                 <slot />
+                <AppFooter />
             </div>
         </div>
     </main>

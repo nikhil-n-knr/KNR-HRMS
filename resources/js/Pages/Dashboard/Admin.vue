@@ -1,33 +1,34 @@
 <template>
-  <div class="min-h-screen pb-24">
-    <div class="space-y-8">
-      <header class="rounded-3xl border border-white/60 bg-gradient-to-r from-emerald-50 via-white to-sky-50 p-6 shadow-sm">
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p class="text-[11px] font-black uppercase tracking-[0.4em] text-emerald-600">Admin Command Center</p>
-            <h1 class="mt-2 text-3xl font-black text-slate-900 tracking-tight">System Overview</h1>
-            <p class="mt-2 text-sm text-slate-500">Live operational metrics across tenants, projects, and infrastructure health.</p>
+  <Head title="Admin Dashboard" />
+  <div class="bg-[#f4f5fa] pb-16">
+    <GradientHeroHeader
+      kicker="Administration"
+      title="Admin Command Center"
+      subtitle="Live operational metrics across tenants, projects, and infrastructure health."
+    >
+      <template #right>
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[140px] text-center">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Users</p>
+            <p class="text-4xl font-extrabold text-white leading-none">{{ totalUsers }}</p>
           </div>
-          <div class="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div class="rounded-2xl border border-white/60 bg-white/80 p-4 text-center">
-              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Users</p>
-              <p class="mt-2 text-2xl font-black text-slate-900">{{ totalUsers }}</p>
-            </div>
-            <div class="rounded-2xl border border-white/60 bg-white/80 p-4 text-center">
-              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Projects</p>
-              <p class="mt-2 text-2xl font-black text-slate-900">{{ totalProjects }}</p>
-            </div>
-            <div class="rounded-2xl border border-white/60 bg-white/80 p-4 text-center">
-              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Clients</p>
-              <p class="mt-2 text-2xl font-black text-slate-900">{{ totalClients }}</p>
-            </div>
-            <div class="rounded-2xl border border-white/60 bg-white/80 p-4 text-center">
-              <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">Tenants</p>
-              <p class="mt-2 text-2xl font-black text-slate-900">{{ activeTenants }}</p>
-            </div>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[140px] text-center">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Projects</p>
+            <p class="text-4xl font-extrabold text-white leading-none">{{ totalProjects }}</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[140px] text-center">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Clients</p>
+            <p class="text-4xl font-extrabold text-white leading-none">{{ totalClients }}</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[140px] text-center">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Tenants</p>
+            <p class="text-4xl font-extrabold text-white leading-none">{{ activeTenants }}</p>
           </div>
         </div>
-      </header>
+      </template>
+    </GradientHeroHeader>
+
+    <div class="mx-0 sm:mx-6 mt-5 space-y-8">
 
       <section class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
@@ -220,16 +221,17 @@
             </div>
           </div>
         </div>
-      </section>
+       </section>
     </div>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from 'vue';
-import { Link } from '@inertiajs/vue3';
+import { Link, Head } from '@inertiajs/vue3';
 import axios from 'axios';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
 
 defineOptions({ layout: MainLayout });
 
