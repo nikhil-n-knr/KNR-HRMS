@@ -173,11 +173,40 @@
                         </div>
 
                         <div class="mt-6 flex flex-wrap items-center justify-between gap-3">
-                            <Link :href="route('projects.show', { project: project.id })" class="inline-flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">
-                                {{ project.status === 'archived' ? 'View' : 'Open' }}
-                                <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M13 18l6-6-6-6" /></svg>
-                            </Link>
-                            <button @click="openEditModal(project)" class="rounded-3xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Edit</button>
+                            <div class="flex items-center gap-2">
+                                <Link :href="route('projects.show', { project: project.id })" class="inline-flex items-center gap-2 rounded-3xl border border-indigo-100 bg-indigo-50 px-4 py-2 text-sm font-semibold text-indigo-700 transition hover:bg-indigo-100">
+                                    {{ project.status === 'archived' ? 'View' : 'Open' }}
+                                    <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14" /><path d="M13 18l6-6-6-6" /></svg>
+                                </Link>
+                                <button @click="openEditModal(project)" class="rounded-3xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50">Edit</button>
+                                
+                                <!-- Admin Actions -->
+                                <template v-if="$page.props.auth.user.roles.some(r => r.name === 'Super Admin')">
+                                    <button 
+                                        v-if="project.status !== 'archived'"
+                                        @click="archiveProject(project)" 
+                                        class="rounded-3xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
+                                        title="Archive Project"
+                                    >
+                                        Archive
+                                    </button>
+                                    <button 
+                                        v-else
+                                        @click="unarchiveProject(project)" 
+                                        class="rounded-3xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                        title="Restore Project"
+                                    >
+                                        Restore
+                                    </button>
+                                    <button 
+                                        @click="deleteProject(project)" 
+                                        class="rounded-3xl border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                                        title="Delete Project"
+                                    >
+                                        Delete
+                                    </button>
+                                </template>
+                            </div>
                         </div>
                     </div>
                 </div>

@@ -110,7 +110,7 @@
       <section class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
         <div class="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
           <div>
-            <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">HRMS</h2>
+            <h2 class="text-[11px] font-black uppercase tracking-[0.3em] text-slate-400">OPSCORE</h2>
           </div>
           <p class="text-xs font-semibold uppercase tracking-widest text-slate-400">Synced with navigation</p>
         </div>

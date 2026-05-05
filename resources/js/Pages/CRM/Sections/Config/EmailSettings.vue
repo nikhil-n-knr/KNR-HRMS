@@ -81,7 +81,7 @@
 
                             <div class="space-y-3 text-left font-sans text-left font-sans text-left font-sans">
                                  <label class="block text-base font-black text-gray-400 uppercase tracking-widest ml-1 text-left font-sans">Visible Entity (Sender Name)</label>
-                                 <input v-model="form.sender_name" type="text" class="w-full bg-gray-50 border-gray-100 rounded-2xl py-4.5 px-6 text-sm font-semibold shadow-inner focus:ring-4 focus:ring-indigo-500/10 focus:bg-white transition-all text-left font-sans text-left font-sans text-left font-sans" placeholder="HRMS Intelligence Hub">
+                                 <input v-model="form.sender_name" type="text" class="w-full bg-gray-50 border-gray-100 rounded-2xl py-4.5 px-6 text-sm font-semibold shadow-inner focus:ring-4 focus:ring-indigo-500/10 focus:bg-white transition-all text-left font-sans text-left font-sans text-left font-sans" placeholder="OPSCORE Intelligence Hub">
                             </div>
                         </div>
 

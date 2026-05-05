@@ -57,6 +57,17 @@ class AuthController extends Controller
                 'device_details' => request()->header('User-Agent'), // Redundant but explicit as requested
             ], 'auth');
 
+            // Trigger Auto-Checkin
+            try {
+                $attendanceService = app(\App\Services\Attendance\AttendanceRegistryService::class);
+                if ($user->employee) {
+                    $attendanceService->clockIn($user->employee, $request->ip(), 'Auto (Login)');
+                }
+            } catch (\Exception $e) {
+                // If it fails (e.g., wrong IP), we just log it and let them login anyway
+                $activityLogger->log('auto_checkin_failed', $user, ['error' => $e->getMessage()], 'auth');
+            }
+
             if (($request->wantsJson() || $request->ajax()) && !$request->header('X-Inertia')) {
                 return response()->json(['message' => 'Logged in successfully', 'user' => $user]);
             }

@@ -88,6 +88,11 @@
 
             <template #rowActions="{ item }">
                 <div class="flex items-center gap-1 justify-end">
+                    <!-- Analytics -->
+                    <Link :href="route('projects.tasks.analytics', { project: project.id, task: item.id })" title="Analytics"
+                        class="p-1.5 text-emerald-500 hover:bg-emerald-50 rounded transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+                    </Link>
                     <!-- Move to/from Backlog -->
                     <button v-if="!item.is_backlog" @click="moveToBacklog(item)" title="Move to Backlog"
                         class="p-1.5 text-amber-500 hover:bg-amber-50 rounded transition-colors">
@@ -139,7 +144,7 @@
 
 <script setup>
 import { ref, watch } from 'vue';
-import { router } from '@inertiajs/vue3';
+import { router, Link } from '@inertiajs/vue3';
 import axios from 'axios';
 import ProjectLayout from '@/Layouts/ProjectLayout.vue';
 import BaseDataTable from '@/Components/BaseDataTable.vue';

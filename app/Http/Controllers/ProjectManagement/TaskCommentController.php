@@ -49,7 +49,10 @@ class TaskCommentController extends Controller
         ]);
 
         // Log Activity (User Facing)
-        $this->activityService->log($task, 'comment', ['comment_id' => $comment->id]);
+        $this->activityService->log($task, 'comment', [
+            'comment_id' => $comment->id,
+            'body_snippet' => \Illuminate\Support\Str::limit($comment->body, 50)
+        ]);
         
         // Log Audit (System)
         $this->logger->log('Task', 'Comment', "User commented on task '{$task->title}'", [

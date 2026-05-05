@@ -35,4 +35,26 @@ class TaskActivityService
             'to' => $toStage
         ]);
     }
+
+    /**
+     * Log field updates with old/new values.
+     */
+    public function logUpdate(Task $task, array $oldValues, array $newValues): ?TaskActivity
+    {
+        $changes = [];
+        $monitored = ['title', 'status', 'priority', 'due_date', 'estimated_hours', 'scrum_points', 'is_locked'];
+
+        foreach ($monitored as $field) {
+            if (isset($oldValues[$field]) && isset($newValues[$field]) && $oldValues[$field] != $newValues[$field]) {
+                $changes[$field] = [
+                    'old' => $oldValues[$field],
+                    'new' => $newValues[$field]
+                ];
+            }
+        }
+
+        if (empty($changes)) return null;
+
+        return $this->log($task, 'update', ['changes' => $changes]);
+    }
 }

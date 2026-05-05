@@ -55,7 +55,7 @@
             @if(isset($configs['header']) && $configs['header'])
                 {!! $configs['header'] !!}
             @else
-                <div class="company-name">{{ config('app.name', 'HRMS') }}</div>
+                <div class="company-name">{{ config('app.name', 'OPSCORE') }}</div>
             @endif
             <div class="payslip-title">Payslip for {{ $payroll->batch_name }}</div>
         </div>

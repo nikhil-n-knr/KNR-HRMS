@@ -31,7 +31,7 @@ const submit = () => {
                 </div>
                 <h1 class="text-3xl font-bold text-gray-800 tracking-tight">Acme Corp</h1>
                 <p class="text-gray-500 mt-2 text-center">Visitor Check-In</p>
-                <div class="mt-auto text-xs text-gray-400">Powered by Agentic HRMS</div>
+                <div class="mt-auto text-xs text-gray-400">Powered by Agentic OPSCORE</div>
             </div>
 
             <!-- Right: Form -->

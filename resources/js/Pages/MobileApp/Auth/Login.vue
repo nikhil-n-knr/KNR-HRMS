@@ -11,7 +11,7 @@
                     <i class="fas fa-leaf text-emerald-400 text-3xl"></i>
                 </div>
                 <div>
-                    <h1 class="text-3xl font-black text-slate-900 tracking-tight uppercase">LEAP HRMS</h1>
+                    <h1 class="text-3xl font-black text-slate-900 tracking-tight uppercase">LEAP OPSCORE</h1>
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.4em] mt-1 italic">Operative Synchronization</p>
                 </div>
             </div>

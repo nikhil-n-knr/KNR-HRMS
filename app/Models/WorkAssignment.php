@@ -15,6 +15,7 @@ class WorkAssignment extends Model
         'assignee_id',
         'assignee_type',
         'allocated_hours',
+        'daily_allocations',
         'start_date',
         'end_date',
         'force_allocation'
@@ -24,6 +25,7 @@ class WorkAssignment extends Model
         'start_date' => 'date',
         'end_date' => 'date',
         'allocated_hours' => 'decimal:2',
+        'daily_allocations' => 'array',
         'force_allocation' => 'boolean'
     ];
 

@@ -335,7 +335,7 @@ const showCheckInInfo = () => showInfo('Reception Check-In Logic',
     'FRONTEND ACTION: Captures visitor details and meeting host. On submit, it hits /visitors/check-in via Inertia.\n\n' +
     'BACKEND LOGIC:\n' +
     '1. Validates input against Purpose-specific rules (e.g. email required for Interviews).\n' +
-    '2. Dynamic Workflows: If "Interview" purpose is selected, it automatically creates a Candidate record in HRMS.\n' +
+    '2. Dynamic Workflows: If "Interview" purpose is selected, it automatically creates a Candidate record in OPSCORE.\n' +
     '3. Blacklist Check: Instant verification against the blocked visitors database.\n' +
     '4. Pass Generation: Generates a unique 8-digit code and guest WiFi credentials.'
 );

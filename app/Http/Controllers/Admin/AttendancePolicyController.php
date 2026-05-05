@@ -59,6 +59,41 @@ class AttendancePolicyController extends Controller
             $data['all_pending'] = []; // Combined view if needed
         }
 
+        // 1.2 Daily Logs (AttendanceList)
+        if ($tab === 'daily_log' || $tab === 'my_dashboard') {
+            $query = \App\Models\AttendanceLog::with(['employee.department', 'sessions'])
+                ->whereHas('employee', fn($q) => $q->where('tenant_id', $tenantId));
+
+            if ($request->filled('date_from')) {
+                $query->whereDate('date', '>=', $request->date_from);
+            }
+            if ($request->filled('date_to')) {
+                $query->whereDate('date', '<=', $request->date_to);
+            }
+            if ($request->filled('department_id')) {
+                $query->whereHas('employee', fn($q) => $q->where('department_id', $request->department_id));
+            }
+            if ($request->filled('location_id')) {
+                $query->whereHas('employee', fn($q) => $q->where('location_id', $request->location_id));
+            }
+            if ($request->filled('status')) {
+                $query->where('status', $request->status);
+            }
+
+            $data['logs'] = $query->latest('date')->paginate(15)->withQueryString();
+        } else {
+            $data['logs'] = \Inertia\Inertia::lazy(fn() => \App\Models\AttendanceLog::with(['employee.department', 'sessions'])
+                ->whereHas('employee', fn($q) => $q->where('tenant_id', $tenantId))
+                ->latest('date')->paginate(15)->withQueryString()
+            );
+        }
+
+        // 1.3 AI Logs
+        if ($tab === 'ai_logs') {
+            // Provide empty paginated structure if table doesn't exist, to prevent crash
+            $data['logs'] = ['data' => [], 'links' => [], 'current_page' => 1, 'last_page' => 1];
+        }
+
         // 2. Shift Swaps (Correcting relation names to match model)
         $data['swaps'] = ($tab === 'swap_requests')
             ? \App\Models\ShiftSwap::with(['requester', 'recipient', 'shiftFrom', 'shiftTo'])->whereHas('requester', fn($q) => $q->where('tenant_id', $tenantId))->latest()->paginate(15)->withQueryString()

@@ -46,6 +46,6 @@ const d = props.block?.data || {};
 const reviews = d.testimonials || [
   { name:'Alexandra V.', rating:5, text:'The attention to detail in the packaging and the fabric quality is simply unmatched.', avatar:'https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=100&h=100' },
   { name:'Marcus Chen', rating:5, text:'Finally a store that gets the urban minimalist aesthetic right. Shipping was incredibly efficient.', avatar:'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&q=80&w=100&h=100' },
-  { name:'Elena Rodriguez',rating:5, text:'A seamless shopping experience from start to finish. The HRMS integration makes tracking so easy.', avatar:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100&h=100' },
+  { name:'Elena Rodriguez',rating:5, text:'A seamless shopping experience from start to finish. The OPSCORE integration makes tracking so easy.', avatar:'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?auto=format&fit=crop&q=80&w=100&h=100' },
 ];
 </script>

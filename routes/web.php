@@ -1039,6 +1039,10 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
 
     // Project Tabs (New)
     Route::get('projects/{project}/list', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'taskList'])->name('projects.tasks.index');
+    Route::get('projects/{project}/analytics', [App\Http\Controllers\ProjectManagement\ProjectAnalyticsController::class, 'projectAnalytics'])->name('projects.analytics');
+    Route::get('projects/{project}/analytics/export', [App\Http\Controllers\ProjectManagement\ProjectAnalyticsController::class, 'exportProjectWeekly'])->name('projects.analytics.export');
+    Route::get('projects/{project}/tasks/{task}/analytics', [App\Http\Controllers\ProjectManagement\ProjectAnalyticsController::class, 'show'])->name('projects.tasks.analytics');
+    Route::get('projects/{project}/tasks/{task}/analytics/export', [App\Http\Controllers\ProjectManagement\ProjectAnalyticsController::class, 'export'])->name('projects.tasks.analytics.export');
     Route::post('projects/{project}/tasks/{task}/backlog', [App\Http\Controllers\Admin\KanbanController::class, 'moveToBacklog'])->name('projects.tasks.backlog');
     Route::post('projects/{project}/tasks/{task}/restore', [App\Http\Controllers\Admin\KanbanController::class, 'restoreFromBacklog'])->name('projects.tasks.restore');
     Route::get('projects/{project}/modules', [App\Http\Controllers\ProjectManagement\ProjectController::class, 'modules'])->name('projects.modules.index');

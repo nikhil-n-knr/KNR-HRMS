@@ -97,6 +97,7 @@ class PlannerApiController extends Controller
                             'name' => $userName,
                             'avatar' => $avatar,
                             'allocated_hours' => (float) $a->allocated_hours, 
+                            'daily_allocations' => $a->daily_allocations,
                             'start_date' => $a->start_date ? $a->start_date->format('Y-m-d') : null,
                             'end_date' => $a->end_date ? $a->end_date->format('Y-m-d') : null,
                             'force_allocation' => (bool) $a->force_allocation,
@@ -448,13 +449,23 @@ class PlannerApiController extends Controller
     /**
      * Delete Task
      */
-    public function destroy($id)
+    public function destroy(Request $request, $id)
     {
         try {
             $task = Task::findOrFail($id);
+
+            $hasTimesheets = \App\Models\Timesheet::where('task_id', $id)->exists();
+
+            if ($hasTimesheets && !$request->boolean('force')) {
+                return response()->json([
+                    'error' => 'Cannot delete task because timesheets are already logged against it. Please use force delete if required.',
+                    'requires_force' => true
+                ], 422);
+            }
+
             $task->delete(); // Soft delete
 
-            $this->logger->log('project_management', 'task_delete', "Task deleted via Planner", ['task_id' => $id]);
+            $this->logger->log('project_management', 'task_delete', "Task deleted via Planner", ['task_id' => $id, 'forced' => $request->boolean('force')]);
             return response()->json(['status' => 'ok']);
         } catch (\Exception $e) {
             $this->logger->log('project_management', 'task_delete_error', "Failed to delete task {$id}: " . $e->getMessage());
@@ -519,6 +530,7 @@ class PlannerApiController extends Controller
                 'user_ids' => 'sometimes|array',
                 'user_ids.*' => 'exists:users,id',
                 'hours' => 'nullable|numeric|min:0|max:24',
+                'daily_allocations' => 'nullable|array',
                 'start_date' => 'nullable|date',
                 'end_date' => 'nullable|date|after_or_equal:start_date'
             ]);
@@ -566,6 +578,7 @@ class PlannerApiController extends Controller
                 $assignment = WorkAssignment::findOrFail($assignmentId);
                 $assignment->update([
                     'allocated_hours' => $request->input('hours', 8),
+                    'daily_allocations' => $request->input('daily_allocations'),
                     'start_date' => $request->input('start_date', $task->start_date),
                     'end_date' => $request->input('end_date', $task->due_date),
                     'force_allocation' => $request->boolean('force_allocation')
@@ -596,6 +609,7 @@ class PlannerApiController extends Controller
                     'assignee_type' => \App\Models\Employee::class,
                     'project_id' => $task->project_id,
                     'allocated_hours' => $request->input('hours', 8),
+                    'daily_allocations' => $request->input('daily_allocations'),
                     'start_date' => $request->input('start_date', $task->start_date),
                     'end_date' => $request->input('end_date', $task->due_date),
                     'force_allocation' => $request->boolean('force_allocation')
@@ -712,12 +726,16 @@ class PlannerApiController extends Controller
                 $dateStr = $curr->format('Y-m-d');
                 $isHoliday = isset($holidays[$dateStr]);
                 
+                $dailyHrs = (isset($a->daily_allocations) && isset($a->daily_allocations[$dateStr])) 
+                            ? (float)$a->daily_allocations[$dateStr] 
+                            : $a->allocated_hours;
+
                 if ($isWeekOff || $isHoliday) {
                     if ($a->force_allocation) {
-                        $holidayHours += $a->allocated_hours;
+                        $holidayHours += $dailyHrs;
                     }
                 } else {
-                    $regularHours += $a->allocated_hours;
+                    $regularHours += $dailyHrs;
                 }
                 $curr->addDay();
             }

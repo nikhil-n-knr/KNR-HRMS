@@ -53,7 +53,7 @@
                     <span class="text-[10px] font-black text-emerald-800 uppercase tracking-widest">Core Status: Optimal</span>
                 </div>
                 <div class="h-4 w-px bg-emerald-100"></div>
-                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Knowledge is the Anti-Gravity of HRMS</p>
+                <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest italic">Knowledge is the Anti-Gravity of OPSCORE</p>
             </div>
             
             <div class="flex items-center gap-3">

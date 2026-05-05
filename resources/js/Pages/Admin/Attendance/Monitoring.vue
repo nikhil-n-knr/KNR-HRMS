@@ -194,7 +194,13 @@ const statsCards = computed(() => [
 const fetchData = async () => {
     loading.value = true;
     try {
-        const response = await axios.get(route('admin.attendance.monitoring.data'));
+        const urlParams = new URLSearchParams(window.location.search);
+        const params = {};
+        if (urlParams.has('date_from')) params.date_from = urlParams.get('date_from');
+        if (urlParams.has('department_id')) params.department_id = urlParams.get('department_id');
+        if (urlParams.has('location_id')) params.location_id = urlParams.get('location_id');
+        
+        const response = await axios.get(route('admin.attendance.monitoring.data'), { params });
         employees.value = response.data.employees;
         stats.value = {
             total: response.data.stats.total || 0,
@@ -238,6 +244,10 @@ const formatDate = () => new Date().toLocaleDateString('en-US', { day: 'numeric'
 
 let timer;
 onMounted(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('search')) {
+        searchQuery.value = urlParams.get('search');
+    }
     fetchData();
     timer = setInterval(fetchData, 30000);
 });

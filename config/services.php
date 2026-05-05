@@ -44,7 +44,7 @@ return [
         'key' => 're_bsMCmgWq_29Lzzu7MHBodjy5XqsBM3jGW',
         'from' => [
             'address' => 'noreply@KNR Office.com',
-            'name' => 'HRMS System'
+            'name' => 'OPSCORE System'
         ]
     ],
 

@@ -70,8 +70,8 @@ const getSeverityClass = (sev) => {
             <div class="bg-white/80 backdrop-blur-md rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/50 overflow-hidden">
                 <BaseDataTable 
                     :columns="columns" 
-                    :data="logs.data" 
-                    :pagination="logs"
+                    :data="logs?.data || []" 
+                    :pagination="logs || {}"
                 >
                     <template #cell-created_at="{ item }">
                         {{ formatDate(item.created_at) }}

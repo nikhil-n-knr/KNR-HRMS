@@ -62,7 +62,7 @@ const submit = () => {
                         {{ form.processing ? 'Syncing Gateway...' : 'Confirm One-Click Entry' }}
                     </button>
                     
-                    <p class="text-center text-sm text-slate-400 font-bold uppercase mt-6 tracking-widest">Powered by HRMS Intelligent Access</p>
+                    <p class="text-center text-sm text-slate-400 font-bold uppercase mt-6 tracking-widest">Powered by OPSCORE Intelligent Access</p>
                 </div>
 
                 <div v-else class="text-center animate-fade-in">

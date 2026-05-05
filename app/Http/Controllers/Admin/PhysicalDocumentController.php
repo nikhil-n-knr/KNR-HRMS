@@ -130,6 +130,7 @@ class PhysicalDocumentController extends Controller
             'parent_id' => 'nullable|exists:physical_document_locations,id'
         ]);
 
+        $validated['tenant_id'] = auth()->user()->tenant_id;
         \App\Models\PhysicalDocumentLocation::create($validated);
         
         return back()->with('success', 'Location Created');

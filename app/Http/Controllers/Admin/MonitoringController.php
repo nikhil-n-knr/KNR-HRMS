@@ -44,18 +44,28 @@ class MonitoringController extends Controller
                 return $this->getCompOffStats();
             case 'monitor':
             default:
-                return $this->getMonitorData();
+                return $this->getMonitorData($request);
         }
     }
 
-    private function getMonitorData()
+    private function getMonitorData(Request $request)
     {
-        $date = Carbon::today();
+        $date = $request->filled('date_from') ? Carbon::parse($request->date_from) : Carbon::today();
         
         // Fetch all active employees
-        $employees = Employee::with(['department'])->get();
+        $employeesQuery = Employee::with(['department']);
         
-        // Fetch logs for today
+        if ($request->filled('department_id')) {
+            $employeesQuery->where('department_id', $request->department_id);
+        }
+        
+        if ($request->filled('location_id')) {
+            $employeesQuery->where('location_id', $request->location_id);
+        }
+        
+        $employees = $employeesQuery->get();
+        
+        // Fetch logs for the selected date
         $logs = AttendanceLog::where('date', $date->toDateString())
             ->with(['sessions'])
             ->get()
@@ -76,14 +86,16 @@ class MonitoringController extends Controller
                 $status = $log->status;
                 $isLate = $log->is_late; 
                 
-                if ($log->sessions->isNotEmpty()) {
+                if ($log->sessions && $log->sessions->isNotEmpty()) {
                      $firstSession = $log->sessions->first();
-                     $checkIn = $firstSession->in_time ? $firstSession->in_time->format('H:i') : null;
+                     $in_time = $firstSession->in_time ? (is_string($firstSession->in_time) ? Carbon::parse($firstSession->in_time) : $firstSession->in_time) : null;
+                     $checkIn = $in_time ? $in_time->format('H:i') : null;
 
                     // Calculate Work Duration & Breaks
                     foreach ($log->sessions as $index => $session) {
-                        $in = $session->in_time;
-                        $out = $session->out_time ?? Carbon::now(); // If active, calc till now
+                        $in = $session->in_time ? (is_string($session->in_time) ? Carbon::parse($session->in_time) : $session->in_time) : null;
+                        if (!$in) continue;
+                        $out = $session->out_time ? (is_string($session->out_time) ? Carbon::parse($session->out_time) : $session->out_time) : Carbon::now(); // If active, calc till now
                         
                         $workDuration += $in->diffInMinutes($out);
 

@@ -128,9 +128,9 @@
         <footer class="bg-white border-t border-gray-100 mt-auto py-10">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center">
                  <div class="flex items-center gap-2 mb-4 opacity-50 grayscale">
-                     <span class="text-xl font-bold text-gray-900 tracking-tight">HRMS</span>
+                     <span class="text-xl font-bold text-gray-900 tracking-tight">OPSCORE</span>
                  </div>
-                 <p class="text-center text-sm text-gray-400">&copy; {{ new Date().getFullYear() }} HRMS Inc. All rights reserved.</p>
+                 <p class="text-center text-sm text-gray-400">&copy; {{ new Date().getFullYear() }} OPSCORE Inc. All rights reserved.</p>
             </div>
         </footer>
     </div>

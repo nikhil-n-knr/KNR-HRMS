@@ -12,7 +12,7 @@ import utc from 'dayjs/plugin/utc';
 import timezone from 'dayjs/plugin/timezone';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
-const appName = window.document.getElementsByTagName('title')[0]?.innerText || 'HRMS';
+const appName = window.document.getElementsByTagName('title')[0]?.innerText || 'OPSCORE';
 const defaultTimeZone = 'Asia/Kolkata';
 const defaultDateLocale = 'en-IN';
 
@@ -22,7 +22,7 @@ dayjs.extend(relativeTime);
 dayjs.tz.setDefault(defaultTimeZone);
 
 const patchDateLocaleMethods = () => {
-    if (window.__hrmsIstDatePatched) {
+    if (window.__opscoreIstDatePatched) {
         return;
     }
 
@@ -41,11 +41,11 @@ const patchDateLocaleMethods = () => {
         };
     });
 
-    window.__hrmsIstDatePatched = true;
+    window.__opscoreIstDatePatched = true;
 };
 
 const patchDayjsDisplayMethods = () => {
-    if (window.__hrmsIstDayjsPatched) {
+    if (window.__opscoreIstDayjsPatched) {
         return;
     }
 
@@ -60,12 +60,12 @@ const patchDayjsDisplayMethods = () => {
         return originalFromNow.call(this.tz(defaultTimeZone), ...args);
     };
 
-    window.__hrmsIstDayjsPatched = true;
+    window.__opscoreIstDayjsPatched = true;
 };
 
 patchDateLocaleMethods();
 patchDayjsDisplayMethods();
-window.HRMS_DEFAULT_TIMEZONE = defaultTimeZone;
+window.OPSCORE_DEFAULT_TIMEZONE = defaultTimeZone;
 
 createInertiaApp({
     title: (title) => `${title} - ${appName}`,

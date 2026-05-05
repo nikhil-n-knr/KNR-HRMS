@@ -270,7 +270,7 @@ const skipToDashboard = () => {
                 <!-- Step 3: Discovery & Mapping -->
                 <div v-show="currentStep === 3" class="bg-white shadow rounded-lg p-6">
                     <h3 class="text-lg font-bold text-gray-900 mb-2">Step 3: Discovery & Automated Mapping</h3>
-                    <p class="text-sm text-gray-500 mb-6">Select the repositories you want to track and link them to your existing HRMS projects. We will automatically configure webhooks to import PRs and commits.</p>
+                    <p class="text-sm text-gray-500 mb-6">Select the repositories you want to track and link them to your existing OPSCORE projects. We will automatically configure webhooks to import PRs and commits.</p>
                     
                     <div v-if="isLoadingRepos" class="py-12 text-center text-gray-500 animate-pulse">
                         Discovering repositories...

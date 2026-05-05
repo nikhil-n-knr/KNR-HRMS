@@ -23,7 +23,7 @@
                  class="h-8 w-auto sm:h-9 lg:h-10 object-contain"
                >
                <span v-show="isSidebarOpen" class="mt-1 text-[11px] sm:text-[12px] font-black tracking-tight text-emerald-800">
-                 HRMS
+                 OPSCORE
                </span>
              </div>
            </Link>
@@ -420,7 +420,7 @@ const profileUrl = computed(() => {
 
     // 2. Client-Side Resolution fallback
     if (authStore.user?.employee?.uuid) {
-        return route('employee.profile', { uuid: authStore.user.employee.uuid });
+        return page.props.auth?.profileUrl || '#';
     }
 
     // 3. Absolute Fallback to Hub

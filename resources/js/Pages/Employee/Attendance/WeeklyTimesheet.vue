@@ -109,10 +109,10 @@ const getOrCreateRow = (t, isOther = false, otherTitle = '') => {
     const newRow = {
         id: rowId,
         project_id: t.project_id,
-        project_name: t.project ? t.project.name : t.project_name, // Handle both structures
-        project_code: t.project ? t.project.code : t.project_code,
+        project_name: t.project ? t.project.name : (t.project_name || props.projects.find(p => p.id == t.project_id)?.name || 'Unknown'),
+        project_code: t.project ? t.project.code : (t.project_code || props.projects.find(p => p.id == t.project_id)?.code || ''),
         title: isOther ? otherTitle : (t.task ? t.task.title : t.title),
-        code: isOther ? '' : (t.task ? t.task.code : t.code),
+        code: isOther ? '' : (t.task ? t.task.code : (t.code || '')),
         is_other: isOther,
         cells: weekDays.value.reduce((acc, day) => {
             acc[day.date] = ''; 
@@ -225,11 +225,17 @@ const saveWeek = async () => {
         const skippedLockedDates = new Set();
         rows.value.forEach(row => {
             weekDays.value.forEach(day => {
-                const h = parseFloat(row.cells[day.date]);
-                if (h > 0) {
+                let h = parseFloat(row.cells[day.date]);
+                if (isNaN(h)) h = 0;
+                
+                if (h >= 0) {
                     if (isDateLocked(day.date)) {
                         skippedLockedDates.add(day.date);
                         return;
+                    }
+                    if (isFutureDate(day.date) && h > 0) {
+                        toast.warning(`Cannot log time for future date: ${day.date}`);
+                        throw new Error("Future date logging blocked");
                     }
 
                    entries.push({
@@ -255,7 +261,7 @@ const saveWeek = async () => {
 
         await axios.post('/api/employee/attendance/timesheets/bulk', { entries });
         toast.success("Weekly timesheet saved!");
-        // Reload?
+        loadData(); // Sync with server after save
     } catch (e) {
         console.error(e);
         toast.error(e.response?.data?.message || "Failed to save week");
@@ -292,36 +298,21 @@ const toggleShowAll = () => {
 const confirmAddRow = () => {
     if (!newRow.value.project_id) return;
     
-    // Find Project Name (from props)
-    const proj = props.projects.find(p => p.id === newRow.value.project_id);
-    
     if (newRow.value.is_other) {
-        rows.value.push({
-             id: 'other_' + Date.now(),
-             project_id: newRow.value.project_id,
-             project_name: proj?.name || 'Unknown',
-             title: newRow.value.task_title || 'Other Task',
-             is_other: true,
-             cells: weekDays.value.reduce((acc, day) => ({...acc, [day.date]: ''}), {})
-        });
+        if (!newRow.value.task_title) {
+            toast.warning("Please enter a task title");
+            return;
+        }
+        getOrCreateRow({ project_id: newRow.value.project_id }, true, newRow.value.task_title);
     } else {
-        const task = availableTasks.value.find(t => t.id === newRow.value.task_id);
+        if (!newRow.value.task_id) {
+            toast.warning("Please select a task");
+            return;
+        }
+        const task = availableTasks.value.find(t => t.id == newRow.value.task_id);
         if (task) {
-             // Check duplicate
-             if (rows.value.find(r => r.id === task.id)) {
-                 toast.warning("Task already in grid");
-                 return;
-             }
-             rows.value.push({
-                 id: task.id,
-                 project_id: newRow.value.project_id,
-                 project_name: proj?.name,
-                 project_code: proj?.code,
-                 title: task.title,
-                 code: task.code,
-                 is_other: false,
-                 cells: weekDays.value.reduce((acc, day) => ({...acc, [day.date]: ''}), {})
-             });
+             // Ensure project_id is passed even if missing from task object
+             getOrCreateRow({ ...task, project_id: newRow.value.project_id });
         }
     }
     showAddRow.value = false;
@@ -333,6 +324,13 @@ const WrapperTitle = (t) => {
 };
 
 const isDateLocked = (date) => lockedDates.value.includes(date);
+const isFutureDate = (date) => {
+    const d = new Date(date);
+    d.setHours(0,0,0,0);
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    return d > today;
+};
 
 onMounted(() => {
     initWeek();
@@ -387,13 +385,13 @@ onMounted(() => {
                                 type="number" 
                                 v-model="row.cells[day.date]" 
                                 class="w-full text-center border-gray-200 rounded-md text-sm focus:ring-indigo-500 focus:border-indigo-500 p-1 h-8"
-                                :class="{ 'bg-gray-100 text-gray-500 cursor-not-allowed': isDateLocked(day.date) }"
+                                :class="{ 'bg-gray-100 text-gray-500 cursor-not-allowed': isDateLocked(day.date) || isFutureDate(day.date) }"
                                 placeholder="-"
                                 min="0" 
                                 max="24"
                                 step="0.5"
-                                :disabled="isDateLocked(day.date)"
-                                :title="isDateLocked(day.date) ? 'Approved date is locked' : ''"
+                                :disabled="isDateLocked(day.date) || isFutureDate(day.date)"
+                                :title="isDateLocked(day.date) ? 'Approved date is locked' : (isFutureDate(day.date) ? 'Cannot log for future date' : '')"
                             />
                         </td>
                         <td class="px-2 text-center">

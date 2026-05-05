@@ -125,6 +125,12 @@ class TimesheetController extends Controller
             return back()->with('error', $message);
         }
 
+        if (Carbon::parse($request->date)->isFuture()) {
+            $message = 'Cannot log time for future dates.';
+            if ($request->wantsJson()) return response()->json(['message' => $message], 422);
+            return back()->with('error', $message);
+        }
+
         // Upsert by employee/date/project/task-slot to avoid duplicates on repeated save/edit.
         $description = trim((string) $request->input('task_description', ''));
         if (!$request->filled('task_id') && $description === '') {
@@ -284,6 +290,12 @@ class TimesheetController extends Controller
             return back()->with('error', $message);
         }
 
+        if (Carbon::parse($targetDate)->isFuture()) {
+            $message = 'Cannot log time for future dates.';
+            if ($request->wantsJson()) return response()->json(['message' => $message], 422);
+            return back()->with('error', $message);
+        }
+
         $policy = Auth::user()->employee?->effectiveAttendancePolicy;
         $maxHours = 24;
         if ($policy && !empty($policy->timesheet_policy)) {
@@ -374,14 +386,14 @@ class TimesheetController extends Controller
                 }
             })
             ->where('stage_id', '!=', 6) // Exclude done? Assumed from previous code
-            ->select('id', 'title') 
+            ->select('id', 'title', 'project_id') 
             ->get();
 
         // 2. All Tasks (If requested)
         $allTasks = collect([]);
         if ($request->boolean('all')) {
             $allTasks = \App\Models\Task::where('project_id', $project->id)
-                ->select('id', 'title')
+                ->select('id', 'title', 'project_id')
                 ->get();
         }
 
@@ -405,7 +417,8 @@ class TimesheetController extends Controller
         $employee = Auth::user()->employee;
 
         $entries = \App\Models\Timesheet::where('employee_id', $employee->id)
-            ->whereBetween('date', [$request->start_date, $request->end_date])
+            ->whereDate('date', '>=', $request->start_date)
+            ->whereDate('date', '<=', $request->end_date)
             ->with(['project:id,name,code', 'task:id,title'])
             ->get();
 
@@ -489,7 +502,7 @@ class TimesheetController extends Controller
             'entries' => 'required|array',
             'entries.*.date' => 'required|date',
             'entries.*.project_id' => 'required|exists:projects,id',
-            'entries.*.hours' => 'required|numeric|min:0.1|max:24',
+            'entries.*.hours' => 'required|numeric|min:0|max:24',
             'entries.*.task_id' => 'nullable|exists:project_tasks,id',
             'entries.*.task_title' => 'nullable|string|max:255',
             'entries.*.description' => 'nullable|string|max:1000',
@@ -500,7 +513,7 @@ class TimesheetController extends Controller
 
         // Date Restrictions
         $allowedPast = now()->subDays(31)->startOfDay();
-        $allowedFuture = now()->addDays(31)->endOfDay();
+        $allowedFuture = now()->endOfDay();
 
         $entries = $request->input('entries');
         $savedCount = 0;
@@ -541,7 +554,7 @@ class TimesheetController extends Controller
 
                 // Check Daily Limit (Aggregate per day)
                 $currentDailyTotal = Timesheet::where('employee_id', $employee->id)
-                    ->where('date', $entry['date'])
+                    ->whereDate('date', $entry['date'])
                     ->sum('hours_spent');
 
                 $effectiveDailyTotal = $currentDailyTotal;
@@ -571,15 +584,19 @@ class TimesheetController extends Controller
                 $project = \App\Models\Project::find($entry['project_id']);
 
                 if ($existingEntry) {
-                    $existingEntry->update([
-                        'project_id' => $project?->id,
-                        'project_name' => $project?->name,
-                        'task_id' => $entry['task_id'] ?? null,
-                        'task_title' => $entry['task_title'] ?? null,
-                        'task_description' => $description !== '' ? $description : 'Weekly Log',
-                        'hours_spent' => $entry['hours'],
-                    ]);
-                } else {
+                    if ($entry['hours'] == 0) {
+                        $existingEntry->delete();
+                    } else {
+                        $existingEntry->update([
+                            'project_id' => $project?->id,
+                            'project_name' => $project?->name,
+                            'task_id' => $entry['task_id'] ?? null,
+                            'task_title' => $entry['task_title'] ?? null,
+                            'task_description' => $description !== '' ? $description : 'Weekly Log',
+                            'hours_spent' => $entry['hours'],
+                        ]);
+                    }
+                } else if ($entry['hours'] > 0) {
                     $timesheet = Timesheet::create([
                         'employee_id' => $employee->id,
                         'date' => $entry['date'],

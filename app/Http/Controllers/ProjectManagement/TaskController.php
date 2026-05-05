@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\DB;
 
 class TaskController extends Controller
 {
+    protected $activityService;
+
+    public function __construct(\App\Services\ProjectManagement\TaskActivityService $activityService)
+    {
+        $this->activityService = $activityService;
+    }
+
     public function store(Request $request, Project $project)
     {
         $validated = $request->validate([
@@ -82,7 +89,9 @@ class TaskController extends Controller
         ]);
 
         DB::transaction(function () use ($validated, $task, $project) {
+            $oldValues = $task->only(['title', 'status', 'priority', 'due_date', 'estimated_hours', 'scrum_points', 'is_locked']);
             $task->update(collect($validated)->except('extension')->toArray());
+            $newValues = $task->fresh()->only(['title', 'status', 'priority', 'due_date', 'estimated_hours', 'scrum_points', 'is_locked']);
 
             if (isset($validated['assignees'])) {
                 $task->assignees()->sync($validated['assignees']);
@@ -102,10 +111,7 @@ class TaskController extends Controller
                 ]);
             }
 
-            $task->activities()->create([
-                'user_id' => auth()->id(),
-                'type' => 'update'
-            ]);
+            $this->activityService->logUpdate($task, $oldValues, $newValues);
         });
 
         return redirect()->back()->with('success', 'Task updated.')->setStatusCode(303);
@@ -125,14 +131,7 @@ class TaskController extends Controller
         $task->update(['stage_id' => $request->stage_id]);
         $newStage = $task->fresh()->stage; // Reload to get new stage relation
         
-        $task->activities()->create([
-            'user_id' => auth()->id(),
-            'type' => 'move',
-            'details' => [
-                'from' => $oldStage->name,
-                'to' => $newStage->name
-            ]
-        ]);
+        $this->activityService->logMove($task, $oldStage->name, $newStage->name);
         
         // Auto-Assign Rule
         if ($newStage->default_assignee_id) {

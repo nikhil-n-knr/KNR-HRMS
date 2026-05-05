@@ -5,12 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
+use App\Traits\TenantSubResource;
+
 class PhysicalDocumentLocation extends Model
 {
-    use HasFactory;
+    use HasFactory, TenantSubResource;
     protected $guarded = [];
     
-    public function tenant() { return $this->belongsTo(Tenant::class); }
     public function records() { return $this->hasMany(PhysicalRecord::class, 'location_id'); }
 
     public function parent() { return $this->belongsTo(self::class, 'parent_id'); }

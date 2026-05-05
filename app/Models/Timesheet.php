@@ -25,7 +25,7 @@ class Timesheet extends Model
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date' => 'date:Y-m-d',
         'hours_spent' => 'decimal:2',
         'is_billable' => 'boolean',
     ];

@@ -164,6 +164,10 @@ watch(() => form.value.is_other, (newVal) => {
 });
 
 const submit = async () => {
+    if (new Date(form.value.date) > new Date()) {
+        toast.error("Cannot log time for future dates.");
+        return;
+    }
     processing.value = true;
     try {
         const payload = { ...form.value }; 
@@ -338,6 +342,7 @@ const totalHours = computed(() => {
                         v-model="form.date"
                         label="Date"
                         required
+                        :max="new Date().toISOString().split('T')[0]"
                     />
                 <!-- Project -->
                 <div>

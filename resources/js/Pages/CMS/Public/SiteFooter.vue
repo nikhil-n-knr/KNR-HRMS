@@ -10,7 +10,7 @@
                         </span>
                     </Link>
                     <p class="text-emerald-100/40 text-xs font-bold uppercase tracking-widest leading-loose max-w-xs">
-                        Elevating the retail experience through AI-driven commerce and elite fashion curation. Part of the HRMS Indigo ecosystem.
+                        Elevating the retail experience through AI-driven commerce and elite fashion curation. Part of the OPSCORE Indigo ecosystem.
                     </p>
                     <div class="flex gap-4">
                         <a v-for="s in social" :key="s.icon" href="#" class="w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center hover:bg-emerald-600 transition-all duration-500">

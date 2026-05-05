@@ -92,7 +92,7 @@ const submitRsvp = (status) => {
 
             <!-- Footer Meta -->
             <div class="px-12 py-8 bg-gray-50/50 border-t border-gray-100 flex justify-center">
-                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Powered by HRMS Communications Infrastructure</p>
+                 <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Powered by OPSCORE Communications Infrastructure</p>
             </div>
         </div>
     </div>

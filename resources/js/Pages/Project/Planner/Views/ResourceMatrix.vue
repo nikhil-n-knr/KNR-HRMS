@@ -239,12 +239,40 @@
                      <div v-if="form.errors.date_range" class="text-sm text-red-600">{{ form.errors.date_range }}</div>
 
                      <!-- Capacity -->
-                 <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg border border-gray-100">
-                         <div>
-                             <InputLabel value="Daily Allocation" class="mb-0" />
-                             <p class="text-sm text-gray-500">Hours per person/day (Max: 8)</p>
+                     <div class="flex flex-col gap-3 bg-gray-50 p-3 rounded-lg border border-gray-100">
+                         <div class="flex items-center justify-between">
+                             <div>
+                                 <InputLabel value="Allocation Mode" class="mb-0" />
+                                 <p class="text-xs text-gray-500">Flat daily rate or varying hours</p>
+                             </div>
+                             <div class="flex items-center gap-2">
+                                 <span class="text-xs text-gray-600">Flat</span>
+                                 <Switch v-model="form.use_daily_breakdown" :class="form.use_daily_breakdown ? 'bg-indigo-500' : 'bg-gray-300'" class="relative inline-flex h-4 w-9 items-center rounded-full transition-colors focus:outline-none">
+                                     <span :class="form.use_daily_breakdown ? 'translate-x-5' : 'translate-x-1'" class="inline-block h-3 w-3 transform rounded-full bg-white transition-transform" />
+                                 </Switch>
+                                 <span class="text-xs text-gray-600">Daily</span>
+                             </div>
                          </div>
-                         <TextInput v-model="form.hours" type="number" min="1" max="12" class="w-20 text-center" />
+
+                         <!-- Flat Allocation -->
+                         <div v-if="!form.use_daily_breakdown" class="flex items-center justify-between pt-2 border-t border-gray-200">
+                             <div>
+                                 <InputLabel value="Daily Allocation" class="mb-0" />
+                                 <p class="text-xs text-gray-500">Hours per person/day (Max: 8)</p>
+                             </div>
+                             <TextInput v-model="form.hours" type="number" min="0" max="24" step="0.5" class="w-20 text-center" />
+                         </div>
+
+                         <!-- Daily Breakdown -->
+                         <div v-else class="pt-2 border-t border-gray-200">
+                             <p class="text-xs text-gray-500 mb-2">Set specific hours for each day:</p>
+                             <div class="max-h-40 overflow-y-auto space-y-1 pr-1 border border-gray-200 rounded-md bg-white">
+                                 <div v-for="day in dailyBreakdownDays" :key="day.dateStr" class="flex items-center justify-between px-2 py-1.5 border-b border-gray-100 last:border-0 hover:bg-gray-50">
+                                     <span class="text-sm text-gray-700 font-medium">{{ day.label }}</span>
+                                     <TextInput v-model="form.daily_allocations[day.dateStr]" type="number" min="0" max="24" step="0.5" class="w-20 text-center h-8 text-xs px-2 py-1" />
+                                 </div>
+                             </div>
+                         </div>
                      </div>
 
                      <div class="flex items-center gap-2 mt-2">
@@ -387,9 +415,33 @@ const form = useForm({
     start_date: '',
     end_date: '',
     hours: 8,
+    use_daily_breakdown: false,
+    daily_allocations: {},
     assignment_id: null, // Track specific segment ID
     ignore_pending: false,
     force_allocation: false
+});
+
+const dailyBreakdownDays = computed(() => {
+    if (!form.start_date || !form.end_date) return [];
+    let days = [];
+    let current = dayjs(form.start_date);
+    const end = dayjs(form.end_date);
+    while (current.isBefore(end) || current.isSame(end, 'day')) {
+        days.push({
+            dateStr: current.format('YYYY-MM-DD'),
+            label: current.format('MMM D, ddd')
+        });
+        current = current.add(1, 'day');
+    }
+    // Limit to 60 days to prevent browser crash, and initialize form allocation if missing
+    const limitedDays = days.slice(0, 60);
+    limitedDays.forEach(d => {
+        if (form.daily_allocations[d.dateStr] === undefined) {
+            form.daily_allocations[d.dateStr] = form.hours;
+        }
+    });
+    return limitedDays;
 });
 
 // Computed Helper for filtered tasks
@@ -490,7 +542,11 @@ const getLoad = (userId, dateStr) => {
                         return; // Ignore
                     }
                     
-                    load += parseFloat(assignment.allocated_hours || 8);
+                    if (assignment.daily_allocations && assignment.daily_allocations[dateStr] !== undefined) {
+                        load += parseFloat(assignment.daily_allocations[dateStr] || 0);
+                    } else {
+                        load += parseFloat(assignment.allocated_hours || 8);
+                    }
                  }
              });
         }
@@ -774,6 +830,8 @@ const openNewAssignmentFromDetails = () => {
     form.start_date = selectedDateStr.value; // Need to create this ref
     form.end_date = selectedDateStr.value;
     form.hours = 8;
+    form.use_daily_breakdown = false;
+    form.daily_allocations = {};
     form.assignment_id = null; // New segment
 
     showAssignmentModal.value = true;
@@ -834,6 +892,8 @@ const handleCellClick = (res, day) => {
          form.start_date = day.dateStr;
          form.end_date = day.dateStr;
          form.hours = 8;
+         form.use_daily_breakdown = false;
+         form.daily_allocations = {};
          form.assignment_id = null; // New segment
 
          showAssignmentModal.value = true;
@@ -853,6 +913,8 @@ const editAssignment = (task) => {
         form.task_id = task.id;
         form.user_ids = [specificSegment.id]; // The user ID attached to assignment (User ID is mapped to id prop in backend resource map)
         form.hours = specificSegment.allocated_hours || 8;
+        form.use_daily_breakdown = !!(specificSegment.daily_allocations && Object.keys(specificSegment.daily_allocations).length > 0);
+        form.daily_allocations = specificSegment.daily_allocations ? { ...specificSegment.daily_allocations } : {};
         form.start_date = specificSegment.start_date || task.start_date;
         form.end_date = specificSegment.end_date || (task.due_date || task.start_date);
         form.assignment_id = specificSegment.assignment_id; // Need this ID! (Will fix backend mapping in next step if missing)
@@ -876,6 +938,8 @@ const editAllAssignments = (task) => {
     form.user_ids = uniqueUserIds;
 
     form.hours = 8; // Reset/Default for bulk
+    form.use_daily_breakdown = false;
+    form.daily_allocations = {};
     form.start_date = task.start_date;
     form.end_date = task.due_date || task.start_date;
     form.assignment_id = null; // Clear ID to signify bulk/replace
@@ -883,8 +947,8 @@ const editAllAssignments = (task) => {
     showAssignmentModal.value = true;
 };
 
-const deleteAssignment = async () => {
-    if (!confirm('Are you sure you want to remove this assignment?')) return;
+const deleteAssignment = async (force = false) => {
+    if (!force && !confirm('Are you sure you want to remove this assignment?')) return;
 
     form.processing = true;
     try {
@@ -899,15 +963,21 @@ const deleteAssignment = async () => {
         } 
         // 2. Delete Entire Task (from Bulk Edit)
         else {
-            await axios.delete(route('planner.destroy', form.task_id));
+            await axios.delete(route('planner.destroy', form.task_id), { data: { force } });
             toast.success('Task deleted');
         }
         
         showAssignmentModal.value = false;
         window.location.reload();
     } catch (e) {
-        toast.error('Delete failed');
-        console.error(e);
+        if (e.response && e.response.status === 422 && e.response.data.requires_force) {
+            if (confirm(e.response.data.error + ' Are you sure you want to FORCE delete this task?')) {
+                return deleteAssignment(true);
+            }
+        } else {
+            toast.error('Delete failed');
+            console.error(e);
+        }
     } finally {
         form.processing = false;
     }
@@ -948,6 +1018,7 @@ const submitAssignment = async () => {
             task_id: form.task_id,
             user_ids: form.user_ids,
             hours: form.hours,
+            daily_allocations: form.use_daily_breakdown ? form.daily_allocations : null,
             start_date: form.start_date,
             end_date: form.end_date,
             strategy: strategy,

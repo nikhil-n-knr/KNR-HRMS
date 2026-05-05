@@ -1458,7 +1458,7 @@ const applyChecklistItems = (items) => {
   checklistModal.items.forEach((item) => {
     checklistDrafts[item.id] = {
       actual_minutes: item.actual_minutes ?? '',
-      work_date: item.work_date || '',
+      work_date: toInputDate(item.work_date) || '',
     };
   });
 };
