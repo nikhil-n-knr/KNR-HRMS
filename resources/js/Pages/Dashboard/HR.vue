@@ -1,20 +1,30 @@
 <template>
-  <div class="min-h-screen pb-24">
-    <div class="space-y-8">
-      <header class="rounded-3xl border border-white/60 bg-gradient-to-r from-sky-50 via-white to-emerald-50 p-6 shadow-sm">
-        <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
-            <p class="text-[11px] font-black uppercase tracking-[0.4em] text-emerald-600">HR Insight Hub</p>
-            <h1 class="mt-2 text-3xl font-black text-slate-900 tracking-tight">People Intelligence</h1>
-            <p class="mt-2 text-sm text-slate-500">Real-time workforce signals powered by your HR data.</p>
+  <Head title="HR Dashboard" />
+  <div class="bg-[#f4f5fa] pb-16">
+    <GradientHeroHeader
+      kicker="Human Resources"
+      title="People Intelligence"
+      subtitle="Real-time workforce signals powered by your HR data."
+    >
+      <template #right>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[150px] text-center">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Engagement</p>
+            <p class="text-3xl font-extrabold text-white leading-none">{{ analytics.engagement_score }}%</p>
           </div>
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="rounded-full bg-emerald-50 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-emerald-600">Engagement {{ analytics.engagement_score }}%</span>
-            <span class="rounded-full bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Retention {{ analytics.retention_rate }}%</span>
-            <span class="rounded-full bg-slate-100 px-4 py-2 text-[10px] font-black uppercase tracking-widest text-slate-600">Wellness {{ analytics.wellness_score }}</span>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[150px] text-center">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Retention</p>
+            <p class="text-3xl font-extrabold text-white leading-none">{{ analytics.retention_rate }}%</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[150px] text-center">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Wellness</p>
+            <p class="text-3xl font-extrabold text-white leading-none">{{ analytics.wellness_score }}</p>
           </div>
         </div>
-      </header>
+      </template>
+    </GradientHeroHeader>
+
+    <div class="mx-0 sm:mx-6 mt-5 space-y-8">
 
       <section class="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
         <div class="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-sm">
@@ -111,7 +121,9 @@
 
 <script setup>
 import { computed } from 'vue';
+import { Head } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
 
 defineOptions({ layout: MainLayout });
 

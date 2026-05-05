@@ -1,55 +1,37 @@
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-800 to-teal-700">
-          User Management
-        </h1>
-        <p class="text-emerald-600/80 text-sm mt-1">Manage system access and permissions</p>
-      </div>
-      <div class="flex gap-3">
-        <Link 
-          v-if="authStore.can('user_management.users.create')"
-          href="/admin/users/create" 
-          class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
-          </svg>
-          Add User
-        </Link>
-      </div>
-    </div>
+  <Head title="User Management" />
+  <div class="bg-[#f4f5fa]">
+    <GradientHeroHeader
+      kicker="Administration"
+      title="User Management"
+      subtitle="Manage system access, security, and permissions."
+    >
+      <template #right>
+        <div class="flex flex-wrap items-center gap-3 shrink-0">
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[140px]">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Total Users</p>
+            <p class="text-4xl font-extrabold text-white leading-none">{{ totalUsers }}</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[140px]">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Current Filter</p>
+            <p class="text-3xl font-extrabold text-white leading-none capitalize">{{ statusFilter || 'All' }}</p>
+          </div>
+          <Link
+            v-if="authStore.can('user_management.users.create')"
+            href="/admin/users/create"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-indigo-700 text-sm font-extrabold hover:bg-indigo-50 active:scale-[0.97] transition-all shadow-lg shadow-black/10"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span class="hidden sm:inline">Add User</span>
+          </Link>
+        </div>
+      </template>
+    </GradientHeroHeader>
 
-    <!-- Stats / AI Insights -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-       <div class="p-4 rounded-2xl bg-white/40 border border-white/50 backdrop-blur-sm shadow-sm flex items-center gap-4">
-          <div class="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" />
-            </svg>
-          </div>
-          <div>
-            <p class="text-sm text-gray-500">Total Users</p>
-            <p class="text-xl font-bold text-gray-800">{{ users.meta?.total || 0 }}</p>
-          </div>
-       </div>
-       
-       <!-- AI Chip -->
-       <div class="p-4 rounded-2xl bg-gradient-to-br from-indigo-50/50 to-purple-50/50 border border-indigo-100/50 backdrop-blur-sm shadow-sm flex items-center gap-4 relative overflow-hidden group">
-          <div class="absolute -right-4 -top-4 h-16 w-16 bg-gradient-to-br from-indigo-500 to-purple-500 opacity-10 rounded-full blur-xl group-hover:opacity-20 transition-opacity"></div>
-          <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 z-10">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-               <path fill-rule="evenodd" d="M12.395 2.553a1 1 0 00-1.45-.385c-.345.23-.614.558-.822.88-.214.33-.403.713-.57 1.116-.334.804-.614 1.768-.84 2.734a31.365 31.365 0 00-.613 3.58 2.64 2.64 0 01-.945-1.067c-.328-.68-.398-1.534-.398-2.654A1 1 0 005.05 6.05 6.981 6.981 0 003 11a7 7 0 1011.95-4.95c-.592-.591-.98-.985-1.348-1.467-.363-.476-.724-1.063-1.207-2.03zM12.12 15.12A3 3 0 017 13s.879.5 2.5.5c0-1 .5-4 1.25-4.5.5 1 .786 1.293 1.371 1.879A2.99 2.99 0 0113 13a2.99 2.99 0 01-.879 2.121z" clip-rule="evenodd" />
-            </svg>
-          </div>
-          <div class="z-10">
-            <p class="text-xs font-semibold text-indigo-600 uppercase tracking-wide mb-0.5">AI Insight</p>
-            <p class="text-sm text-gray-700 font-medium">3 inactive users detected this week.</p>
-          </div>
-       </div>
-    </div>
+    <div class="mx-0 sm:mx-6 mt-5 pb-12">
+      <div class="space-y-6">
 
     <!-- Data Table -->
     <BaseDataTable
@@ -62,14 +44,18 @@
         @page-change="changePage"
     >
         <template #actions>
-             <button class="px-4 py-2 bg-white/40 hover:bg-white/60 border border-white/50 rounded-xl text-emerald-700 text-sm font-medium backdrop-blur-sm transition shadow-sm hover:shadow-md">
-                Export
-             </button>
-             <select v-model="statusFilter" @change="handleSearch" class="pl-3 pr-10 py-2 text-base border-gray-200 focus:outline-none focus:ring-emerald-500/30 focus:border-emerald-500/30 sm:text-sm rounded-xl bg-white/50">
-               <option value="">All Status</option>
-               <option value="active">Active</option>
-               <option value="suspended">Suspended</option>
-             </select>
+          <button class="px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-sm font-bold shadow-sm hover:bg-slate-50 transition">
+            Export
+          </button>
+          <select
+            v-model="statusFilter"
+            @change="handleSearch"
+            class="pl-3 pr-10 py-2 text-sm font-semibold border-slate-200 focus:outline-none focus:ring-indigo-500/20 focus:border-indigo-400 rounded-xl bg-white"
+          >
+            <option value="">All Status</option>
+            <option value="active">Active</option>
+            <option value="suspended">Suspended</option>
+          </select>
         </template>
 
         <template #cell-name="{ item }">
@@ -189,17 +175,20 @@
                 </button>
             </template>
         </Modal>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
-import { router, Link } from '@inertiajs/vue3';
+import { ref, watch, computed } from 'vue';
+import { router, Link, Head } from '@inertiajs/vue3';
 import { useAuthStore } from '@/stores/auth';
 import { useToastStore } from '@/stores/toast';
 import MainLayout from '@/Layouts/MainLayout.vue'; // Layout
 import Modal from '@/Components/Modal.vue';
 import BaseDataTable from '@/Components/BaseDataTable.vue';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
 import debounce from 'lodash/debounce';
 
 // Define Layout
@@ -213,6 +202,8 @@ const props = defineProps({
 
 const authStore = useAuthStore();
 const toast = useToastStore();
+
+const totalUsers = computed(() => (props.users?.meta?.total ?? 0));
 
 // Local State
 const search = ref(props.filters.search || '');

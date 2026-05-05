@@ -54,6 +54,7 @@
     <!-- Main Content -->
     <main class="max-w-7xl mx-auto px-6 lg:px-12 py-10">
       <slot />
+      <AppFooter />
     </main>
 
     <!-- Global Toast (Reuse if possible, or simple local one) -->
@@ -63,6 +64,7 @@
 
 <script setup>
 import { Link } from '@inertiajs/vue3';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 
 const navItems = [
     { id: 'hub', label: 'Learning Hub', route: route('lms.learn.hub'), active: 'lms.learn.hub' },

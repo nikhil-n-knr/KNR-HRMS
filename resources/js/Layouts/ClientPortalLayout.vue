@@ -33,6 +33,7 @@
         <main class="flex-1 py-10">
             <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <slot />
+                <AppFooter />
             </div>
         </main>
         
@@ -48,6 +49,7 @@
 import { Link, router } from '@inertiajs/vue3';
 import { onMounted, onBeforeUnmount } from 'vue';
 import { record } from 'rrweb';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 
 let stopFn = null;
 const eventsMatrix = [];

@@ -1,8 +1,14 @@
 <template>
-  <div>
-    <h1 class="text-2xl font-bold text-gray-800 mb-6">Dashboard</h1>
-    
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+  <Head title="Dashboard" />
+  <div class="bg-[#f4f5fa] pb-16">
+    <GradientHeroHeader
+      kicker="Workspace"
+      title="Dashboard"
+      subtitle="Your daily pulse: approvals, requests, and quick actions."
+    />
+
+    <div class="mx-0 sm:mx-6 mt-5 space-y-8">
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
       <StatCard 
         title="Total Employees" 
         value="124" 
@@ -30,7 +36,7 @@
         icon="DocumentTextIcon" 
         color="bg-purple-500"
       />
-    </div>
+      </div>
 
       
       <!-- Action Center -->
@@ -93,6 +99,7 @@
         </button>
       </div>
     </div>
+    </div>
   </div>
 </template>
 
@@ -106,7 +113,8 @@ import {
 import StatCard from '@/Components/StatCard.vue';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import MyApprovals from '@/Components/Dashboard/MyApprovals.vue';
-import { router } from '@inertiajs/vue3';
+import { router, Head } from '@inertiajs/vue3';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
 
 defineOptions({ layout: MainLayout });
 

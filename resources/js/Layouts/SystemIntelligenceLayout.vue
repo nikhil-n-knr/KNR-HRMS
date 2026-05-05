@@ -2,6 +2,7 @@
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { Link, usePage } from '@inertiajs/vue3';
 import { computed } from 'vue';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 import { 
     ShieldCheckIcon, 
     TrophyIcon, 
@@ -81,6 +82,7 @@ const navigation = computed(() => [
         <div class="bg-gray-50 min-h-screen">
             <div class="max-w-7xl mx-auto py-8">
                 <slot />
+                <AppFooter />
             </div>
         </div>
     </MainLayout>

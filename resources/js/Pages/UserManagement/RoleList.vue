@@ -1,35 +1,46 @@
 <template>
-  <div class="space-y-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center">
-      <div>
-        <h1 class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-800 to-teal-700">
-          User Roles
-        </h1>
-        <p class="text-emerald-600/80 text-sm mt-1">Define access levels and permissions</p>
-      </div>
-      <div class="flex gap-3">
-        <button 
-          v-if="authStore.can('user_management.role.create')"
-          @click="createRole"
-          class="px-4 py-2 bg-gradient-to-r from-emerald-500 to-teal-600 text-white rounded-xl text-sm font-medium shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/40 hover:-translate-y-0.5 transition-all flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clip-rule="evenodd" />
-          </svg>
-          Create Role
-        </button>
-        <Link 
-          href="/admin/roles/matrix" 
-          class="px-4 py-2 bg-white/40 hover:bg-white/60 border border-white/50 rounded-xl text-emerald-700 text-sm font-medium backdrop-blur-sm transition shadow-sm hover:shadow-md flex items-center gap-2"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-             <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
-          </svg>
-          Matrix
-        </Link>
-      </div>
-    </div>
+  <Head title="Roles" />
+  <div class="bg-[#f4f5fa]">
+    <GradientHeroHeader
+      kicker="Administration"
+      title="Roles"
+      subtitle="Define access levels, dashboards, and responsibility boundaries."
+    >
+      <template #right>
+        <div class="flex flex-wrap items-center gap-3">
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[140px]">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Total Roles</p>
+            <p class="text-4xl font-extrabold text-white leading-none">{{ totalRoles }}</p>
+          </div>
+          <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[140px]">
+            <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">System Roles</p>
+            <p class="text-4xl font-extrabold text-white leading-none">{{ systemRoles }}</p>
+          </div>
+          <button
+            v-if="authStore.can('user_management.role.create')"
+            @click="createRole"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-indigo-700 text-sm font-extrabold hover:bg-indigo-50 active:scale-[0.97] transition-all shadow-lg shadow-black/10"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+            </svg>
+            <span class="hidden sm:inline">Create Role</span>
+          </button>
+          <Link
+            href="/admin/roles/matrix"
+            class="w-10 h-10 flex items-center justify-center rounded-2xl bg-white/10 border border-white/20 text-white/70 hover:bg-white/20 hover:text-white transition-all"
+            title="Permission Matrix"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+            </svg>
+          </Link>
+        </div>
+      </template>
+    </GradientHeroHeader>
+
+    <div class="mx-0 sm:mx-6 mt-5 pb-12">
+      <div class="space-y-6">
 
     <!-- Role Cards -->
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -214,17 +225,20 @@
             </button>
         </template>
     </Modal>
+      </div>
+    </div>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue';
-import { useForm, router, Link } from '@inertiajs/vue3';
+import { ref, computed } from 'vue';
+import { useForm, router, Link, Head } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import Modal from '@/Components/Modal.vue';
 import { useToastStore } from '@/stores/toast';
 import { useAuthStore } from '@/stores/auth';
 import BaseInput from '@/Components/BaseInput.vue';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
 
 defineOptions({ layout: MainLayout });
 
@@ -234,6 +248,9 @@ const props = defineProps({
 
 const toast = useToastStore();
 const authStore = useAuthStore();
+
+const totalRoles = computed(() => (props.roles?.data?.length ?? 0));
+const systemRoles = computed(() => (props.roles?.data ?? []).filter((r) => r?.is_system).length);
 
 const showCreateModal = ref(false);
 

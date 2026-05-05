@@ -1,9 +1,9 @@
 <template>
-  <div class="relative min-h-screen font-sans text-[color:var(--text-primary)]">
+  <div class="relative h-screen overflow-hidden font-sans text-[color:var(--text-primary)]">
     <!-- Vanta Background Container -->
     <div id="vanta-bg" ref="vantaRef"></div>
 
-    <div class="flex min-h-screen relative z-10">
+    <div class="flex h-full relative z-10">
       <!-- Glass Sidebar -->
       <aside 
         v-if="!isGuestRoute"
@@ -139,7 +139,7 @@
       ></div>
 
       <!-- Main Content Block -->
-      <div class="flex-1 flex flex-col min-w-0 min-h-screen relative">
+      <div class="flex-1 flex flex-col min-w-0 h-full relative">
         <!-- Unified Premium Header (Dynamic Context) -->
         <header 
           v-if="!isGuestRoute" 
@@ -273,11 +273,12 @@
         </header>
 
         <!-- Main View Area - Enhanced -->
-        <main ref="mainContentRef" class="flex-1 overflow-x-hidden pb-32 lg:pb-8" :class="{'px-4 lg:px-8 pt-2': !isGuestRoute, 'px-0 pt-0': isAttendanceHub && !isGuestRoute}">
+        <main ref="mainContentRef" class="flex-1 overflow-x-hidden overflow-y-auto pb-32 lg:pb-8" :class="{'px-4 lg:px-8 pt-2': !isGuestRoute, 'px-0 pt-0': isAttendanceHub && !isGuestRoute}">
           
            <!-- Inertia Content (Unified) -->
           <div class="h-full" :class="isBoxedLayout ? 'max-w-6xl mx-auto w-full' : ''">
-               <slot />
+                <slot />
+                <AppFooter />
           </div>
 
         </main>
@@ -353,6 +354,7 @@ import GlobalLoader from '@/Components/GlobalLoader.vue';
 import SlideOver from '@/Components/SlideOver.vue'; // Imported
 import BottomNav from '@/Components/Mobile/BottomNav.vue';
 import CheckInButton from '@/Components/CheckInButton.vue';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 import axios from 'axios';
 import { 
     CubeIcon, 

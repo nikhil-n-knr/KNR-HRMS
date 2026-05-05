@@ -49,6 +49,7 @@
 
                 <!-- Content -->
                 <slot />
+                <AppFooter />
             </div>
         </div>
     </MainLayout>
@@ -57,4 +58,5 @@
 <script setup>
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { Link } from '@inertiajs/vue3';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 </script>

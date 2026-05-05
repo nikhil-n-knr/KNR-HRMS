@@ -2,6 +2,7 @@
 import { Link } from '@inertiajs/vue3';
 import { defineProps } from 'vue';
 import MainLayout from '@/Layouts/MainLayout.vue';
+import AppFooter from '@/Components/UI/AppFooter.vue';
 
 const props = defineProps({
     title: {
@@ -69,7 +70,8 @@ const props = defineProps({
             <div :key="activeTab">
                 <slot />
             </div>
-        </Transition>
+         </Transition>
+         <AppFooter />
       </div>
     </main>
   </div>

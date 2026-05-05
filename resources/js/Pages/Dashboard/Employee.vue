@@ -1,45 +1,30 @@
 <template>
-    <div class="min-h-screen pb-24 relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-indigo-50/50 via-white to-sky-50/50">
-        <!-- Dashboard Header: Operative HUD -->
-        <header class="mb-14 px-8 pt-6 flex flex-col md:flex-row md:items-center justify-between gap-10">
-            <div class="space-y-4">
-                <div class="flex items-center gap-3 animate-fade-in">
-                    <div class="h-10 w-10 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-2xl shadow-indigo-600/30">
-                        <ActivityIcon class="w-6 h-6 text-white animate-pulse-slow" />
+    <Head title="Employee Dashboard" />
+    <div class="bg-[#f4f5fa] pb-16">
+        <GradientHeroHeader
+            kicker="Employee"
+            :title="`Hi, ${(user?.name || 'Employee').split(' ')[0]}!`"
+            subtitle="Your work, insights, and attendance at a glance."
+        >
+            <template #right>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[170px]">
+                        <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Sync</p>
+                        <p class="text-2xl font-extrabold text-white leading-none">{{ currentTime }}</p>
                     </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-600 text-xs font-black rounded-full uppercase tracking-[0.2em] border border-indigo-500/20">Operational_Pulse</span>
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-widest pl-2 border-l border-slate-200">{{ currentTime }} SYNC</span>
-                        </div>
-                        <h1 class="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
-                            Hi, {{ user.name.split(' ')[0] }}! 
-                            <span class="text-indigo-600 font-mono text-sm tracking-tighter bg-indigo-500/10 px-3 py-1 rounded-xl border border-indigo-500/20 shadow-sm">OPERATIVE</span>
-                        </h1>
+                    <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[170px]">
+                        <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Mission Capacity</p>
+                        <p class="text-3xl font-extrabold text-white leading-none">88%</p>
                     </div>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-6">
-                <!-- Advanced Performance Hub -->
-                <div class="p-4 bg-white/60 border border-white/80 rounded-[2rem] flex items-center gap-12 shadow-2xl shadow-black/5 backdrop-blur-3xl group transition-all hover:bg-white/80">
-                    <div class="flex flex-col border-r border-slate-200/60 pr-12">
-                        <span class="text-sm font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-indigo-600 transition">Mission Capacity</span>
-                        <div class="flex items-baseline gap-2">
-                             <span class="text-3xl font-black text-slate-900 tracking-tighter leading-none">88%</span>
-                             <span class="text-sm font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded shadow-sm">HIGH_IMPACT</span>
-                        </div>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-sm font-black text-slate-400 tracking-widest uppercase mb-1">Growth Index</span>
-                        <div class="flex items-center gap-3">
-                             <span class="text-3xl font-black text-indigo-600 tracking-tighter leading-none">+14%</span>
-                             <span class="text-sm font-black text-slate-400 opacity-50 uppercase tracking-widest">A+ GRADE</span>
-                        </div>
+                    <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[170px]">
+                        <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Growth Index</p>
+                        <p class="text-3xl font-extrabold text-white leading-none">+14%</p>
                     </div>
                 </div>
-            </div>
-        </header>
+            </template>
+        </GradientHeroHeader>
+
+        <div class="mx-0 sm:mx-6 mt-5">
 
         <!-- Smart Insights Row -->
         <div class="px-8 mb-10 animate-fade-in-up">
@@ -86,15 +71,18 @@
         <!-- Floating UI Elements -->
         <DashboardDock class="z-50" />
         <CommandPalette class="z-50" />
+        </div>
     </div>
 </template>
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue';
+import { Head } from '@inertiajs/vue3';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { GridLayout, GridItem } from 'grid-layout-plus';
 import axios from 'axios';
 import { ActivityIcon } from 'lucide-vue-next';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
 
 // Widgets
 import SmartInsights from '@/Components/Dashboard/Widgets/SmartInsights.vue';

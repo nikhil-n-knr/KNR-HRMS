@@ -1,46 +1,30 @@
-                                                                                                                                            <template>
-    <div class="min-h-screen pb-24 relative overflow-hidden bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-50/50 via-white to-slate-50/50">
-        <!-- Dashboard Header: Squad Control HUD -->
-        <header class="mb-14 px-8 pt-6 flex flex-col md:flex-row md:items-center justify-between gap-10">
-            <div class="space-y-4">
-                <div class="flex items-center gap-3 animate-fade-in">
-                    <div class="h-10 w-10 bg-slate-900 rounded-2xl flex items-center justify-center shadow-2xl shadow-slate-900/30">
-                        <UsersIcon class="w-6 h-6 text-emerald-500 animate-pulse-slow" />
+<template>
+    <Head title="Manager Dashboard" />
+    <div class="bg-[#f4f5fa] pb-16">
+        <GradientHeroHeader
+            kicker="Manager"
+            title="Squad Ops"
+            subtitle="Team velocity, attendance, and operational intelligence in one view."
+        >
+            <template #right>
+                <div class="flex flex-wrap items-center gap-3">
+                    <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[170px]">
+                        <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Squad Velocity</p>
+                        <p class="text-3xl font-extrabold text-white leading-none">{{ team_performance.velocity }}%</p>
                     </div>
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <span class="px-2 py-0.5 bg-slate-900/10 text-slate-900 text-xs font-black rounded-full uppercase tracking-[0.2em] border border-slate-900/20">Active_Operations</span>
-                            <span class="text-slate-400 text-xs font-bold uppercase tracking-widest pl-2 border-l border-slate-200">Team Control v4.0</span>
-                        </div>
-                        <h1 class="text-4xl font-black text-slate-900 tracking-tighter flex items-center gap-4">
-                            Squad_Ops
-                            <span class="text-emerald-600 font-mono text-sm tracking-tighter bg-emerald-500/10 px-3 py-1 rounded-xl border border-emerald-500/20 shadow-sm">L1_COMMAND</span>
-                        </h1>
+                    <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[170px]">
+                        <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Completion</p>
+                        <p class="text-3xl font-extrabold text-white leading-none">{{ overview.completion_pct || 0 }}%</p>
                     </div>
-                </div>
-            </div>
-            
-            <div class="flex items-center gap-6">
-                 <div class="p-4 bg-white/60 border border-white/80 rounded-[2rem] flex items-center gap-12 shadow-2xl shadow-black/5 backdrop-blur-3xl group transition-all hover:bg-white/80">
-                    <div class="flex flex-col border-r border-slate-200/60 pr-12">
-                        <span class="text-sm font-black text-slate-400 uppercase tracking-widest mb-1 group-hover:text-emerald-600 transition">Squad Velocity</span>
-                        <div class="flex items-baseline gap-2">
-                             <span class="text-3xl font-black text-slate-900 tracking-tighter leading-none">{{ team_performance.velocity }}%</span>
-                                <span class="text-sm font-black text-emerald-600 bg-emerald-500/10 px-1.5 py-0.5 rounded shadow-sm">{{ overview.completion_pct || 0 }}% done</span>
-                        </div>
-                    </div>
-                    <div class="flex flex-col">
-                        <span class="text-sm font-black text-slate-400 tracking-widest uppercase mb-1">Squad Presence</span>
-                        <div class="flex items-center gap-3">
-                             <span class="text-3xl font-black text-slate-900 tracking-tighter leading-none">{{ presentCount }}/{{ teamCount }}</span>
-                             <div class="flex gap-0.5">
-                                 <div v-for="i in 5" :key="i" class="w-1 h-4 bg-emerald-500 rounded-full animate-pulse" :style="{ animationDelay: `${i*150}ms` }"></div>
-                             </div>
-                        </div>
+                    <div class="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl px-6 py-4 min-w-[170px]">
+                        <p class="text-[10px] font-bold text-white/50 uppercase tracking-widest mb-1">Presence</p>
+                        <p class="text-3xl font-extrabold text-white leading-none">{{ presentCount }}/{{ teamCount }}</p>
                     </div>
                 </div>
-            </div>
-        </header>
+            </template>
+        </GradientHeroHeader>
+
+        <div class="mx-0 sm:mx-6 mt-5">
 
         <section class="px-8 mb-10 space-y-6">
             <div class="rounded-3xl border border-indigo-100 bg-gradient-to-r from-indigo-50 via-white to-cyan-50 p-5 lg:p-6 shadow-sm">
@@ -327,6 +311,7 @@
                 </div>
             </div>
         </div>
+        </div>
     </div>
 </template>
 
@@ -334,11 +319,13 @@
 import { 
     UsersIcon, CheckIcon, AlertCircleIcon, ActivityIcon, RadarIcon 
 } from 'lucide-vue-next';
+import { Head } from '@inertiajs/vue3';
 import GlassCard from '@/Components/Common/GlassCard.vue';
 import IntelligencePulse from '@/Components/Dashboard/Advanced/IntelligencePulse.vue';
 import AdvancedAnalytics from '@/Components/Dashboard/Advanced/AdvancedAnalytics.vue';
 import MainLayout from '@/Layouts/MainLayout.vue';
 import { computed } from 'vue';
+import GradientHeroHeader from '@/Components/UI/GradientHeroHeader.vue';
 
 defineOptions({ layout: MainLayout });
 
