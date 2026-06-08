@@ -147,11 +147,11 @@
                                     <td class="sticky left-0 z-10 bg-white px-6 py-4 whitespace-nowrap shadow-sm">
                                         <div class="flex items-center">
                                             <div class="flex-shrink-0 h-8 w-8 rounded-full bg-gray-200 flex items-center justify-center text-xs font-bold text-gray-600">
-                                                {{ slip.employee?.user?.name.charAt(0) }}
+                                                {{ slip.employee?.user?.name ? slip.employee.user.name.charAt(0) : 'E' }}
                                             </div>
                                             <div class="ml-4">
-                                                <div class="text-sm font-medium text-gray-900">{{ slip.employee?.user?.name }}</div>
-                                                <div class="text-xs text-gray-500">{{ slip.employee?.employee_id }}</div>
+                                                <div class="text-sm font-medium text-gray-900">{{ slip.employee?.user?.name || 'Unknown Employee' }}</div>
+                                                <div class="text-xs text-gray-500">{{ slip.employee?.employee_id || 'N/A' }}</div>
                                             </div>
                                         </div>
                                     </td>
@@ -367,8 +367,8 @@ const filteredPayslips = computed(() => {
     if (!searchQuery.value) return props.payslips;
     const q = searchQuery.value.toLowerCase();
     return props.payslips.filter(p => 
-        p.employee?.user?.name.toLowerCase().includes(q) || 
-        p.employee?.employee_id.toLowerCase().includes(q)
+        (p.employee?.user?.name || '').toLowerCase().includes(q) || 
+        (p.employee?.employee_id || '').toLowerCase().includes(q)
     );
 });
 

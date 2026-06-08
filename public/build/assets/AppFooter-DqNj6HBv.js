@@ -1,0 +1,1 @@
+import{o as t,c as s,b as r,t as o,u as a}from"./app-kuB4sYx8.js";const c={class:"w-full pt-10 pb-6"},n={class:"text-center text-xs sm:text-sm text-slate-400 font-semibold"},m={__name:"AppFooter",setup(l){const e=new Date().getFullYear();return(_,p)=>(t(),s("footer",c,[r("div",n," © "+o(a(e))+" PiSparrow. All rights reserved. ",1)]))}};export{m as _};

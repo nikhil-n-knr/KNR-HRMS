@@ -7,7 +7,7 @@
                     <i class="fas fa-layer-group text-white text-base"></i>
                 </div>
                 <div>
-                    <h1 class="text-base font-black tracking-wider text-gray-900 leading-none">KNR Office</h1>
+                    <h1 class="text-base font-black tracking-wider text-gray-900 leading-none">OneHub Connect</h1>
                     <p class="text-xs font-bold text-gray-400 uppercase tracking-widest mt-0.5">CMS Engine 6.0</p>
                 </div>
             </div>

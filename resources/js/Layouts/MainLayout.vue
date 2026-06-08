@@ -18,12 +18,12 @@
            <Link :href="route('dashboard')" class="flex w-full items-center justify-center">
              <div class="flex flex-col items-center text-center">
                <img 
-                 src="https://knrint-website.blr1.digitaloceanspaces.com/KNR-WEBSITE/2026/site_logo/KNR-WEBSITE_f817360c-0c15-4992-bc1b-4df24f071612_KNR-Logo.png"
-                 alt="KNR Logo"
+                 src="https://pisparrow.com/logo/logo.png"
+                 alt="PiSparrow Logo"
                  class="h-8 w-auto sm:h-9 lg:h-10 object-contain"
                >
                <span v-show="isSidebarOpen" class="mt-1 text-[11px] sm:text-[12px] font-black tracking-tight text-emerald-800">
-                 OPSCORE
+                 OneHub Connect
                </span>
              </div>
            </Link>
@@ -552,6 +552,7 @@ const getRouteForModule = (key) => {
         'crm': '/admin/crm/hub',
         'compliance': '/hr/compliance',
         'cms': '/cms/hub',
+        'lms': '/hr/lms',
         'family': currentContext.value === 'admin' ? route('admin.employees.reports.family') : (profileUrl.value + '?tab=family'),
         'documents': currentContext.value === 'admin' ? route('admin.employees.reports.documents') : (profileUrl.value + '?tab=documents'),
         'history': currentContext.value === 'admin' ? route('admin.employees.reports.history') : (profileUrl.value + '?tab=history'),
@@ -634,6 +635,11 @@ const getRouteForSubModule = (modKey, subKey) => {
                  if (subKey === 'apply') return '/leave-management?tab=my_leaves'; 
                  if (subKey === 'restricted') return '/leave-management?tab=restricted'; 
             }
+        }
+        if (modKey === 'lms') {
+             if (subKey === 'my_courses') return '/lms/my-courses';
+             if (subKey === 'courses') return '/hr/lms';
+             if (subKey === 'questions') return '/hr/lms/questions';
         }
     } catch (e) {
         return '#';

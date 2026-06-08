@@ -1,1 +1,0 @@
-import{L as a,k as i}from"./app-BSSC7_v8.js";const v=a("toast",()=>{const e=i([]),o=(s,t="success",c=3e3)=>{const n=Date.now();e.value.push({id:n,message:s,type:t}),setTimeout(()=>{r(n)},c)},r=s=>{e.value=e.value.filter(t=>t.id!==s)};return{toasts:e,add:o,remove:r,success:s=>o(s,"success"),error:s=>o(s,"error"),info:s=>o(s,"info"),warning:s=>o(s,"warning")}});export{v as u};

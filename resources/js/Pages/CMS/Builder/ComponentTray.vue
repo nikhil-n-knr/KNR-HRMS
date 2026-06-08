@@ -156,9 +156,9 @@ const blockCatalog = [
     { id:'m2', category:'Media', cat:'media', name:'Autoplay Video Section', type:'video', icon:'fas fa-film', iconColor:'#6366f1', previewBg:'#eef2ff', defaults:{ styles:{paddingY:80}, content:{title:'See It In Action',video_url:'',autoplay:true} } },
 
     // Nav / Footer
-    { id:'n1', category:'Nav / Footer', cat:'nav', name:'Sticky Top Navbar', type:'navbar', icon:'fas fa-bars', iconColor:'#374151', previewBg:'#f9fafb', defaults:{ styles:{bgColor:'#ffffff'}, content:{logo_text:'KNR Office',links:[{label:'Features',href:'#'},{label:'Pricing',href:'#'},{label:'Contact',href:'#'}],btn_text:'Get Started',btn_link:'#'} } },
-    { id:'n2', category:'Nav / Footer', cat:'nav', name:'Mega Footer', type:'footer', icon:'fas fa-shoe-prints', iconColor:'#64748b', previewBg:'#0f172a', defaults:{ styles:{bgColor:'#0f172a',textColor:'#94a3b8'}, content:{logo_text:'KNR Office',tagline:'Built for growing teams.',columns:[{heading:'Product',links:[]},{heading:'Company',links:[]},{heading:'Legal',links:[]}],socials:[{icon:'fab fa-twitter',url:'#'},{icon:'fab fa-linkedin',url:'#'}]} } },
-    { id:'n3', category:'Nav / Footer', cat:'nav', name:'Simple Footer Strip', type:'footer', icon:'fas fa-minus', iconColor:'#9ca3af', previewBg:'#f9fafb', defaults:{ styles:{bgColor:'#f9fafb',paddingY:24}, content:{layout:'simple',copyright:'© 2026 KNR Office. All rights reserved.'} } },
+    { id:'n1', category:'Nav / Footer', cat:'nav', name:'Sticky Top Navbar', type:'navbar', icon:'fas fa-bars', iconColor:'#374151', previewBg:'#f9fafb', defaults:{ styles:{bgColor:'#ffffff'}, content:{logo_text:'OneHub Connect',links:[{label:'Features',href:'#'},{label:'Pricing',href:'#'},{label:'Contact',href:'#'}],btn_text:'Get Started',btn_link:'#'} } },
+    { id:'n2', category:'Nav / Footer', cat:'nav', name:'Mega Footer', type:'footer', icon:'fas fa-shoe-prints', iconColor:'#64748b', previewBg:'#0f172a', defaults:{ styles:{bgColor:'#0f172a',textColor:'#94a3b8'}, content:{logo_text:'OneHub Connect',tagline:'Built for growing teams.',columns:[{heading:'Product',links:[]},{heading:'Company',links:[]},{heading:'Legal',links:[]}],socials:[{icon:'fab fa-twitter',url:'#'},{icon:'fab fa-linkedin',url:'#'}]} } },
+    { id:'n3', category:'Nav / Footer', cat:'nav', name:'Simple Footer Strip', type:'footer', icon:'fas fa-minus', iconColor:'#9ca3af', previewBg:'#f9fafb', defaults:{ styles:{bgColor:'#f9fafb',paddingY:24}, content:{layout:'simple',copyright:'© 2026 OneHub Connect. All rights reserved.'} } },
 ];
 
 const filteredGroups = computed(() => {

@@ -50,6 +50,12 @@ class NavigationController extends Controller
             'security_identity' => ['Super Admin', 'Security Manager'],
             'cms' => ['Super Admin'],
             'advanced_lms' => ['Super Admin'],
+            
+            // Basic LMS
+            'lms' => ['Super Admin', 'Admin', 'HR', 'Manager', 'Employee'],
+            'lms.my_courses' => ['Super Admin', 'Admin', 'HR', 'Manager', 'Employee'],
+            'lms.courses' => ['Super Admin', 'Admin', 'HR', 'Manager'],
+            'lms.questions' => ['Super Admin', 'Admin', 'HR', 'Manager'],
         ];
 
         // Fetch Modules from DB with Submodules
@@ -144,20 +150,29 @@ class NavigationController extends Controller
 
                     // Fallback to route field in DB
                     if (!$resolvedRoute && !empty($sub->route)) {
-                        if (str_starts_with($sub->route, '/')) {
-                            $resolvedRoute = url($sub->route);
-                        } else if (\Illuminate\Support\Facades\Route::has($sub->route)) {
+                        $routeStr = $sub->route;
+                        if (str_ends_with($routeStr, '.standalone')) {
+                            $routeStr = str_replace('.standalone', '', $routeStr);
+                            if ($routeStr === 'bugs.overview') $routeStr = 'bugs.index';
+                            if ($routeStr === 'bugs.deployments') $routeStr = 'bugs.deployments.index';
+                            if ($routeStr === 'bugs.time_allocation') $routeStr = 'bugs.index';
+                            if ($routeStr === 'bugs.time_tracker') $routeStr = 'bugs.index';
+                        }
+
+                        if (str_starts_with($routeStr, '/')) {
+                            $resolvedRoute = url($routeStr);
+                        } else if (\Illuminate\Support\Facades\Route::has($routeStr)) {
                             try {
-                                $resolvedRoute = route($sub->route);
+                                $resolvedRoute = route($routeStr);
                             } catch (\Symfony\Component\Routing\Exception\RouteNotFoundException $e) {
-                                $resolvedRoute = $sub->route;
+                                $resolvedRoute = $routeStr;
                             } catch (\Exception $e) {
-                                $resolvedRoute = $sub->route;
+                                $resolvedRoute = $routeStr;
                             }
                         } else {
                             try {
                                 // Sometimes the route name exists but Route::has fails for dynamic setups
-                                $resolvedRoute = route($sub->route);
+                                $resolvedRoute = route($routeStr);
                             } catch (\Symfony\Component\Routing\Exception\RouteNotFoundException $e) {
                                 $resolvedRoute = '#'; // Safe fallback
                             } catch (\Exception $e) {

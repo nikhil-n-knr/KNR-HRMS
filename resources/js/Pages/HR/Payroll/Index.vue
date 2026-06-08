@@ -6,6 +6,7 @@ import PayrollStepper from './Components/PayrollStepper.vue';
 import BaseChart from '@/Components/BaseChart.vue';
 import dayjs from 'dayjs';
 import axios from 'axios';
+import Modal from '@/Components/Modal.vue';
 
 const props = defineProps({
     payrolls: Array,
@@ -117,54 +118,47 @@ const downloadSampleCsv = () => {
 };
 
 const showRecalculateOption = ref(false);
+const showConfirmModal = ref(false);
+const isRecalculationConfirm = ref(false);
+const confirmError = ref('');
 
-const runPayroll = (options = {}) => {
-    try {
-        const recalculate = options.recalculate || false;
-        
-        // Skip confirm if recalculating (we show a different confirm below)
-        if (!recalculate) {
-             const monthObj = months.find(m => m.value == form.value.month);
-             const monthLabel = monthObj ? monthObj.label : 'Current Month';
-             if (!confirm(`Are you sure you want to start payroll processing for ${monthLabel} ${form.value.year}?`)) return;
-        } else {
-             if (!confirm(`Warning: This will DELETE the existing draft and all manual changes. Continue?`)) return;
-        }
-        
-        processing.value = true;
-        showRecalculateOption.value = false; // Reset
+const triggerRunPayroll = (options = {}) => {
+    confirmError.value = '';
+    isRecalculationConfirm.value = options.recalculate || false;
+    showConfirmModal.value = true;
+};
 
-        router.post(route('hr.payroll.store'), {
-            month: form.value.month,
-            year: form.value.year,
-            ignore_warnings: ignoreWarnings.value,
-            recalculate: recalculate
-        }, {
-            onSuccess: (page) => {
-                processing.value = false; // Stop spinner
-                // URL watcher will pick up the new step
-            },
-            onError: (errors) => {
-                console.error(errors);
-                processing.value = false;
-                let msg = errors.message || Object.values(errors).join('\n') || 'Unknown Error';
-                
-                // Check if specific error
-                if (msg.includes('already exists') || msg.includes('Already exists')) {
-                    showRecalculateOption.value = true;
-                }
-                
-                // Don't alert if we are showing the custom UI for recalculate
-                if (!showRecalculateOption.value) {
-                     alert('Failed to start payroll:\n' + msg);
-                }
+const confirmRunPayroll = () => {
+    const recalculate = isRecalculationConfirm.value;
+    
+    processing.value = true;
+    showRecalculateOption.value = false; // Reset
+    confirmError.value = '';
+
+    router.post(route('hr.payroll.store'), {
+        month: form.value.month,
+        year: form.value.year,
+        ignore_warnings: ignoreWarnings.value,
+        recalculate: recalculate
+    }, {
+        onSuccess: (page) => {
+            processing.value = false; // Stop spinner
+            showConfirmModal.value = false;
+        },
+        onError: (errors) => {
+            console.error(errors);
+            processing.value = false;
+            let msg = errors.message || Object.values(errors).join('\n') || 'Unknown Error';
+            
+            // Check if specific error
+            if (msg.includes('already exists') || msg.includes('Already exists')) {
+                showRecalculateOption.value = true;
+                showConfirmModal.value = false;
+            } else {
+                confirmError.value = msg;
             }
-        });
-    } catch (e) {
-        console.error(e);
-        alert('Client-side Error: ' + e.message);
-        processing.value = false;
-    }
+        }
+    });
 };
 
 const deletePayroll = (payroll) => {
@@ -197,19 +191,19 @@ const unpublishPayroll = (payroll) => {
         </template>
 
         <template #actions>
-             <Link :href="route('hr.finance.hub')" class="text-sm font-medium text-gray-500 hover:text-gray-800 mr-4">
+             <Link :href="route('hr.finance.hub')" class="text-sm font-semibold text-white bg-white/10 hover:bg-white/20 px-3 py-2 rounded-xl border border-white/20 transition-all shadow-sm">
                 &larr; Back to Hub
              </Link>
-             <Link :href="route('hr.payroll.bulk')" class="text-sm font-medium text-indigo-600 hover:text-indigo-800 mr-4 bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100">
+             <Link :href="route('hr.payroll.bulk')" class="text-sm font-semibold text-slate-900 bg-white px-3 py-2 rounded-xl border border-slate-200 hover:bg-slate-100 transition-all shadow-sm">
                 Bulk Salary Update
              </Link>
-             <button v-if="activeTab === 'runs'" @click="router.visit('?tab=wizard')" class="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 shadow-sm font-medium">
+             <button v-if="activeTab === 'runs'" @click="router.visit('?tab=wizard')" class="px-3 py-2 bg-white text-slate-900 rounded-xl hover:bg-slate-50 shadow-lg font-semibold transition-all">
                 + New Run
              </button>
         </template>
 
         <!-- Tab: Runs (History) -->
-        <div v-if="activeTab === 'runs'" class="space-y-6">
+<div v-if="activeTab === 'runs'" class="space-y-6">
             <!-- Stats -->
             <div class="grid grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 <div class="bg-white/60 backdrop-blur-xl rounded-2xl p-5 md:p-6 border border-gray-200 shadow-sm relative overflow-hidden group hover:shadow-md transition-all">
@@ -239,8 +233,8 @@ const unpublishPayroll = (payroll) => {
             </div>
 
             <!-- List -->
-            <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 overflow-hidden">
-                <div class="px-6 py-5 border-b border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div class="px-6 py-5 border-b border-gray-100 bg-blue-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                         <h3 class="text-lg font-black text-slate-900 tracking-tight">
                             {{ formFilters.trashed ? 'Deleted Payroll Runs' : 'Payroll Batches' }}
@@ -292,67 +286,200 @@ const unpublishPayroll = (payroll) => {
                     <div v-if="!payrolls || payrolls.length === 0" class="p-12 text-center text-gray-400 italic text-sm">No payroll records found.</div>
                 </div>
 
-                <!-- Desktop View -->
-                <div class="hidden md:block overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100">
-                        <thead class="bg-gray-50/50">
-                            <tr>
-                                <th class="px-6 py-4 text-left text-sm font-black text-gray-400 uppercase tracking-widest">Batch details</th>
-                                <th class="px-6 py-4 text-left text-sm font-black text-gray-400 uppercase tracking-widest">Processing Period</th>
-                                <th class="px-6 py-4 text-left text-sm font-black text-gray-400 uppercase tracking-widest">Total Net Payout</th>
-                                <th class="px-6 py-4 text-left text-sm font-black text-gray-400 uppercase tracking-widest">Status</th>
-                                <th class="relative px-6 py-4"><span class="sr-only">Actions</span></th>
-                            </tr>
-                        </thead>
-                        <tbody class="bg-white divide-y divide-gray-50">
-                             <tr v-for="payroll in payrolls" :key="payroll.id" class="hover:bg-indigo-50/30 transition-colors group">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm font-black text-slate-800">{{ payroll.batch_name }}</div>
-                                    <div class="text-sm text-gray-400 font-bold uppercase tracking-tighter">BCH-{{ payroll.id.toString().padStart(4, '0') }}</div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium tracking-tight">
-                                    {{ formatDate(payroll.start_date) }} - {{ formatDate(payroll.end_date) }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm font-black text-slate-900 tracking-tight">{{ formatCurrency(payroll.total_payout) }}</td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-3 py-1 text-sm rounded-full font-black uppercase tracking-widest shadow-sm"
-                                          :class="{
-                                              'bg-emerald-100 text-emerald-800': payroll.status === 'Published',
-                                              'bg-amber-100 text-amber-800': payroll.status === 'Draft' || payroll.status === 'Approved',
-                                              'bg-indigo-100 text-indigo-800': payroll.status === 'Processing'
-                                          }">
-                                        {{ payroll.status }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 text-right text-sm">
-                                    <div class="flex items-center justify-end space-x-2">
-                                        <Link v-if="!formFilters.trashed" :href="route('hr.payroll.show', payroll.id)" class="p-2 text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all" title="View Details">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                                        </Link>
-                                        
-                                        <button v-if="!formFilters.trashed && payroll.status === 'Published'" @click="unpublishPayroll(payroll)" class="p-2 text-amber-600 hover:bg-amber-50 rounded-xl transition-all" title="Unpublish">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" /></svg>
-                                        </button>
-    
-                                        <button v-if="!formFilters.trashed" @click="deletePayroll(payroll)" class="p-2 text-red-600 hover:bg-red-50 rounded-xl transition-all" title="Delete Run">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                                        </button>
-    
-                                        <button v-else @click="restorePayroll(payroll)" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-emerald-100 hover:bg-emerald-700 transition-all flex items-center gap-1" title="Restore Run">
-                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
-                                            Restore
-                                        </button>
-                                    </div>
-                                </td>
-                             </tr>
-                             <tr v-if="!payrolls || payrolls.length === 0">
-                                 <td colspan="5" class="px-6 py-12 text-center text-gray-400 italic text-sm">No history found. Start a new run.</td>
-                             </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                <!-- Desktop View --><!-- Desktop View -->
+<div class="hidden md:block bg-white rounded-b-2xl border-t border-gray-100">
+
+    <!-- Scroll Container -->
+    <div class="max-h-[500px] overflow-y-auto">
+
+        <table class="w-full min-w-full divide-y divide-gray-100">
+
+            <!-- Sticky Header -->
+            <thead class="bg-blue-50 sticky top-0 z-10 shadow-sm">
+                <tr>
+                    <th class="px-6 py-4 text-left text-xs font-black text-blue-900 uppercase tracking-widest">
+                        Batch details
+                    </th>
+
+                    <th class="px-6 py-4 text-left text-xs font-black text-blue-900 uppercase tracking-widest">
+                        Processing Period
+                    </th>
+
+                    <th class="px-6 py-4 text-left text-xs font-black text-blue-900 uppercase tracking-widest">
+                        Total Net Payout
+                    </th>
+
+                    <th class="px-6 py-4 text-left text-xs font-black text-blue-900 uppercase tracking-widest">
+                        Status
+                    </th>
+
+                    <th class="relative px-6 py-4">
+                        <span class="sr-only">Actions</span>
+                    </th>
+                </tr>
+            </thead>
+
+            <tbody class="bg-white divide-y divide-gray-50">
+                <tr
+                    v-for="payroll in payrolls"
+                    :key="payroll.id"
+                    class="hover:bg-indigo-50/30 transition-colors group"
+                >
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <div class="text-sm font-black text-slate-800">
+                            {{ payroll.batch_name }}
+                        </div>
+
+                        <div class="text-sm text-gray-400 font-bold uppercase tracking-tighter">
+                            BCH-{{ payroll.id.toString().padStart(4, '0') }}
+                        </div>
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 font-medium tracking-tight">
+                        {{ formatDate(payroll.start_date) }} -
+                        {{ formatDate(payroll.end_date) }}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-black text-slate-900 tracking-tight">
+                        {{ formatCurrency(payroll.total_payout) }}
+                    </td>
+
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span
+                            class="px-3 py-1 text-sm rounded-full font-black uppercase tracking-widest shadow-sm"
+                            :class="{
+                                'bg-emerald-100 text-emerald-800': payroll.status === 'Published',
+                                'bg-amber-100 text-amber-800': payroll.status === 'Draft' || payroll.status === 'Approved',
+                                'bg-indigo-100 text-indigo-800': payroll.status === 'Processing'
+                            }"
+                        >
+                            {{ payroll.status }}
+                        </span>
+                    </td>
+
+                <td class="px-6 py-4 text-right text-sm">
+    <div class="flex items-center justify-end gap-2">
+
+        <!-- View / Eye Button -->
+        <Link
+            v-if="!formFilters.trashed"
+            :href="route('hr.payroll.show', payroll.id)"
+            class="p-2.5 bg-white border border-gray-200 text-indigo-600 rounded-xl hover:bg-indigo-50 transition-all shadow-sm"
+            title="View Payroll"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 class="h-5 w-5"
+                 fill="none"
+                 viewBox="0 0 24 24"
+                 stroke="currentColor">
+                <path stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5
+                         c4.478 0 8.268 2.943 9.542 7
+                         -1.274 4.057-5.064 7-9.542 7
+                         -4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+        </Link>
+
+        <!-- Unpublish -->
+        <button
+            v-if="!formFilters.trashed && payroll.status === 'Published'"
+            @click="unpublishPayroll(payroll)"
+            class="p-2.5 bg-white border border-gray-200 text-amber-600 rounded-xl hover:bg-amber-50 transition-all shadow-sm"
+            title="Unpublish"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 class="h-5 w-5"
+                 fill="none"
+                 viewBox="0 0 24 24"
+                 stroke="currentColor">
+                <path stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M13.875 18.825A10.05 10.05 0 0112 19
+                         c-4.478 0-8.268-2.943-9.543-7
+                         a9.97 9.97 0 011.563-3.029
+                         m5.858.908a3 3 0 114.243 4.243
+                         M9.878 9.878l4.242 4.242
+                         M9.88 9.88l-3.29-3.29
+                         m7.532 7.532l3.29 3.29
+                         M3 3l3.59 3.59
+                         m0 0A9.953 9.953 0 0112 5
+                         c4.478 0 8.268 2.943 9.543 7
+                         a10.025 10.025 0 01-4.132 5.411
+                         m0 0L21 21" />
+            </svg>
+        </button>
+
+        <!-- Delete -->
+        <button
+            v-if="!formFilters.trashed"
+            @click="deletePayroll(payroll)"
+            class="p-2.5 bg-white border border-gray-200 text-red-600 rounded-xl hover:bg-red-50 transition-all shadow-sm"
+            title="Delete"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 class="h-5 w-5"
+                 fill="none"
+                 viewBox="0 0 24 24"
+                 stroke="currentColor">
+                <path stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M19 7l-.867 12.142
+                         A2 2 0 0116.138 21H7.862
+                         a2 2 0 01-1.995-1.858L5 7
+                         m5 4v6m4-6v6
+                         m1-10V4a1 1 0 00-1-1h-4
+                         a1 1 0 00-1 1v3M4 7h16" />
+            </svg>
+        </button>
+
+        <!-- Restore -->
+        <button
+            v-if="formFilters.trashed"
+            @click="restorePayroll(payroll)"
+            class="p-2.5 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-all shadow-sm"
+            title="Restore"
+        >
+            <svg xmlns="http://www.w3.org/2000/svg"
+                 class="h-5 w-5"
+                 fill="none"
+                 viewBox="0 0 24 24"
+                 stroke="currentColor">
+                <path stroke-linecap="round"
+                      stroke-linejoin="round"
+                      stroke-width="2"
+                      d="M4 4v5h.582
+                         m15.356 2A8.001 8.001 0 004.582 9
+                         m0 0H9m11 11v-5h-.581
+                         m0 0a8.003 8.003 0 01-15.357-2
+                         m15.357 2H15" />
+            </svg>
+        </button>
+
+    </div>
+</td>
+                </tr>
+
+                <tr v-if="!payrolls || payrolls.length === 0">
+                    <td colspan="5" class="px-6 py-12 text-center text-gray-400 italic text-sm">
+                        No history found. Start a new run.
+                    </td>
+                </tr>
+            </tbody>
+
+        </table>
+
+    </div>
+</div>
         </div>
+        </div>  
 
         <!-- Tab: Wizard -->
         <div v-if="activeTab === 'wizard'" class="space-y-8 animate-fade-in">
@@ -456,7 +583,6 @@ const unpublishPayroll = (payroll) => {
                         </div>
                         
                         <div v-if="!processing">
-                            <h3 class="text-lg font-bold text-gray-800">Ready to Process</h3>
                             <p class="text-gray-500">
                                 This will run the payroll engine for <span class="font-bold text-gray-800">{{ syncData?.total_employees || 'all' }} employees</span>.
                                 <br>Updates tax slabs, PF, ESI, and integrates variable pay.
@@ -467,7 +593,7 @@ const unpublishPayroll = (payroll) => {
                                 <label for="ignore" class="text-sm text-gray-600">Ignore {{ syncData.pending_leaves }} pending leave warnings and proceed</label>
                             </div>
 
-                            <button @click="runPayroll" class="mt-6 px-8 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-bold shadow-lg transition-transform hover:scale-105">
+                            <button @click="triggerRunPayroll({ recalculate: false })" class="mt-6 px-8 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 font-bold shadow-lg transition-transform hover:scale-105">
                                 Start Calculation
                             </button>
                             
@@ -476,7 +602,7 @@ const unpublishPayroll = (payroll) => {
                                 <p class="font-bold text-amber-800">Payroll Draft Already Exists!</p>
                                 <p class="text-sm text-amber-700 mt-1">A draft for this month was found. Do you want to wipe it and start fresh?</p>
                                 <div class="mt-3">
-                                    <button @click="runPayroll({ recalculate: true })" class="px-4 py-2 bg-amber-600 text-white text-sm font-bold rounded shadow hover:bg-amber-700">
+                                    <button @click="triggerRunPayroll({ recalculate: true })" class="px-4 py-2 bg-amber-600 text-white text-sm font-bold rounded shadow hover:bg-amber-700">
                                         Yes, Recalculate
                                     </button>
                                 </div>
@@ -553,7 +679,7 @@ const unpublishPayroll = (payroll) => {
                 </div>
             </div>
 
-            <div class="bg-white/80 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 overflow-hidden">
+            <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
                 <!-- Mobile Card View -->
                 <div class="block md:hidden">
                     <div v-for="payroll in payrolls.filter(p => ['Paid', 'Published'].includes(p.status))" :key="payroll.id" class="p-4 border-b border-gray-100 last:border-0">
@@ -572,14 +698,14 @@ const unpublishPayroll = (payroll) => {
                 </div>
 
                 <!-- Desktop Table -->
-                <div class="hidden md:block">
+                <div class="hidden md:block overflow-x-auto bg-white rounded-b-2xl border-t border-gray-100">
                     <table class="min-w-full divide-y divide-gray-100">
-                        <thead class="bg-gray-50/50">
+                        <thead class="bg-blue-50">
                             <tr>
-                                <th class="px-6 py-4 text-left text-sm font-black text-gray-400 uppercase tracking-widest">Batch name</th>
-                                <th class="px-6 py-4 text-left text-sm font-black text-gray-400 uppercase tracking-widest">Generation Date</th>
-                                <th class="px-6 py-4 text-left text-sm font-black text-gray-400 uppercase tracking-widest">Released Amount</th>
-                                <th class="px-6 py-4 text-right text-sm font-black text-gray-400 uppercase tracking-widest">Action</th>
+                                <th class="px-6 py-4 text-left text-xs font-black text-blue-900 uppercase tracking-widest">Batch name</th>
+                                <th class="px-6 py-4 text-left text-xs font-black text-blue-900 uppercase tracking-widest">Generation Date</th>
+                                <th class="px-6 py-4 text-left text-xs font-black text-blue-900 uppercase tracking-widest">Released Amount</th>
+                                <th class="px-6 py-4 text-right text-xs font-black text-blue-900 uppercase tracking-widest">Action</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-50">
@@ -621,65 +747,169 @@ const unpublishPayroll = (payroll) => {
             </div>
         </div>
 
-        <div v-if="activeTab === 'settings'" class="max-w-4xl mx-auto space-y-6">
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">Payroll Configuration</h3>
-                
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Pay Schedule</label>
-                        <select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <option>Monthly (Default)</option>
-                            <option>Bi-Weekly</option>
-                        </select>
-                        <p class="mt-1 text-xs text-gray-500">Only Monthly is supported in Phase 1.</p>
-                    </div>
+       <div v-if="activeTab === 'settings'" class="max-w-4xl mx-auto space-y-6">
 
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700">Payout Date</label>
-                        <select class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm">
-                            <option>Last Working Day</option>
-                            <option>1st of Next Month</option>
-                            <option>5th of Next Month</option>
-                            <option>10th of Next Month</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
+    <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+        
+        <div class="px-6 py-5 border-b border-gray-100 bg-blue-50">
+            <h3 class="text-lg font-black text-slate-900 tracking-tight">
+                Payroll Configuration
+            </h3>
+        </div>
 
-            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h3 class="text-lg font-bold text-gray-800 mb-4">Statutory & Compliance</h3>
-                
-                <div class="space-y-4">
-                    <div class="flex items-center justify-between py-3 border-b border-gray-100">
-                        <div>
-                            <p class="text-sm font-medium text-gray-900">Provident Fund (PF)</p>
-                            <p class="text-xs text-gray-500">12% Employee Contribution (Capped at 15k)</p>
-                        </div>
-                         <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Edit Rules</button>
-                    </div>
-                     <div class="flex items-center justify-between py-3 border-b border-gray-100">
-                        <div>
-                            <p class="text-sm font-medium text-gray-900">ESI (Employee State Insurance)</p>
-                            <p class="text-xs text-gray-500">0.75% Employee Contribution (Gross &le; 21k)</p>
-                        </div>
-                         <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Edit Rules</button>
-                    </div>
-                     <div class="flex items-center justify-between py-3 border-b border-gray-100">
-                        <div>
-                            <p class="text-sm font-medium text-gray-900">Professional Tax (PT)</p>
-                            <p class="text-xs text-gray-500">State-wise Slab Logic (Karnataka, Maharashtra, etc.)</p>
-                        </div>
-                         <button class="text-indigo-600 hover:text-indigo-800 text-sm font-medium">Edit Rules</button>
-                    </div>
+        <div class="p-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 hover:shadow-sm transition-all">
+                    <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-3">
+                        Pay Schedule
+                    </label>
+
+                    <select class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <option>Monthly (Default)</option>
+                        <option>Bi-Weekly</option>
+                    </select>
+
+                    <p class="mt-3 text-xs text-gray-500">
+                        Only Monthly is supported in Phase 1.
+                    </p>
                 </div>
-            </div>
-             <div class="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                <p class="text-sm text-yellow-800">
-                    <strong>Note:</strong> Advanced tax slab configuration is handled via the separate "Tax Engine" module.
-                </p>
+
+                <div class="bg-gray-50 border border-gray-100 rounded-2xl p-5 hover:shadow-sm transition-all">
+                    <label class="block text-xs font-black uppercase tracking-widest text-gray-500 mb-3">
+                        Payout Date
+                    </label>
+
+                    <select class="mt-1 block w-full rounded-xl border-gray-200 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-sm">
+                        <option>Last Working Day</option>
+                        <option>1st of Next Month</option>
+                        <option>5th of Next Month</option>
+                        <option>10th of Next Month</option>
+                    </select>
+                </div>
+
             </div>
         </div>
+    </div>
+
+    <div class="bg-white/80 backdrop-blur-xl rounded-3xl shadow-sm border border-gray-200 overflow-hidden">
+
+        <div class="px-6 py-5 border-b border-gray-100 bg-emerald-50">
+            <h3 class="text-lg font-black text-slate-900 tracking-tight">
+                Statutory & Compliance
+            </h3>
+        </div>
+
+        <div class="p-6 space-y-4">
+
+            <div class="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 hover:bg-indigo-50/40 transition-all">
+                <div>
+                    <p class="text-sm font-black text-slate-900">
+                        Provident Fund (PF)
+                    </p>
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        12% Employee Contribution (Capped at 15k)
+                    </p>
+                </div>
+
+                <button class="px-4 py-2 rounded-xl bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-600 hover:text-white text-xs font-black uppercase tracking-widest transition-all shadow-sm">
+                    Edit Rules
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 hover:bg-emerald-50/40 transition-all">
+                <div>
+                    <p class="text-sm font-black text-slate-900">
+                        ESI (Employee State Insurance)
+                    </p>
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        0.75% Employee Contribution (Gross ≤ 21k)
+                    </p>
+                </div>
+
+                <button class="px-4 py-2 rounded-xl bg-white border border-emerald-200 text-emerald-600 hover:bg-emerald-600 hover:text-white text-xs font-black uppercase tracking-widest transition-all shadow-sm">
+                    Edit Rules
+                </button>
+            </div>
+
+            <div class="flex items-center justify-between bg-gray-50 border border-gray-100 rounded-2xl px-5 py-4 hover:bg-amber-50/40 transition-all">
+                <div>
+                    <p class="text-sm font-black text-slate-900">
+                        Professional Tax (PT)
+                    </p>
+
+                    <p class="text-xs text-gray-500 mt-1">
+                        State-wise Slab Logic (Karnataka, Maharashtra, etc.)
+                    </p>
+                </div>
+
+                <button class="px-4 py-2 rounded-xl bg-white border border-amber-200 text-amber-600 hover:bg-amber-600 hover:text-white text-xs font-black uppercase tracking-widest transition-all shadow-sm">
+                    Edit Rules
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-5 shadow-sm">
+        <p class="text-sm text-yellow-800">
+            <strong>Note:</strong> Advanced tax slab configuration is handled via the separate "Tax Engine" module.
+        </p>
+    </div>
+</div>
+
+    <!-- Confirmation Modal -->
+    <Modal :show="showConfirmModal" @close="showConfirmModal = false">
+        <div class="p-6">
+            <h2 class="text-xl font-bold text-slate-900 mb-4">
+                {{ isRecalculationConfirm ? 'Recalculate Payroll' : 'Calculate Payroll' }}
+            </h2>
+            
+            <div v-if="!isRecalculationConfirm" class="text-sm text-slate-600 space-y-3">
+                <p>
+                    You are about to start the payroll generation engine for 
+                    <span class="font-bold text-slate-800">{{ months.find(m => m.value == form.month)?.label }} {{ form.year }}</span>.
+                </p>
+                <p>
+                    This will calculate PF, ESI, TDS, and other statutory elements for 
+                    <span class="font-bold text-slate-800">{{ syncData?.total_employees || 'all' }} active employees</span>.
+                </p>
+            </div>
+            <div v-else class="text-sm text-slate-600 space-y-3">
+                <p class="text-amber-700 font-semibold bg-amber-50 p-3 rounded-lg border border-amber-100">
+                    ⚠️ Warning: A payroll draft for {{ months.find(m => m.value == form.month)?.label }} {{ form.year }} already exists.
+                </p>
+                <p>
+                    Wiping and recalculating will <span class="font-bold text-red-600">DELETE</span> the existing draft and all manual adjustments made to individual payslips. This action cannot be undone.
+                </p>
+            </div>
+
+            <div v-if="confirmError" class="mt-4 text-xs font-semibold text-red-600 bg-red-50 p-2.5 rounded-lg border border-red-100">
+                {{ confirmError }}
+            </div>
+
+            <div class="mt-6 flex justify-end gap-3">
+                <button 
+                    @click="showConfirmModal = false" 
+                    class="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 transition-all"
+                    :disabled="processing"
+                >
+                    Cancel
+                </button>
+                <button 
+                    @click="confirmRunPayroll" 
+                    class="px-5 py-2 text-white text-sm font-semibold rounded-xl transition-all shadow-md flex items-center gap-2"
+                    :class="isRecalculationConfirm ? 'bg-amber-600 hover:bg-amber-700' : 'bg-purple-600 hover:bg-purple-700'"
+                    :disabled="processing"
+                >
+                    <div v-if="processing" class="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                    {{ isRecalculationConfirm ? 'Yes, Recalculate' : 'Proceed to Calculate' }}
+                </button>
+            </div>
+        </div>
+    </Modal>
 
     </SmartTabLayout>
 </template>

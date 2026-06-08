@@ -8,8 +8,8 @@
           <div class="absolute inset-0 rounded-full border-2 border-emerald-500/60 breath-ring"></div>
           <div class="absolute inset-2 rounded-full bg-white shadow-sm"></div>
           <img
-            src="https://knrint-website.blr1.digitaloceanspaces.com/KNR-WEBSITE/2026/site_logo/KNR-WEBSITE_f817360c-0c15-4992-bc1b-4df24f071612_KNR-Logo.png"
-            alt="KNR Logo"
+            src="https://pisparrow.com/logo/logo.png"
+            alt="PiSparrow Logo"
             class="relative z-10 h-10 w-10 object-contain breath-logo"
           />
         </div>

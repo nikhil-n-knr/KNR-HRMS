@@ -25,7 +25,8 @@ class CourseController extends Controller
         $this->authorize('viewAny', LmsCourse::class);
         
         $query = LmsCourse::with(['creator', 'assignments', 'certificates'])
-            ->withCount(['assignments', 'questions']);
+            ->withCount(['assignments', 'questions'])
+            ->whereNull('institution_id'); // HR-LMS only — Advanced LMS courses have institution_id set
             
         // Search
         if ($request->search) {

@@ -148,6 +148,11 @@ class LmsCourse extends Model
         return $this->hasMany(LmsCertificate::class, 'course_id');
     }
     
+    public function certificates()
+    {
+        return $this->hasMany(LmsCertificate::class, 'course_id');
+    }
+    
     public function getTargetEmployees()
     {
         $query = \App\Models\Employee::where('status', 'active');

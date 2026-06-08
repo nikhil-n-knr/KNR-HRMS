@@ -13,51 +13,22 @@
       <div class="hidden lg:flex flex-col justify-center">
         <div class="flex items-center gap-4">
           <img
-            src="https://knrint-website.blr1.digitaloceanspaces.com/KNR-WEBSITE/2026/site_logo/KNR-WEBSITE_f817360c-0c15-4992-bc1b-4df24f071612_KNR-Logo.png"
-            alt="KNR Logo"
+            src="https://pisparrow.com/logo/logo.png"
+            alt="PiSparrow Logo"
             class="h-14 w-auto object-contain"
           >
-          <span class="text-6xl font-black" :class="roleTheme.accentText">CONNECT</span>
+          <span class="text-6xl font-black" :class="roleTheme.accentText">ONEHUB CONNECT</span>
         </div>
 
         <h1 class="mt-8 text-5xl font-black leading-tight text-slate-900">
           Unified login.
-          <span class="block" :class="roleTheme.accentText">Every role.</span>
+          <span class="block" :class="roleTheme.accentText">One Workspace.</span>
         </h1>
         <p class="mt-4 text-lg text-slate-600 max-w-md">
-          A unified access point for KNR Management, KNR Team, and Clients.
+          A unified digital workspace for all PiSparrow team members, projects, and operations.
         </p>
 
-        <div class="mt-8 space-y-3">
-          <button
-            v-for="option in roleOptions"
-            :key="option.key"
-            type="button"
-            @click="currentRole = option.key"
-            class="w-full text-left rounded-2xl border px-4 py-3 transition-all shadow-sm"
-            :class="currentRole === option.key
-              ? roleTheme.roleActive
-              : 'border-white/70 bg-white/60 hover:bg-white/80'"
-          >
-            <div class="flex items-center gap-3">
-              <div
-                class="h-10 w-10 rounded-xl flex items-center justify-center"
-                :class="currentRole === option.key ? roleTheme.roleIconActive : roleTheme.roleIconIdle"
-              >
-                <i :class="option.icon"></i>
-              </div>
-              <div class="flex-1">
-                <p class="text-sm font-black text-slate-900 uppercase tracking-wider">{{ option.label }}</p>
-                <p class="text-xs text-slate-500">{{ option.desc }}</p>
-              </div>
-              <span
-                v-if="currentRole === option.key"
-                class="text-[10px] font-black uppercase tracking-widest px-2 py-1 rounded-full"
-                :class="roleTheme.roleBadge"
-              >Active</span>
-            </div>
-          </button>
-        </div>
+
 
         <div class="mt-8 flex items-center gap-3 text-xs text-slate-500">
           <span class="px-3 py-1 rounded-full bg-white/70 border border-white/60">4K+ Users</span>
@@ -71,28 +42,16 @@
         <div class="rounded-[28px] bg-white/80 backdrop-blur-xl border border-white/70 shadow-[0_20px_60px_rgba(15,23,42,0.15)] p-6 sm:p-8">
           <div class="text-center">
             <img
-              src="https://knrint-website.blr1.digitaloceanspaces.com/KNR-WEBSITE/2026/site_logo/KNR-WEBSITE_f817360c-0c15-4992-bc1b-4df24f071612_KNR-Logo.png"
-              alt="KNR Logo"
+              src="https://pisparrow.com/logo/logo.png"
+              alt="PiSparrow Logo"
               class="h-12 w-auto mx-auto object-contain"
             >
-            <p class="mt-2 text-[10px] font-black uppercase tracking-[0.4em]" :class="roleTheme.accentTextSoft">KNR CONNECT</p>
+            <p class="mt-2 text-[10px] font-black uppercase tracking-[0.4em]" :class="roleTheme.accentTextSoft">ONEHUB CONNECT</p>
            <!-- <h2 class="mt-3 text-2xl font-black text-slate-900">Welcome back</h2> -->
             <p class="text-sm text-slate-500">Sign in to your workspace</p>
           </div>
 
-          <!-- Role Pills -->
-          <div class="mt-6 flex items-center gap-2 rounded-2xl bg-slate-50/80 border border-slate-100 p-1">
-            <button
-              v-for="option in roleOptions"
-              :key="option.key + '-pill'"
-              type="button"
-              @click="currentRole = option.key"
-              class="flex-1 rounded-xl px-2.5 py-2 text-[10px] font-black uppercase tracking-widest transition-all"
-              :class="currentRole === option.key ? roleTheme.pillActive : 'text-slate-500 hover:text-slate-700'"
-            >
-              {{ option.short }}
-            </button>
-          </div>
+
 
           <form @submit.prevent="handleLogin" class="mt-6 space-y-5">
             <BaseInput
@@ -100,7 +59,7 @@
               class="mb-2"
               label="Work Email"
               type="email"
-              placeholder="name@knrint.com"
+              placeholder="name@pisparrow.com"
               required
             />
 
@@ -140,12 +99,12 @@
                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
               </svg>
-              <span v-else>Sign in as {{ currentRoleLabel }}</span>
+              <span v-else>Sign In</span>
             </button>
           </form>
 
           <div class="mt-6 text-center text-[11px] text-slate-400">
-            <p>By continuing, you agree to KNR Terms & Privacy Policy.</p>
+            <p>By continuing, you agree to PiSparrow Terms & Privacy Policy.</p>
           </div>
         </div>
       </div>
@@ -163,30 +122,16 @@ const authStore = useAuthStore();
 
 const roleOptions = [
   {
-    key: 'mgmt',
-    label: 'KNR Management',
-    short: 'KNR Mgmt',
-    desc: 'Leadership, approvals, and executive dashboards',
-    icon: 'fas fa-crown'
-  },
-  {
     key: 'team',
-    label: 'KNR Team',
-    short: 'KNR Team',
+    label: 'PiSparrow Team',
+    short: 'PiSparrow Team',
     desc: 'Employees, operations, and internal tools',
     icon: 'fas fa-users'
-  },
-  {
-    key: 'client',
-    label: 'Clients',
-    short: 'Clients',
-    desc: 'Client access, projects, and support portals',
-    icon: 'fas fa-handshake'
   }
 ];
 
-const currentRole = ref('mgmt');
-const currentRoleLabel = computed(() => roleOptions.find(r => r.key === currentRole.value)?.label || 'KNR');
+const currentRole = ref('team');
+const currentRoleLabel = computed(() => roleOptions.find(r => r.key === currentRole.value)?.label || 'PiSparrow');
 const roleThemes = {
   mgmt: {
     pageBg: 'bg-gradient-to-br from-[#EEF1FF] via-[#F2F6FF] to-[#ECF7FF]',
@@ -240,7 +185,7 @@ const roleThemes = {
 const roleTheme = computed(() => roleThemes[currentRole.value] || roleThemes.mgmt);
 
 const form = reactive({
-  email: 'admin@test.com',
+  email: 'nikhil@pisparrow.com',
   password: 'secret'
 });
 

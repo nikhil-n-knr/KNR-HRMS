@@ -59,13 +59,13 @@ const print = () => {
                 <div class="hidden print:flex justify-between items-center mb-10 pb-8 border-b-8 border-black text-left">
                      <div class="flex items-center gap-6 italic shrink-0">
                         <TagIcon class="w-12 h-12 text-black shrink-0" />
-                        <span class="text-4xl font-extrabold text-black uppercase tracking-tighter italic leading-none">KNR PROPERTY</span>
+                        <span class="text-4xl font-extrabold text-black uppercase tracking-tighter italic leading-none">PiSparrow Property</span>
                      </div>
                      <span class="text-xl font-black text-black italic">2024_REG</span>
                 </div>
 
                 <div class="print:hidden">
-                    <h1 class="text-4xl font-black text-slate-900 uppercase tracking-tight mb-4 leading-none">KNR STORAGE</h1>
+                    <h1 class="text-4xl font-black text-slate-900 uppercase tracking-tight mb-4 leading-none">PiSparrow Storage</h1>
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-12 relative leading-none">
                         GLOBAL RESOURCE INVENTORY
                         <span class="absolute -bottom-6 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-indigo-500 rounded-full print:hidden"></span>

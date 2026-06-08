@@ -1,7 +1,7 @@
 <template>
     <nav class="w-full sticky top-0 z-50" :style="navStyle">
         <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-            <span class="font-black text-xl">{{ block.content?.logo_text || 'KNR Office' }}</span>
+            <span class="font-black text-xl">{{ block.content?.logo_text || 'OneHub Connect' }}</span>
             <div class="flex items-center gap-6 text-sm font-bold">
                 <a v-for="link in (block.content?.links || [{label:'Features',href:'#'},{label:'Pricing',href:'#'},{label:'Blog',href:'#'}])" :key="link.label" :href="link.href" class="opacity-70 hover:opacity-100 transition-opacity">
                     {{ link.label }}

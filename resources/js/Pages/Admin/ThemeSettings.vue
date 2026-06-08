@@ -276,7 +276,7 @@
               <div class="flex items-center justify-between rounded-2xl px-4 py-3" :style="{ background: 'var(--header-bg)', color: 'var(--header-text)' }">
                 <div>
                   <p class="text-[10px] uppercase tracking-widest" :style="{ color: 'var(--text-secondary)' }">Preview</p>
-                  <h3 class="text-lg font-black">KNR OPSCORE</h3>
+                  <h3 class="text-lg font-black">ONEHUB CONNECT</h3>
                 </div>
                 <button class="px-4 py-2 text-xs font-black uppercase tracking-widest" :style="previewButtonStyle">Primary Action</button>
               </div>

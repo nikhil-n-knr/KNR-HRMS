@@ -89,32 +89,40 @@ class UserController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'email' => 'required|email|unique:users',
-            'employee_id' => 'nullable|unique:users',
-            'role_ids' => 'required|array',
-            'role_ids.*' => 'exists:roles,id',
-            'department_id' => 'nullable|exists:departments,id',
-            'location_id' => 'nullable|exists:locations,id',
-            'password' => 'required|min:8',
+            'name'              => 'required|string|max:255',
+            'email'             => 'required|email|unique:users',
+            'employee_id'       => 'nullable|unique:users',
+            'employee_link_id'  => 'nullable|exists:employees,id',
+            'role_ids'          => 'required|array',
+            'role_ids.*'        => 'exists:roles,id',
+            'department_id'     => 'nullable|exists:departments,id',
+            'location_id'       => 'nullable|exists:locations,id',
+            'password'          => 'required|min:8',
         ]);
 
         DB::transaction(function () use ($validated) {
             $user = User::create([
-                'tenant_id' => auth()->user()->tenant_id,
-                'name' => $validated['name'],
-                'email' => $validated['email'],
-                'employee_id' => $validated['employee_id'] ?? null,
-                'password' => Hash::make($validated['password']),
+                'tenant_id'     => auth()->user()->tenant_id,
+                'name'          => $validated['name'],
+                'email'         => $validated['email'],
+                'employee_id'   => $validated['employee_id'] ?? null,
+                'password'      => Hash::make($validated['password']),
                 'department_id' => $validated['department_id'] ?? null,
-                'location_id' => $validated['location_id'] ?? null,
-                'status' => 'active',
+                'location_id'   => $validated['location_id'] ?? null,
+                'status'        => 'active',
             ]);
+
+            // Link the employee record to this user account
+            if (!empty($validated['employee_link_id'])) {
+                \App\Models\Employee::where('id', $validated['employee_link_id'])
+                    ->whereNull('user_id')  // Safety: never overwrite an existing link
+                    ->update(['user_id' => $user->id]);
+            }
 
             $pivotData = [
                 'assigned_by' => auth()->id(),
-                'valid_from' => now(), 
-                'is_active' => true
+                'valid_from'  => now(),
+                'is_active'   => true
             ];
             
             $syncPayload = collect($validated['role_ids'])->mapWithKeys(function ($id) use ($pivotData) {
@@ -135,10 +143,21 @@ class UserController extends Controller
             abort(403);
         }
 
+        // Employees that have no user linked yet
+        $unlinkedEmployees = \App\Models\Employee::whereNull('user_id')
+            ->select('id', 'first_name', 'last_name', 'employee_code')
+            ->orderBy('first_name')
+            ->get()
+            ->map(fn($e) => [
+                'id'   => $e->id,
+                'name' => "{$e->first_name} {$e->last_name} ({$e->employee_code})"
+            ]);
+
         return Inertia::render('UserManagement/UserForm', [
-            'roles' => \App\Models\Role::all(),
-            'departments' => \App\Models\Department::select('id', 'name')->get(),
-            'locations' => \App\Models\Location::select('id', 'name')->get(),
+            'roles'              => \App\Models\Role::all(),
+            'departments'        => \App\Models\Department::select('id', 'name')->get(),
+            'locations'          => \App\Models\Location::select('id', 'name')->get(),
+            'unlinkedEmployees'  => $unlinkedEmployees,
         ]);
     }
 
@@ -149,16 +168,17 @@ class UserController extends Controller
         }
 
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255',
-            'email' => ['sometimes', 'email', Rule::unique('users')->ignore($user->id)],
-            'employee_id' => ['nullable', Rule::unique('users')->ignore($user->id)],
-            'department_id' => 'nullable|exists:departments,id',
-            'role_ids' => 'sometimes|array',
-            'role_ids.*' => 'exists:roles,id',
-            'location_id' => 'nullable|exists:locations,id', // Added validation for location
+            'name'              => 'sometimes|string|max:255',
+            'email'             => ['sometimes', 'email', Rule::unique('users')->ignore($user->id)],
+            'employee_id'       => ['nullable', Rule::unique('users')->ignore($user->id)],
+            'employee_link_id'  => 'nullable|exists:employees,id',
+            'department_id'     => 'nullable|exists:departments,id',
+            'role_ids'          => 'sometimes|array',
+            'role_ids.*'        => 'exists:roles,id',
+            'location_id'       => 'nullable|exists:locations,id',
         ]);
 
-        DB::transaction(function () use ($request, $user) {
+        DB::transaction(function () use ($request, $user, $validated) {
             if ($request->filled('password')) {
                 $validatedPassword = $request->validate(['password' => 'min:8']);
                 $user->password = Hash::make($validatedPassword['password']);
@@ -167,11 +187,26 @@ class UserController extends Controller
 
             $user->update($request->only(['name', 'email', 'department_id', 'location_id', 'status']));
 
+            // Handle employee (re)linking
+            if (array_key_exists('employee_link_id', $validated)) {
+                $newEmpId = $validated['employee_link_id'];
+
+                // Detach old linked employee
+                \App\Models\Employee::where('user_id', $user->id)->update(['user_id' => null]);
+
+                // Attach the new one (if one was selected)
+                if ($newEmpId) {
+                    \App\Models\Employee::where('id', $newEmpId)
+                        ->whereNull('user_id')
+                        ->update(['user_id' => $user->id]);
+                }
+            }
+
             if ($request->has('role_ids')) {
                 $pivotData = [
                     'assigned_by' => auth()->id(),
-                    'valid_from' => now(), 
-                    'is_active' => true
+                    'valid_from'  => now(),
+                    'is_active'   => true
                 ];
                 
                 $syncPayload = collect($request->role_ids)->mapWithKeys(function ($id) use ($pivotData) {
@@ -193,11 +228,30 @@ class UserController extends Controller
             abort(403);
         }
 
+        // Currently linked employee (if any)
+        $linkedEmployee = \App\Models\Employee::where('user_id', $user->id)
+            ->select('id', 'first_name', 'last_name', 'employee_code')
+            ->first();
+
+        // Employees that have no user linked yet (+ the currently linked one so it shows in dropdown)
+        $unlinkedEmployees = \App\Models\Employee::where(function($q) use ($user) {
+                $q->whereNull('user_id')->orWhere('user_id', $user->id);
+            })
+            ->select('id', 'first_name', 'last_name', 'employee_code')
+            ->orderBy('first_name')
+            ->get()
+            ->map(fn($e) => [
+                'id'   => $e->id,
+                'name' => "{$e->first_name} {$e->last_name} ({$e->employee_code})"
+            ]);
+
         return Inertia::render('UserManagement/UserForm', [
-            'user' => $user->load('roles'),
-            'roles' => \App\Models\Role::all(),
-            'departments' => \App\Models\Department::select('id', 'name')->get(),
-            'locations' => \App\Models\Location::select('id', 'name')->get(),
+            'user'               => $user->load('roles'),
+            'roles'              => \App\Models\Role::all(),
+            'departments'        => \App\Models\Department::select('id', 'name')->get(),
+            'locations'          => \App\Models\Location::select('id', 'name')->get(),
+            'unlinkedEmployees'  => $unlinkedEmployees,
+            'linkedEmployeeId'   => $linkedEmployee?->id,
         ]);
     }
 

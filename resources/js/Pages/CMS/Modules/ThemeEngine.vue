@@ -221,7 +221,7 @@
             <div class="w-3 h-3 rounded-full bg-red-400"></div>
             <div class="w-3 h-3 rounded-full bg-amber-400"></div>
             <div class="w-3 h-3 rounded-full bg-emerald-400"></div>
-            <div class="ml-3 flex-1 bg-white rounded-md h-5 text-sm flex items-center px-3 text-gray-400 font-mono border border-gray-200">preview.KNR Office.in</div>
+            <div class="ml-3 flex-1 bg-white rounded-md h-5 text-sm flex items-center px-3 text-gray-400 font-mono border border-gray-200">preview.OneHub Connect.in</div>
           </div>
 
           <!-- Actual preview -->

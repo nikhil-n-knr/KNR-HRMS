@@ -1,45 +1,45 @@
 <template>
     <div class="h-full flex flex-col bg-white">
         <transition name="slide-up">
-            <div v-if="selectedBugs.length > 0" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-slate-900/95 text-white px-6 py-4 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.4)] z-[100] flex items-center gap-8 border border-white/10 backdrop-blur-xl ring-1 ring-white/5">
-                <div class="flex items-center gap-3 pr-8 border-r border-slate-700">
-                    <span class="bg-emerald-500 text-white text-sm font-black px-2.5 py-1 rounded-full shadow-lg shadow-emerald-500/50">{{ selectedBugs.length }}</span>
-                    <span class="text-xs font-black uppercase tracking-[0.1em] text-slate-300">Targeted</span>
+            <div v-if="selectedBugs.length > 0" class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/95 text-slate-900 px-6 py-4 rounded-3xl shadow-[0_20px_60px_rgba(0,0,0,0.1)] z-[100] flex items-center gap-8 border border-slate-200 backdrop-blur-xl ring-1 ring-slate-100">
+                <div class="flex items-center gap-3 pr-8 border-r border-slate-200">
+                    <span class="bg-indigo-600 text-white text-sm font-black px-2.5 py-1 rounded-full shadow-lg shadow-indigo-600/30">{{ selectedBugs.length }}</span>
+                    <span class="text-xs font-black uppercase tracking-[0.1em] text-slate-500">Targeted</span>
                 </div>
                 
                 <div class="flex items-center gap-4">
                     <div class="flex items-center gap-2" @click.stop>
                          <button 
                             @click="showBulkStageMenu = !showBulkStageMenu"
-                            class="px-4 py-2 text-sm font-black uppercase tracking-widest bg-emerald-600 hover:bg-emerald-500 rounded-xl transition-all flex items-center gap-2 shadow-lg shadow-emerald-600/20"
+                            class="px-4 py-2 text-sm font-black uppercase tracking-widest bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-xl transition-all flex items-center gap-2 border border-emerald-200 shadow-sm"
                         >
                             <ArrowsRightLeftIcon class="w-3.5 h-3.5" />
                             Change Stage
                         </button>
                     </div>
 
-                    <button @click.stop="bulkReassign" class="px-4 py-2 text-sm font-black uppercase tracking-widest bg-slate-800 hover:bg-slate-700 rounded-xl transition-all flex items-center gap-2 border border-slate-700">
-                        <UserPlusIcon class="w-3.5 h-3.5 text-slate-400" />
+                    <button @click.stop="bulkReassign" class="px-4 py-2 text-sm font-black uppercase tracking-widest bg-slate-50 text-slate-700 hover:bg-slate-100 rounded-xl transition-all flex items-center gap-2 border border-slate-200 shadow-sm">
+                        <UserPlusIcon class="w-3.5 h-3.5 text-slate-500" />
                         Reassign
                     </button>
 
-                    <button @click.stop="bulkNotify" class="px-4 py-2 text-sm font-black uppercase tracking-widest bg-slate-800 hover:bg-slate-700 rounded-xl transition-all flex items-center gap-2 border border-slate-700">
-                        <EnvelopeIcon class="w-3.5 h-3.5 text-slate-400" />
+                    <button @click.stop="bulkNotify" class="px-4 py-2 text-sm font-black uppercase tracking-widest bg-slate-50 text-slate-700 hover:bg-slate-100 rounded-xl transition-all flex items-center gap-2 border border-slate-200 shadow-sm">
+                        <EnvelopeIcon class="w-3.5 h-3.5 text-slate-500" />
                         Notify Group
                     </button>
                     
-                    <button @click="selectedBugs = []" class="ml-4 text-sm font-black uppercase tracking-widest text-slate-500 hover:text-white transition-colors">
+                    <button @click="selectedBugs = []" class="ml-4 text-sm font-black uppercase tracking-widest text-rose-500 hover:text-rose-700 hover:bg-rose-50 px-3 py-1.5 rounded-lg transition-colors">
                         Cancel Action
                     </button>
                 </div>
 
                 <!-- Inline Stage Menu for Bulk -->
-                <div v-if="showBulkStageMenu" @click.stop class="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 bg-slate-900 border border-slate-700 rounded-2xl p-2 w-48 shadow-2xl">
+                <div v-if="showBulkStageMenu" @click.stop class="absolute bottom-full mb-4 left-1/2 -translate-x-1/2 bg-white border border-slate-200 rounded-2xl p-2 w-48 shadow-2xl">
                     <button 
                         v-for="stage in stages" 
                         :key="stage.id"
                         @click="bulkMoveToStage(stage.id); showBulkStageMenu = false"
-                        class="w-full text-left px-4 py-2.5 text-sm font-black uppercase tracking-widest text-slate-300 hover:bg-slate-800 hover:text-white rounded-xl transition-colors"
+                        class="w-full text-left px-4 py-2.5 text-sm font-black uppercase tracking-widest text-slate-600 hover:bg-slate-50 hover:text-slate-900 rounded-xl transition-colors"
                     >
                         {{ stage.name }}
                     </button>
@@ -107,28 +107,28 @@
             </div>
 
             <div class="flex items-center gap-2 justify-between lg:justify-end">
-                <div class="flex gap-2 relative items-center">
-                    <!-- Filters Button -->
-                    <button @click="showFilterPanel = true" class="relative p-2.5 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 rounded-2xl transition-all border border-transparent hover:border-indigo-100" title="Advanced Filters">
-                        <FunnelIcon class="w-5 h-5" />
-                        <span v-if="activeFiltersCount > 0" class="absolute top-1 right-1 flex h-3 w-3 items-center justify-center rounded-full bg-indigo-600 text-xs font-black text-white ring-2 ring-white">{{ activeFiltersCount }}</span>
+                <div class="flex flex-wrap items-center gap-4 w-full md:w-auto mt-4 lg:mt-0">
+                    <!-- Inline Date Range Filter -->
+                    <div class="flex items-center gap-2 bg-slate-50/50 border border-slate-200 rounded-2xl px-2 py-1.5 focus-within:ring-2 focus-within:ring-indigo-500/20 focus-within:border-indigo-500 transition-all">
+                        <input type="date" v-model="filters.date_start" @change="debouncedSearch" class="w-32 bg-transparent border-none text-slate-600 text-xs font-bold focus:ring-0 p-1" title="From Date" />
+                        <span class="text-slate-300 font-black">-</span>
+                        <input type="date" v-model="filters.date_end" @change="debouncedSearch" class="w-32 bg-transparent border-none text-slate-600 text-xs font-bold focus:ring-0 p-1" title="To Date" />
+                    </div>
+
+                    <!-- Advanced Filters Toggle -->
+                    <button @click="showFilterPanel = true" class="px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-2xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 transition-all shadow-sm flex items-center relative" title="Deep Filters">
+                        <FunnelIcon class="w-4 h-4" />
+                        <span v-if="activeFiltersCount > 0" class="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-[10px] font-black text-white shadow-sm">{{ activeFiltersCount }}</span>
                     </button>
 
-                    <!-- Export Dropdown -->
-                    <div class="relative">
-                        <button @click="showExportMenu = !showExportMenu" class="p-2.5 md:px-6 md:py-2.5 bg-white border border-gray-200 rounded-2xl text-sm font-black uppercase tracking-widest text-slate-700 hover:bg-gray-50 transition-all shadow-sm flex items-center gap-3">
-                            <span class="hidden md:inline">Export</span>
-                            <ChevronDownIcon class="w-3.5 h-3.5" />
-                        </button>
-                        <div v-if="showExportMenu" class="absolute right-0 mt-2 w-48 bg-white border border-gray-100 rounded-2xl shadow-2xl py-2 z-50">
-                            <button v-for="fmt in ['CSV', 'Excel', 'PDF']" :key="fmt" @click="exportData(fmt)" class="w-full text-left px-5 py-3 text-sm font-black uppercase tracking-widest text-slate-600 hover:bg-emerald-50 hover:text-emerald-700 transition-colors">
-                                Save as {{ fmt }}
-                            </button>
-                        </div>
-                    </div>
+                    <!-- Inline Export (1-click) -->
+                    <a :href="exportComprehensiveUrl" target="_blank" class="px-5 py-2.5 bg-white border border-gray-200 rounded-2xl text-sm font-black uppercase tracking-widest text-indigo-600 hover:bg-indigo-50 hover:border-indigo-100 transition-all shadow-sm flex items-center gap-2">
+                        <ArrowDownTrayIcon class="w-4 h-4" />
+                        Export Data
+                    </a>
                 </div>
 
-                <PrimaryButton @click="showCreateModal = true" class="!py-2.5 !px-5 md:!py-3 md:!px-8 !rounded-2xl !bg-emerald-600 !shadow-xl !shadow-emerald-100 transition-all flex-shrink-0">
+                <PrimaryButton @click="showCreateModal = true" class="mt-4 lg:mt-0 !py-2.5 !px-5 md:!py-3 md:!px-8 !rounded-2xl !bg-emerald-600 !shadow-xl !shadow-emerald-100 transition-all flex-shrink-0">
                     <span class="mr-1 md:mr-2 font-black">+</span> <span class="text-sm md:text-sm">Ticket</span>
                 </PrimaryButton>
             </div>
@@ -136,6 +136,13 @@
         <!-- Custom Context Views (Saved Filters) -->
         <div class="bg-white border-b border-gray-100 flex items-center px-6 py-2 gap-4 flex-none overflow-x-auto">
             <span class="text-sm font-black uppercase tracking-widest text-slate-400">Saved Views</span>
+            <div v-if="counts" class="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100 text-xs font-black uppercase tracking-wider flex-shrink-0">
+                <span class="text-slate-500">Total: <strong class="text-slate-800">{{ counts.total }}</strong></span>
+                <span class="text-slate-300">|</span>
+                <span class="text-emerald-600">Closed: <strong>{{ counts.closed }}</strong></span>
+                <span class="text-slate-300">|</span>
+                <span class="text-rose-600">Remaining: <strong>{{ counts.open }}</strong></span>
+            </div>
             <div class="h-4 w-px bg-gray-200"></div>
             <button 
                 @click="clearCustomView"
@@ -231,8 +238,9 @@
                     <!-- Left Pane: List / Kanban -->
                     <div :class="[selectedBugId ? 'w-1/2 hidden md:flex border-r border-gray-200' : 'w-full flex', 'transition-all duration-300 flex-col bg-white overflow-hidden']">
                          <!-- Bug List -->
-                        <div v-if="viewMode === 'list'" class="flex-1 overflow-y-auto">
-                            <table class="min-w-full divide-y divide-gray-200 table-fixed">
+                        <div v-if="viewMode === 'list'" class="flex-1 flex flex-col overflow-hidden">
+                            <div class="flex-1 overflow-y-auto">
+                                <table class="min-w-full divide-y divide-gray-200 table-fixed">
                                 <thead class="bg-gray-50 sticky top-0 z-10 shadow-sm">
                                     <tr>
                                         <th class="w-12 px-4 md:px-6 py-3"></th>
@@ -366,6 +374,14 @@
                                 </tbody>
                             </table>
                         </div>
+                        <!-- Pagination Controls -->
+                        <div v-if="bugs && bugs.links" class="p-4 border-t border-gray-100 bg-gray-50/50 flex flex-col sm:flex-row justify-between items-center gap-4 flex-shrink-0">
+                            <div class="text-xs font-bold text-gray-500 uppercase tracking-widest">
+                                Showing {{ bugs.from || 0 }} to {{ bugs.to || 0 }} of {{ bugs.total || 0 }} tickets
+                            </div>
+                            <Pagination :links="bugs.links || []" />
+                        </div>
+                    </div>
 
                          <!-- Timeline View -->
                         <BugTimeline 
@@ -501,24 +517,28 @@ import BugKanban from './Components/BugKanban.vue';
 import BugTimeline from './Components/BugTimeline.vue';
 import BugForensics from './Components/BugForensics.vue';
 import CommandPalette from './Components/CommandPalette.vue';
+import Pagination from '@/Components/Pagination.vue';
 import { 
     ListBulletIcon, 
     Squares2X2Icon,
     MagnifyingGlassPlusIcon,
     ClockIcon,
     MagnifyingGlassIcon,
-    ShareIcon,
-    ChevronDownIcon,
-    CommandLineIcon,
-    UserCircleIcon,
-    FireIcon,
+    PlusIcon, 
+    ChevronDownIcon, 
+    FunnelIcon,
+    EllipsisVerticalIcon,
+    ChatBubbleLeftRightIcon,
+    PaperClipIcon,
     ArrowsRightLeftIcon,
+    CheckCircleIcon,
     UserPlusIcon,
     EnvelopeIcon,
-    FunnelIcon
+    InformationCircleIcon,
+    ArrowDownTrayIcon
 } from '@heroicons/vue/24/outline';
 
-const props = defineProps(['bugs', 'filters', 'projects', 'stages', 'custom_views', 'lookup']);
+const props = defineProps(['bugs', 'filters', 'projects', 'stages', 'custom_views', 'lookup', 'counts']);
 
 const showCreateModal = ref(false);
 const showCommandPalette = ref(false);
@@ -547,6 +567,23 @@ const activeFiltersCount = computed(() => {
     return count;
 });
 
+const exportComprehensiveUrl = computed(() => {
+    const url = new URL(route('bugs.export.pdf'));
+    // Append active filters to URL
+    for (const [key, value] of Object.entries(props.filters || {})) {
+        if (Array.isArray(value)) {
+            value.forEach(v => url.searchParams.append(`${key}[]`, v));
+        } else if (value !== null && value !== undefined && value !== '') {
+            url.searchParams.append(key, value);
+        }
+    }
+    // Append global overrides if needed, like project_id
+    if (store.selectedProject && !props.filters.project_id) {
+        url.searchParams.append('project_id', store.selectedProject);
+    }
+    return url.toString();
+});
+
 const applyDeepFilters = (newFilters) => {
     showFilterPanel.value = false;
     router.get(route('bugs.index'), {
@@ -566,7 +603,7 @@ const newViewName = ref('');
 const page = usePage();
 const store = useBugTrackerStore();
 
-const search = ref('');
+const search = ref(props.filters.search || '');
 const filters = ref({
     project_id: props.filters.project_id || store.selectedProject || '',
     module_id: props.filters.module_id || store.selectedModule || '',
@@ -576,6 +613,7 @@ const filters = ref({
 
 const debouncedSearch = debounce(() => {
     router.get(route('bugs.index'), { 
+        ...props.filters,
         ...filters.value,
         search: search.value,
         my_work: myWorkOnly.value,
@@ -586,6 +624,7 @@ const debouncedSearch = debounce(() => {
 watch(myWorkOnly, () => {
     // Immediate refresh for toggle
     router.get(route('bugs.index'), { 
+        ...props.filters,
         ...filters.value,
         search: search.value,
         my_work: myWorkOnly.value,
@@ -595,15 +634,33 @@ watch(myWorkOnly, () => {
 
 // Global Store Context Synchronization
 watch(() => store.selectedProject, (newVal) => {
-    router.get(route('bugs.index'), { ...filters.value, project_id: newVal, my_work: myWorkOnly.value, tab: 'tracker' });
+    router.get(route('bugs.index'), { 
+        ...props.filters,
+        ...filters.value,
+        project_id: newVal,
+        my_work: myWorkOnly.value,
+        tab: 'tracker'
+    });
 });
 
 watch(() => store.selectedModule, (newVal) => {
-    router.get(route('bugs.index'), { ...filters.value, module_id: newVal, my_work: myWorkOnly.value, tab: 'tracker' });
+    router.get(route('bugs.index'), { 
+        ...props.filters,
+        ...filters.value,
+        module_id: newVal,
+        my_work: myWorkOnly.value,
+        tab: 'tracker'
+    });
 });
 
 watch(() => store.timeFrame, (newVal) => {
-    router.get(route('bugs.index'), { ...filters.value, timeframe: newVal, my_work: myWorkOnly.value, tab: 'tracker' });
+    router.get(route('bugs.index'), { 
+        ...props.filters,
+        ...filters.value,
+        timeframe: newVal,
+        my_work: myWorkOnly.value,
+        tab: 'tracker'
+    });
 });
 
 // Transition Modal State

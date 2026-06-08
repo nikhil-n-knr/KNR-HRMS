@@ -115,7 +115,8 @@ class BugTrackerController extends Controller
             'custom_views' => $customViews,
             'open_critical_count' => BugTicket::whereHas('stage', function($q) {
                 $q->where('is_final', false);
-            })->where('severity', 'critical')->count()
+            })->where('severity', 'critical')->count(),
+            'counts' => null
         ];
 
         // 3. Tab-Specific Data Loader
@@ -194,6 +195,18 @@ class BugTrackerController extends Controller
                 // Assuming sprint is last 14 days or similar logic
                 $query->where('created_at', '>=', now()->subDays(14));
             }
+
+            $totalCount = (clone $query)->count();
+            $closedCount = (clone $query)->whereHas('stage', function($q) {
+                $q->where('is_final', true);
+            })->count();
+            $openCount = $totalCount - $closedCount;
+
+            $data['counts'] = [
+                'total' => $totalCount,
+                'closed' => $closedCount,
+                'open' => $openCount
+            ];
 
             $data['bugs'] = $query->paginate(50);
             $data['bugs']->withQueryString();
@@ -789,12 +802,51 @@ class BugTrackerController extends Controller
         return response()->json($bugs);
     }
 
-    public function exportPDF()
+    public function exportPDF(Request $request)
     {
         // Simple PDF export logic (In a real app, use dompdf / snappy)
         // For now, return a view that can be printed or a CSV as fallback if PDF engine not installed.
         // Assuming we have a PDF service or just returning JSON as a placeholder for "High-Control" logic.
-        $bugs = BugTicket::with(['project', 'module', 'stage'])->get();
+        $query = BugTicket::with(['project', 'module', 'stage']);
+
+        if ($request->project_id) {
+            $query->where('project_id', $request->project_id);
+        }
+        if ($request->module_id) {
+            $query->where('module_id', $request->module_id);
+        }
+        if ($request->severity) {
+            $severities = is_array($request->severity) ? $request->severity : [$request->severity];
+            $query->whereIn('severity', $severities);
+        }
+        if ($request->priority || $request->priorities) {
+            $pris = $request->priorities ?? $request->priority;
+            $priorities = is_array($pris) ? $pris : [$pris];
+            $query->whereIn('priority', $priorities);
+        }
+        if ($request->stages) {
+            $stages = is_array($request->stages) ? $request->stages : [$request->stages];
+            $query->whereIn('workflow_stage_id', $stages);
+        }
+        if ($request->reporter_ids) {
+            $reporterIds = is_array($request->reporter_ids) ? $request->reporter_ids : [$request->reporter_ids];
+            $query->whereIn('reporter_id', $reporterIds);
+        }
+        if ($request->assignee_ids) {
+            $assigneeUserIds = is_array($request->assignee_ids) ? $request->assignee_ids : [$request->assignee_ids];
+            $employeeIds = \App\Models\Employee::whereIn('user_id', $assigneeUserIds)->pluck('id');
+            $query->where(function($q) use ($employeeIds) {
+                 $q->whereIn('assignee_id', $employeeIds)
+                   ->orWhereHas('assignees', function($aq) use ($employeeIds) {
+                       $aq->whereIn('assignee_id', $employeeIds);
+                   });
+            });
+        }
+        if ($request->search) {
+            $query->where('subject', 'like', "%{$request->search}%");
+        }
+
+        $bugs = $query->get();
         
         // Let's at least make it a CSV for now as a "Functional Export"
         $headers = [
@@ -815,11 +867,11 @@ class BugTrackerController extends Controller
                 fputcsv($file, [
                     $bug->id,
                     $bug->subject,
-                    $bug->project->name,
+                    $bug->project?->name ?? 'N/A',
                     $bug->module?->name ?? 'N/A',
                     $bug->severity,
                     $bug->priority,
-                    $bug->stage?->name,
+                    $bug->stage?->name ?? 'N/A',
                     $bug->created_at
                 ]);
             }

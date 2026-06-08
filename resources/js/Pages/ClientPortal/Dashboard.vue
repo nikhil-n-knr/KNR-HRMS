@@ -7,7 +7,7 @@
                     <CpuChipIcon class="h-6 w-6 text-slate-900" />
                 </div>
                 <div class="flex flex-col">
-                    <h1 class="text-white font-black text-lg tracking-tighter leading-none">KNR Portals</h1>
+                    <h1 class="text-white font-black text-lg tracking-tighter leading-none">OneHub Connect Portals</h1>
                     <span class="text-[9px] font-black text-slate-500 uppercase tracking-widest mt-1">Enterprise Hub v2.5</span>
                 </div>
             </div>

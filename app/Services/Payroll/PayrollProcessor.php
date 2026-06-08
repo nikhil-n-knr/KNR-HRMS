@@ -70,8 +70,8 @@ class PayrollProcessor
     public function process(Payroll $payroll, ?int $employeeId = null): void
     {
         DB::transaction(function () use ($payroll, $employeeId) {
-             // 2. Fetch Active Employees with Salary Structures
-            $query = EmployeeSalary::where('is_active', true)->with(['employee', 'salaryStructure']);
+            // 2. Fetch Active Employees with Salary Structures
+            $query = EmployeeSalary::where('is_active', true)->whereHas('employee')->with(['employee', 'salaryStructure']);
             
             if ($employeeId) {
                 $query->where('employee_id', $employeeId);
@@ -96,6 +96,9 @@ class PayrollProcessor
             }
             
             foreach ($activeSalaries as $salary) {
+                if (!$salary->employee) {
+                    continue;
+                }
                 // --- 1. Pre-Check: Salary Hold ---
                 $activeHold = \App\Models\PayrollHold::where('employee_id', $salary->employee_id)
                                 ->where('status', 'Active')

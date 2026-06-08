@@ -140,6 +140,7 @@ const props = defineProps({
     custom_views: Array,
     open_critical_count: Number,
     lookup: Object,
+    counts: Object,
     // Workflow props
     workflow: Object,
     teams: Array,

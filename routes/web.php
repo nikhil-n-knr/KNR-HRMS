@@ -1274,6 +1274,7 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
             Route::get('/monitoring', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'monitor_view')->name('monitoring');
             Route::get('/roster', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'roster')->name('roster');
             Route::get('/timesheets', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'timesheets')->name('timesheets');
+            Route::get('/timesheets/standalone', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'timesheets')->name('timesheets.standalone');
             Route::get('/regularization', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'approvals')->name('regularization');
             Route::get('/holidays', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'holidays')->name('holidays');
             Route::get('/leave-types', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'leave_types')->name('leave-types');
@@ -1284,9 +1285,12 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
             Route::post('/manual/bulk', [\App\Http\Controllers\Admin\AttendanceController::class, 'bulkImport'])->name('manual.bulk');
             Route::post('/manual/bulk-mark', [\App\Http\Controllers\Admin\AttendanceController::class, 'storeBulkMark'])->name('manual.bulk-mark.store');
             Route::get('/manual/shift-info', [\App\Http\Controllers\Admin\AttendanceController::class, 'getShiftInfo'])->name('manual.shift-info');
+            Route::get('/bulk-manage', [\App\Http\Controllers\Admin\AttendanceController::class, 'bulkManagePage'])->name('bulk-manage');
+            Route::post('/bulk-manage/save', [\App\Http\Controllers\Admin\AttendanceController::class, 'saveBulkManage'])->name('bulk-manage.save');
 
             // Intelligence Tabs
             Route::get('/policies', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'policies')->name('policies');
+            Route::get('/policies/standalone', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'policies')->name('policies.standalone');
             Route::get('/attendance-policies', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'attendance_policies')->name('policies.index');
             Route::get('/workflows', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'workflows')->name('workflows');
             Route::get('/gamification', [\App\Http\Controllers\Admin\AttendancePolicyController::class, 'index'])->defaults('tab', 'gamification')->name('gamification');
@@ -1295,6 +1299,7 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
             
             // AI Logs & Analytics
             Route::get('/analytics', [App\Http\Controllers\Admin\AttendanceAnalyticsController::class, 'index'])->name('analytics');
+            Route::get('/analytics/standalone', [App\Http\Controllers\Admin\AttendanceAnalyticsController::class, 'index'])->name('analytics.standalone');
             Route::get('/ai-logs', [App\Http\Controllers\Admin\AiLogController::class, 'index'])->name('ai-logs.index');
 
             // Shifts & Calendar
@@ -1309,8 +1314,33 @@ Route::get('/attendance', function (Illuminate\Http\Request $request) {
             // --- DATA & ACTION ENDPOINTS ---
             Route::get('/monitoring/data', [App\Http\Controllers\Admin\MonitoringController::class, 'getData'])->name('monitoring.data');
             Route::get('/monitoring/stats', [App\Http\Controllers\Admin\MonitoringController::class, 'stats'])->name('monitoring.stats');
+            Route::get('/monitoring/export-live', [App\Http\Controllers\Admin\MonitoringController::class, 'exportLiveMonitorData'])->name('monitoring.export-live');
+            Route::get('/monitoring/matrix-export', [App\Http\Controllers\Admin\MonitoringController::class, 'exportAttendanceMatrix'])->name('monitoring.matrix-export');
+            Route::get('/monitoring/employee-details-page/{employee}', [App\Http\Controllers\Admin\MonitoringController::class, 'getEmployeeYearlyDetailsPage'])->name('monitoring.employee-details-page');
+            Route::get('/monitoring/employee-details/{employee}', [App\Http\Controllers\Admin\MonitoringController::class, 'getEmployeeYearlyDetails'])->name('monitoring.employee-details');
+            Route::get('/monitoring/employee-details/{employee}/export', [App\Http\Controllers\Admin\MonitoringController::class, 'exportEmployeeYearlyDetails'])->name('monitoring.employee-details.export');
             Route::get('/roster/data', [\App\Http\Controllers\Admin\ShiftRosterController::class, 'index'])->name('roster.data');
             Route::post('/roster/assign', [\App\Http\Controllers\Admin\ShiftRosterController::class, 'assign'])->name('roster.assign');
+
+            // Zones
+            Route::get('/zones', [\App\Http\Controllers\Admin\ZoneController::class, 'index'])->name('zones.index');
+            Route::post('/zones', [\App\Http\Controllers\Admin\ZoneController::class, 'store'])->name('zones.store');
+            Route::put('/zones/{zone}', [\App\Http\Controllers\Admin\ZoneController::class, 'update'])->name('zones.update');
+            Route::delete('/zones/{zone}', [\App\Http\Controllers\Admin\ZoneController::class, 'destroy'])->name('zones.destroy');
+
+            // Comp-offs
+            Route::post('/comp-offs/scan', [App\Http\Controllers\Admin\CompOffController::class, 'scan'])->name('compoffs.scan');
+
+            // Bulk Shift Import
+            Route::post('/bulk-shifts/verify', [\App\Http\Controllers\Admin\BulkShiftController::class, 'verify'])->name('bulk-shifts.verify');
+            Route::post('/bulk-shifts/execute', [\App\Http\Controllers\Admin\BulkShiftController::class, 'execute'])->name('bulk-shifts.execute');
+
+            // Shift Rotations
+            Route::get('/rotations', [\App\Http\Controllers\Admin\ShiftRotationController::class, 'index'])->name('rotations.index');
+            Route::post('/rotations', [\App\Http\Controllers\Admin\ShiftRotationController::class, 'store'])->name('rotations.store');
+            Route::put('/rotations/{rotation}', [\App\Http\Controllers\Admin\ShiftRotationController::class, 'update'])->name('rotations.update');
+            Route::delete('/rotations/{rotation}', [\App\Http\Controllers\Admin\ShiftRotationController::class, 'destroy'])->name('rotations.destroy');
+            Route::post('/rotations/assign', [\App\Http\Controllers\Admin\ShiftRotationController::class, 'assign'])->name('rotations.assign');
 
             Route::post('/regularization/store', [App\Http\Controllers\Admin\RegularizationController::class, 'store'])->name('regularization.store');
             Route::put('/regularization/{id}', [App\Http\Controllers\Admin\RegularizationController::class, 'update'])->name('regularization.update');

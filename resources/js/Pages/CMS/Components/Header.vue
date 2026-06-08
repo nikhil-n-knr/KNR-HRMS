@@ -29,7 +29,7 @@
                 <div>
                     <h2 class="text-sm font-black text-gray-900 tracking-tight">{{ sectionName }}</h2>
                     <div class="flex items-center gap-2 mt-0.5">
-                        <p class="text-sm text-emerald-500 font-extrabold uppercase tracking-widest">KNR Office Builder</p>
+                        <p class="text-sm text-emerald-500 font-extrabold uppercase tracking-widest">OneHub Connect Builder</p>
                         <span v-if="activeSite" class="text-sm font-bold text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200 cursor-help" title="Active Site Workspace">
                             <i class="fas fa-globe mr-1 text-gray-400"></i>{{ activeSite.name }}
                             <i v-if="sites && sites.length > 1" class="fas fa-chevron-down ml-1 text-xs opacity-70"></i>
